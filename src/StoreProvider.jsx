@@ -1,8 +1,17 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { StoreContext } from './store'
 import { INITIAL_ORDERS, INITIAL_USER, PRODUCTS } from './data/mock'
+import { supabase } from './lib/supabase'
 
 const scrollTop = () => window.scrollTo({ top: 0, behavior: 'smooth' })
+
+function toAppUser(authUser) {
+  return {
+    ...INITIAL_USER,
+    name: authUser.user_metadata?.display_name?.trim() || authUser.email?.split('@')[0] || 'CareMarket 회원',
+    email: authUser.email || '',
+  }
+}
 
 // Mock AI 자연어 검색: 대표 예시 문장을 조건으로 해석 (추후 Gemini + Supabase로 교체 예정)
 function analyzeMockAiQuery(query) {
@@ -56,6 +65,10 @@ export function StoreProvider({ children }) {
   const [aiQuery, setAiQuery] = useState('')
   const [aiResult, setAiResult] = useState(null)
 
+  // 상단 제품 카테고리 브라우징 (목표와 별개 축)
+  const [shopCategory, setShopCategory] = useState('전체상품')
+  const [shopSub, setShopSub] = useState('전체')
+
   // 커머스 상태
   const [wishlist, setWishlist] = useState([1, 2])
   const [cart, setCart] = useState([
@@ -76,6 +89,44 @@ export function StoreProvider({ children }) {
     window.clearTimeout(showToast._t)
     showToast._t = window.setTimeout(() => setToast(null), 2800)
   }
+
+  const syncAuthSession = (session) => {
+    if (session?.user) {
+      setUser(toAppUser(session.user))
+      setIsLoggedIn(true)
+      return
+    }
+
+    setUser(INITIAL_USER)
+    setIsLoggedIn(false)
+  }
+
+  useEffect(() => {
+    let mounted = true
+
+    const restoreSession = async () => {
+      const { data, error } = await supabase.auth.getSession()
+      if (!mounted) return
+
+      if (error) {
+        console.error('Supabase session restore failed:', error.message)
+        return
+      }
+
+      syncAuthSession(data.session)
+    }
+
+    restoreSession()
+
+    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (mounted) syncAuthSession(session)
+    })
+
+    return () => {
+      mounted = false
+      listener.subscription.unsubscribe()
+    }
+  }, [])
 
   const navigate = (v) => {
     setView(v)
@@ -166,17 +217,58 @@ export function StoreProvider({ children }) {
     showToast(`${id} · ${status} 처리되었습니다.`)
   }
 
-  const login = () => {
-    setUser(INITIAL_USER)
-    setIsLoggedIn(true)
+  const login = async ({ email, password }) => {
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password })
+
+    if (error) {
+      showToast(`로그인에 실패했습니다. ${error.message}`)
+      return false
+    }
+
+    syncAuthSession(data.session)
     navigate('main')
-    showToast(`${INITIAL_USER.name} 님, 환영합니다.`)
+    showToast(`${toAppUser(data.user).name} 님, 환영합니다.`)
+    return true
   }
 
-  const logout = () => {
-    setIsLoggedIn(false)
+  const register = async ({ email, password, displayName }) => {
+    const { data, error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        data: { display_name: displayName },
+      },
+    })
+
+    if (error) {
+      showToast(`회원가입에 실패했습니다. ${error.message}`)
+      return false
+    }
+
+    if (data.session) {
+      syncAuthSession(data.session)
+      navigate('goalSetup')
+      showToast('가입 완료! 웰빙 목표 설정으로 이동합니다.')
+    } else {
+      navigate('login')
+      showToast('가입 확인 이메일을 보냈습니다. 인증 후 로그인해 주세요.')
+    }
+
+    return true
+  }
+
+  const logout = async () => {
+    const { error } = await supabase.auth.signOut()
+
+    if (error) {
+      showToast(`로그아웃에 실패했습니다. ${error.message}`)
+      return false
+    }
+
+    syncAuthSession(null)
     navigate('main')
     showToast('로그아웃되었습니다.')
+    return true
   }
 
   const value = useMemo(
@@ -188,18 +280,19 @@ export function StoreProvider({ children }) {
       allergies, setAllergies, toggleAllergy,
       search, setSearch,
       searchMode, setSearchMode, aiQuery, setAiQuery, aiResult, runAiSearch, clearAiSearch,
+      shopCategory, setShopCategory, shopSub, setShopSub,
       sortBy, setSortBy,
       wishlist, toggleWish,
       cart, addToCart, setQty, removeFromCart,
       drawerOpen, setDrawerOpen,
       orders, checkout, updateOrderStatus,
       products, setProducts,
-      user, setUser, login, logout, isLoggedIn,
+      user, setUser, login, register, logout, isLoggedIn,
       cartTotal, deliveryFee, cartCount,
       toast, showToast,
     }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [view, selectedProduct, goal, subFilters, allergies, search, searchMode, aiQuery, aiResult, sortBy, wishlist, cart, drawerOpen, orders, products, user, isLoggedIn, toast],
+    [view, selectedProduct, goal, subFilters, allergies, search, searchMode, aiQuery, aiResult, shopCategory, shopSub, sortBy, wishlist, cart, drawerOpen, orders, products, user, isLoggedIn, toast],
   )
 
   return <StoreContext.Provider value={value}>{children}</StoreContext.Provider>

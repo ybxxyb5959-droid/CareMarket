@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useStore } from '../store'
-import { GOALS } from '../data/mock'
+import { CATEGORIES } from '../data/mock'
 import Icon from './Icon'
 
 const AI_SEARCH_EXAMPLES = [
@@ -13,11 +13,26 @@ export default function Header() {
   const {
     view, navigate, setView, search, setSearch,
     searchMode, setSearchMode, aiQuery, setAiQuery, runAiSearch, clearAiSearch,
-    goal, setGoal, wishlist, cartCount, setDrawerOpen, showToast,
+    shopCategory, setShopCategory, shopSub, setShopSub,
+    wishlist, cartCount, setDrawerOpen, showToast,
   } = useStore()
   const [aiPlaceholder, setAiPlaceholder] = useState('')
 
   const isAi = searchMode === 'ai'
+
+  // 카테고리/하위 선택 → 필터 적용 후 상품 목록으로 스크롤
+  const openCategory = (c, sub) => {
+    setShopCategory(c.name)
+    setShopSub(sub)
+    setView('main')
+    window.setTimeout(() => {
+      const el = document.getElementById('product-list')
+      if (el) {
+        const y = el.getBoundingClientRect().top + window.scrollY - 150
+        window.scrollTo({ top: Math.max(0, y), behavior: 'smooth' })
+      }
+    }, 80)
+  }
 
   useEffect(() => {
     if (!isAi) return undefined
@@ -144,17 +159,39 @@ export default function Header() {
             </div>
           </div>
 
-          {/* 목표 서브 네비게이션 */}
+          {/* 제품 카테고리 네비게이션 (iHerb 스타일 · 하위는 드롭다운) */}
           <div className="header-nav no-scrollbar">
             <div className="goal-nav">
-              {GOALS.map((g) => (
-                <button
-                  key={g.id}
-                  className={goal === g.name ? 'on' : ''}
-                  onClick={() => { setGoal(g.name); navigate('main') }}
-                >
-                  <Icon name={g.icon} size={15} /> {g.name}
-                </button>
+              {CATEGORIES.map((c) => (
+                c.subs ? (
+                  <div key={c.id} className="cat-item">
+                    <button
+                      className={shopCategory === c.name ? 'on' : ''}
+                      onClick={() => openCategory(c, '전체')}
+                    >
+                      {c.name}<Icon name="chevron-down" size={13} />
+                    </button>
+                    <div className="cat-dropdown">
+                      {['전체', ...c.subs.map((s) => s.name)].map((name) => (
+                        <button
+                          key={name}
+                          className={shopCategory === c.name && shopSub === name ? 'on' : ''}
+                          onClick={() => openCategory(c, name)}
+                        >
+                          {name}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                ) : (
+                  <button
+                    key={c.id}
+                    className={shopCategory === c.name ? 'on' : ''}
+                    onClick={() => openCategory(c, '전체')}
+                  >
+                    {c.name}
+                  </button>
+                )
               ))}
             </div>
             <div className="header-nav-right">

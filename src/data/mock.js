@@ -92,6 +92,47 @@ export const HERO_SLIDES = [
   },
 ]
 
+// 상단 제품 카테고리 (iHerb 스타일). 목표(근육량/체중 등)는 홈의 목표 선택 영역에서 다룬다.
+// productIds 로 매칭 — 기존 상품 데이터는 건드리지 않는다.
+export const CATEGORIES = [
+  { id: 'best', name: '베스트' }, // isBest 상품
+  { id: 'all', name: '전체상품' },
+  { id: 'protein', name: '프로틴', productIds: [1, 5] },
+  {
+    id: 'supplement',
+    name: '영양제',
+    productIds: [3, 7, 8],
+    subs: [
+      { name: '비타민', productIds: [3] },
+      { name: '오메가3', productIds: [7] },
+      { name: '유산균', productIds: [8] },
+    ],
+  },
+  {
+    id: 'food',
+    name: '식료품',
+    productIds: [2, 4, 6],
+    subs: [
+      { name: '간편식', productIds: [2] },
+      { name: '음료', productIds: [4] },
+      { name: '육류', productIds: [6] },
+    ],
+  },
+]
+
+// 카테고리/서브카테고리 매칭 (상품 목록 필터에 사용)
+export function matchCategory(product, catName, subName) {
+  if (!catName || catName === '전체상품') return true
+  if (catName === '베스트') return product.isBest
+  const cat = CATEGORIES.find((c) => c.name === catName)
+  if (!cat || !cat.productIds) return true
+  if (cat.subs && subName && subName !== '전체') {
+    const sub = cat.subs.find((s) => s.name === subName)
+    return sub ? sub.productIds.includes(product.id) : cat.productIds.includes(product.id)
+  }
+  return cat.productIds.includes(product.id)
+}
+
 // 시간대별 웰빙 루틴 (중앙부 인터랙션)
 export const ROUTINE = [
   {

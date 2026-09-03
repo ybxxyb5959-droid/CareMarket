@@ -1,11 +1,12 @@
 import { useMemo, useState } from 'react'
 import { useStore, useAutoSlide } from '../store'
-import { GOALS, HERO_SLIDES, ROUTINE, SUB_FILTERS, VALUES, PRODUCTS } from '../data/mock'
+import { GOALS, HERO_SLIDES, ROUTINE, SUB_FILTERS, VALUES, PRODUCTS, matchCategory } from '../data/mock'
 import Icon from '../components/Icon'
 import ProductCard from '../components/ProductCard'
 
-function filterAndSort(products, { search, subFilters, allergies, sortBy, goal }) {
+function filterAndSort(products, { search, subFilters, allergies, sortBy, goal, shopCategory, shopSub }) {
   let list = products.filter((p) => {
+    if (!matchCategory(p, shopCategory, shopSub)) return false
     if (search) {
       const q = search.toLowerCase()
       if (!p.name.toLowerCase().includes(q) && !p.brand.toLowerCase().includes(q) && !p.category.toLowerCase().includes(q)) return false
@@ -42,7 +43,7 @@ export default function Home() {
     subFilters, toggleSub, setSubFilters, allergies,
     products, openProduct, navigate, showToast,
     searchMode, aiResult: aiSearch, runAiSearch, clearAiSearch,
-    isLoggedIn, logout,
+    isLoggedIn, logout, shopCategory, shopSub,
   } = useStore()
 
   const [slide, setSlide] = useAutoSlide(HERO_SLIDES.length)
@@ -52,8 +53,8 @@ export default function Home() {
   const activeGoal = GOALS.find((g) => g.name === focusGoal)
 
   const filtered = useMemo(
-    () => filterAndSort(products, { search, subFilters, allergies, sortBy, goal }),
-    [products, search, subFilters, allergies, sortBy, goal],
+    () => filterAndSort(products, { search, subFilters, allergies, sortBy, goal, shopCategory, shopSub }),
+    [products, search, subFilters, allergies, sortBy, goal, shopCategory, shopSub],
   )
 
   const routine = ROUTINE[routineIdx]
@@ -295,11 +296,11 @@ export default function Home() {
       </section>
 
       {/* ── 필터 & 상품 목록 ── */}
-      <section className="section" style={{ paddingTop: 0, paddingBottom: 64 }}>
+      <section id="product-list" className="section" style={{ paddingTop: 0, paddingBottom: 64 }}>
         <div className="wrap">
           <div className="section-head" style={{ textAlign: 'left', maxWidth: 'none', marginBottom: 20 }}>
-            <span className="eyebrow">Curated for you · {goal}</span>
-            <h2 className="serif" style={{ fontSize: 26 }}>{goal} 맞춤 셀렉션</h2>
+            <span className="eyebrow">{goal} 기준 영양 강조</span>
+            <h2 className="serif" style={{ fontSize: 26 }}>{shopCategory}{shopSub !== '전체' ? ` · ${shopSub}` : ''}</h2>
           </div>
 
           {searchMode === 'ai' && !aiSearch && (
