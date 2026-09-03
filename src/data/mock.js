@@ -92,30 +92,41 @@ export const HERO_SLIDES = [
   },
 ]
 
-// 상단 제품 카테고리 (iHerb 스타일). 목표(근육량/체중 등)는 홈의 목표 선택 영역에서 다룬다.
-// productIds 로 매칭 — 기존 상품 데이터는 건드리지 않는다.
+// 상단 제품 카테고리 (iHerb 스타일). Supabase 상품군/상품명으로 매칭한다.
 export const CATEGORIES = [
   { id: 'best', name: '베스트' }, // isBest 상품
   { id: 'all', name: '전체상품' },
-  { id: 'protein', name: '프로틴', productIds: [1, 5] },
+  {
+    id: 'protein',
+    name: '프로틴',
+    categories: ['닭가슴살·고단백 식품', '프로틴바·건강간식', '음료·프로틴음료'],
+  },
   {
     id: 'supplement',
     name: '영양제',
-    productIds: [3, 7, 8],
+    categories: ['영양제·비타민'],
     subs: [
-      { name: '비타민', productIds: [3] },
-      { name: '오메가3', productIds: [7] },
-      { name: '유산균', productIds: [8] },
+      { name: '비타민', keywords: ['비타민'] },
+      { name: '오메가3', keywords: ['오메가3'] },
+      { name: '유산균', keywords: ['유산균', '프로바이오틱스'] },
     ],
   },
   {
     id: 'food',
     name: '식료품',
-    productIds: [2, 4, 6],
+    categories: [
+      '닭가슴살·고단백 식품',
+      '도시락·간편식',
+      '시리얼·그래놀라',
+      '유제품·대체유',
+      '견과·건과류',
+      '소스·조미료',
+      '기타 건강식품',
+    ],
     subs: [
-      { name: '간편식', productIds: [2] },
-      { name: '음료', productIds: [4] },
-      { name: '육류', productIds: [6] },
+      { name: '간편식', categories: ['도시락·간편식'] },
+      { name: '음료', categories: ['유제품·대체유', '음료·프로틴음료'] },
+      { name: '육류', categories: ['닭가슴살·고단백 식품'] },
     ],
   },
 ]
@@ -125,12 +136,17 @@ export function matchCategory(product, catName, subName) {
   if (!catName || catName === '전체상품') return true
   if (catName === '베스트') return product.isBest
   const cat = CATEGORIES.find((c) => c.name === catName)
-  if (!cat || !cat.productIds) return true
+  if (!cat || !cat.categories) return true
   if (cat.subs && subName && subName !== '전체') {
     const sub = cat.subs.find((s) => s.name === subName)
-    return sub ? sub.productIds.includes(product.id) : cat.productIds.includes(product.id)
+    if (!sub) return cat.categories.includes(product.category)
+    if (sub.categories) return sub.categories.includes(product.category)
+    if (sub.keywords) {
+      const searchable = [product.name, ...(product.mainIngredients || [])].join(' ')
+      return sub.keywords.some((keyword) => searchable.includes(keyword))
+    }
   }
-  return cat.productIds.includes(product.id)
+  return cat.categories.includes(product.category)
 }
 
 // 시간대별 웰빙 루틴 (중앙부 인터랙션)

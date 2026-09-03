@@ -1,12 +1,13 @@
 import { useEffect, useMemo, useState } from 'react'
 import { StoreContext } from './store'
-import { INITIAL_ORDERS, INITIAL_USER, PRODUCTS } from './data/mock'
+import { INITIAL_ORDERS, INITIAL_USER } from './data/mock'
 import { supabase } from './lib/supabase'
+import { fetchActiveProducts } from './lib/products'
 
 const scrollTop = () => window.scrollTo({ top: 0, behavior: 'smooth' })
 
 const DEFAULT_GOAL = '식단 영양 관리'
-const DEFAULT_SUB_FILTERS = ['저당']
+const DEFAULT_SUB_FILTERS = []
 
 const GOAL_TO_DB = {
   '근육량 증가': 'muscle_gain',
@@ -54,21 +55,21 @@ function analyzeMockAiQuery(query) {
   ) {
     return {
       conditions: ['간식', '당류 ≤ 5g', '단백질 ≥ 15g'],
-      matches: (product) => product.name.includes('프로틴바') && product.nutrition.sugar <= 5 && product.nutrition.protein >= 15,
+      matches: (product) => product.category === '프로틴바·건강간식' && product.nutrition.sugar <= 5 && product.nutrition.protein >= 15,
     }
   }
 
   if (normalized.includes('나트륨낮') || normalized.includes('저염')) {
     return {
       conditions: ['식품', '나트륨 ≤ 250mg'],
-      matches: (product) => product.category !== '영양제 탐색' && product.nutrition.sodium <= 250,
+      matches: (product) => product.category !== '영양제·비타민' && product.nutrition.sodium <= 250,
     }
   }
 
   if (normalized.includes('카페인없') && normalized.includes('영양제')) {
     return {
       conditions: ['영양제', '카페인 제외'],
-      matches: (product) => product.category === '영양제 탐색' && !product.caffeine,
+      matches: (product) => product.category === '영양제·비타민' && !product.caffeine,
     }
   }
 
@@ -81,7 +82,7 @@ function analyzeMockAiQuery(query) {
 
 export function StoreProvider({ children }) {
   const [view, setView] = useState('main')
-  const [selectedProduct, setSelectedProduct] = useState(PRODUCTS[1])
+  const [selectedProduct, setSelectedProduct] = useState(null)
 
   // 맞춤 조건
   const [goal, setGoal] = useState(DEFAULT_GOAL)
@@ -100,14 +101,14 @@ export function StoreProvider({ children }) {
   const [shopSub, setShopSub] = useState('전체')
 
   // 커머스 상태
-  const [wishlist, setWishlist] = useState([1, 2])
-  const [cart, setCart] = useState([
-    { product: PRODUCTS[1], quantity: 2 },
-    { product: PRODUCTS[3], quantity: 1 },
-  ])
+  const [wishlist, setWishlist] = useState([])
+  const [cart, setCart] = useState([])
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [orders, setOrders] = useState(INITIAL_ORDERS)
-  const [products, setProducts] = useState(PRODUCTS)
+  const [products, setProducts] = useState([])
+  const [productsLoading, setProductsLoading] = useState(true)
+  const [productsError, setProductsError] = useState(null)
+  const [productsReloadKey, setProductsReloadKey] = useState(0)
   const [user, setUser] = useState(INITIAL_USER)
   const [isLoggedIn, setIsLoggedIn] = useState(false)
   const [authUserId, setAuthUserId] = useState(null)
@@ -138,6 +139,59 @@ export function StoreProvider({ children }) {
     setSubFilters(DEFAULT_SUB_FILTERS)
     setAllergies([])
   }
+
+  useEffect(() => {
+    let mounted = true
+
+    const loadProducts = async () => {
+      setProductsLoading(true)
+      setProductsError(null)
+
+      try {
+        const nextProducts = await fetchActiveProducts()
+        if (!nextProducts.length) throw new Error('조회 가능한 상품이 없습니다.')
+        if (!mounted) return
+
+        const productsById = new Map(nextProducts.map((product) => [product.id, product]))
+        setProducts(nextProducts)
+        setSelectedProduct((current) => productsById.get(current?.id) || nextProducts[0])
+        setWishlist((current) => {
+          const validIds = current.filter((id) => productsById.has(id))
+          return validIds.length ? validIds : nextProducts.slice(0, 2).map((product) => product.id)
+        })
+        setCart((current) => {
+          const validItems = current
+            .map((item) => {
+              const product = productsById.get(item.product.id)
+              return product ? { ...item, product } : null
+            })
+            .filter(Boolean)
+
+          if (validItems.length) return validItems
+
+          return [
+            nextProducts[1] && { product: nextProducts[1], quantity: 2 },
+            nextProducts[3] && { product: nextProducts[3], quantity: 1 },
+          ].filter(Boolean)
+        })
+      } catch (error) {
+        if (!mounted) return
+        console.error('Supabase products fetch failed:', error)
+        setProducts([])
+        setProductsError(error.message || '상품을 불러오지 못했습니다.')
+      } finally {
+        if (mounted) setProductsLoading(false)
+      }
+    }
+
+    loadProducts()
+
+    return () => {
+      mounted = false
+    }
+  }, [productsReloadKey])
+
+  const reloadProducts = () => setProductsReloadKey((key) => key + 1)
 
   useEffect(() => {
     let mounted = true
@@ -420,13 +474,13 @@ export function StoreProvider({ children }) {
       cart, addToCart, setQty, removeFromCart,
       drawerOpen, setDrawerOpen,
       orders, checkout, updateOrderStatus,
-      products, setProducts,
+      products, setProducts, productsLoading, productsError, reloadProducts,
       user, setUser, login, register, logout, isLoggedIn,
       cartTotal, deliveryFee, cartCount,
       toast, showToast,
     }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [view, selectedProduct, goal, subFilters, allergies, search, searchMode, aiQuery, aiResult, shopCategory, shopSub, sortBy, wishlist, cart, drawerOpen, orders, products, user, isLoggedIn, authUserId, settingsLoading, toast],
+    [view, selectedProduct, goal, subFilters, allergies, search, searchMode, aiQuery, aiResult, shopCategory, shopSub, sortBy, wishlist, cart, drawerOpen, orders, products, productsLoading, productsError, user, isLoggedIn, authUserId, settingsLoading, toast],
   )
 
   return <StoreContext.Provider value={value}>{children}</StoreContext.Provider>

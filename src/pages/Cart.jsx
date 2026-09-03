@@ -14,7 +14,7 @@ export default function Cart() {
   const goalKeys = GOAL_NUTRIENTS[goal] || []
   const isSupplement = goal === '영양제 탐색'
   const totals = cartNutritionTotals(cart)
-  const supplementItems = cart.filter((c) => c.product.category === '영양제 탐색')
+  const supplementItems = cart.filter((c) => c.product.category === '영양제·비타민')
 
   // 상품별 · 현재 목표 기준 핵심 영양(1회 제공량 기준)
   const productNutri = (p) => {

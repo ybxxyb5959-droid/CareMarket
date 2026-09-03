@@ -8,9 +8,23 @@ import GoalBadge from '../components/GoalBadge'
 import { discountRate, won } from '../lib/format'
 
 export default function ProductDetail() {
-  const { selectedProduct: p, goal, subFilters, allergies, wishlist, toggleWish, addToCart, navigate } = useStore()
+  const {
+    selectedProduct: p, productsLoading, productsError,
+    goal, subFilters, allergies, wishlist, toggleWish, addToCart, navigate,
+  } = useStore()
   const [tab, setTab] = useState('nutrition')
-  if (!p) return null
+  if (!p) {
+    return (
+      <div className="wrap page">
+        <div className="empty" role={productsError ? 'alert' : undefined}>
+          <Icon name={productsError ? 'alert-circle' : 'package'} size={44} />
+          <h3>{productsLoading ? '상품을 불러오고 있습니다.' : '선택된 상품이 없습니다.'}</h3>
+          <p>{productsError ? '상품 조회 상태를 확인한 뒤 다시 시도해 주세요.' : '잠시만 기다려 주세요.'}</p>
+          {!productsLoading && <button className="btn btn-primary" onClick={() => navigate('main')}>상품 목록으로</button>}
+        </div>
+      </div>
+    )
+  }
   const wished = wishlist.includes(p.id)
   const n = p.nutrition
   const matches = {
@@ -63,7 +77,8 @@ export default function ProductDetail() {
           <div style={{ marginTop: 4 }}><GoalBadge goal={goal} product={p} /></div>
 
           <div className="detail-meta">
-            <div className="dm-row"><Icon name="leaf" size={16} style={{ color: 'var(--brand-500)' }} /> <span>원산지 · <b>{p.origin}</b></span></div>
+            <div className="dm-row"><Icon name="leaf" size={16} style={{ color: 'var(--brand-500)' }} /> <span>주요 원료 · <b>{p.origin}</b></span></div>
+            <div className="dm-row"><Icon name="package" size={16} style={{ color: 'var(--brand-500)' }} /> <span>재고 · <b>{p.stock.toLocaleString('ko-KR')}개</b></span></div>
             <div className="dm-row"><Icon name="truck" size={16} style={{ color: 'var(--brand-500)' }} /> <span>{p.delivery}</span></div>
           </div>
 
@@ -117,7 +132,7 @@ export default function ProductDetail() {
               <div className="nutri-head">
                 <div>
                   <h4>공인 분석 영양성분</h4>
-                  <div className="serv">1회 섭취 기준 · {n.servingSize}</div>
+                  <div className="serv">1회 섭취 기준 · {n.servingSize} · 지방 {n.fat}g</div>
                 </div>
                 <span className="kcal">{n.calories} kcal</span>
               </div>
@@ -128,7 +143,7 @@ export default function ProductDetail() {
                 <div className="nutri-cell"><div className="k">나트륨</div><div className="v">{n.sodium}mg</div></div>
               </div>
               <div className="nutri-special">
-                <b>기능성 지표</b>
+                <b>주요 원재료</b>
                 {n.special}
               </div>
             </div>
@@ -138,8 +153,9 @@ export default function ProductDetail() {
             <div className="prose">
               <p><b>{p.name}</b>은(는) 자연에서 유래한 식재료 본연의 영양소를 파괴하지 않는 저온 공법으로 안전하게 제조되었습니다.</p>
               <div className="box">
-                <div>원산지 · {p.origin}</div>
-                <div>알레르기 주의 물질 · {p.allergens.length ? p.allergens.join(', ') : '해당 없음'}</div>
+                <div>주요 원재료 · {p.mainIngredients.length ? p.mainIngredients.join(', ') : '상품 표시 정보 참조'}</div>
+                <div>알레르기 주의 물질 · {p.allergens.length ? p.allergens.join(', ') : '표시된 관리 대상 성분 없음'}</div>
+                <div>카페인 · {p.caffeine ? '함유' : '미함유'}</div>
                 <div>HACCP 인증 제조원 및 정기 잔류물질 검사 완료</div>
               </div>
             </div>

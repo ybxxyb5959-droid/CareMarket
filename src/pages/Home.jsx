@@ -1,8 +1,17 @@
 import { useMemo, useState } from 'react'
 import { useStore, useAutoSlide } from '../store'
-import { GOALS, HERO_SLIDES, ROUTINE, SUB_FILTERS, VALUES, PRODUCTS, matchCategory } from '../data/mock'
+import { GOALS, HERO_SLIDES, ROUTINE, SUB_FILTERS, VALUES, matchCategory } from '../data/mock'
 import Icon from '../components/Icon'
 import ProductCard from '../components/ProductCard'
+
+function goalScore(product, goal) {
+  const nutrition = product.nutrition
+
+  if (goal === '근육량 증가') return nutrition.protein * 20 - nutrition.sugar
+  if (goal === '체중 관리') return 1000 - nutrition.calories - nutrition.sugar * 20
+  if (goal === '영양제 탐색') return product.category === '영양제·비타민' ? 1000 : 0
+  return 1000 - nutrition.sodium - nutrition.sugar * 5
+}
 
 function filterAndSort(products, { search, subFilters, allergies, sortBy, goal, shopCategory, shopSub }) {
   let list = products.filter((p) => {
@@ -23,7 +32,7 @@ function filterAndSort(products, { search, subFilters, allergies, sortBy, goal, 
   if (sortBy === 'lowPrice') list = [...list].sort((a, b) => a.price - b.price)
   else if (sortBy === 'highPrice') list = [...list].sort((a, b) => b.price - a.price)
   else if (sortBy === 'review') list = [...list].sort((a, b) => b.reviewCount - a.reviewCount)
-  else list = [...list].sort((a, b) => (b.category === goal) - (a.category === goal))
+  else list = [...list].sort((a, b) => goalScore(b, goal) - goalScore(a, goal) || a.id - b.id)
   return list
 }
 
@@ -41,7 +50,7 @@ export default function Home() {
   const {
     goal, setGoal, search, setSearch, sortBy, setSortBy,
     subFilters, toggleSub, setSubFilters, allergies,
-    products, openProduct, navigate, showToast,
+    products, productsLoading, productsError, reloadProducts, openProduct, navigate, showToast,
     searchMode, aiResult: aiSearch, runAiSearch, clearAiSearch,
     isLoggedIn, logout, shopCategory, shopSub,
   } = useStore()
@@ -58,6 +67,8 @@ export default function Home() {
   )
 
   const routine = ROUTINE[routineIdx]
+  const routineCategories = ['영양제·비타민', '도시락·간편식', '프로틴바·건강간식', '닭가슴살·고단백 식품']
+  const routineProduct = products.find((product) => product.category === routineCategories[routineIdx])
   const aiProducts = useMemo(
     () => (aiSearch ? filtered.filter(aiSearch.matches) : filtered),
     [aiSearch, filtered],
@@ -95,7 +106,7 @@ export default function Home() {
           </div>
 
           <div className="hero-cards">
-            {PRODUCTS.slice(1, 3).map((p) => (
+            {products.slice(1, 3).map((p) => (
               <div key={p.id} className="hero-card" onClick={() => openProduct(p)}>
                 <div className="thumb" style={{ backgroundImage: `url(${p.image})` }} />
                 <div className="oc">{p.origin}</div>
@@ -260,13 +271,12 @@ export default function Home() {
                 <div className="routine-rec">
                   <div>
                     <div className="rr-label">추천 식품</div>
-                    <div className="rr-name">{routine.product}</div>
+                    <div className="rr-name">{routineProduct?.name || routine.product}</div>
                   </div>
                   <button
                     className="btn btn-primary btn-sm"
                     onClick={() => {
-                      const m = PRODUCTS.find((p) => routine.product.includes(p.name.split(' (')[0].slice(0, 8)))
-                      if (m) openProduct(m); else navigate('main')
+                      if (routineProduct) openProduct(routineProduct); else navigate('main')
                     }}
                   >
                     자세히 보기 <Icon name="chevron-right" size={15} />
@@ -355,7 +365,20 @@ export default function Home() {
             </div>
           </div>
 
-          {aiProducts.length === 0 ? (
+          {productsLoading ? (
+            <div className="empty" aria-live="polite">
+              <Icon name="package" size={44} />
+              <h3>상품을 불러오고 있습니다.</h3>
+              <p>최신 상품과 영양정보를 확인하는 중입니다.</p>
+            </div>
+          ) : productsError ? (
+            <div className="empty" role="alert">
+              <Icon name="alert-circle" size={44} />
+              <h3>상품을 불러오지 못했습니다.</h3>
+              <p>잠시 후 다시 시도해 주세요.</p>
+              <button className="btn btn-primary" onClick={reloadProducts}>다시 불러오기</button>
+            </div>
+          ) : aiProducts.length === 0 ? (
             <div className="empty">
               <Icon name="alert-circle" size={44} />
               <h3>선택하신 조건에 맞는 상품이 없습니다.</h3>
