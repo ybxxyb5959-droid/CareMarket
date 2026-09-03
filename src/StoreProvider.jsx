@@ -5,6 +5,36 @@ import { supabase } from './lib/supabase'
 
 const scrollTop = () => window.scrollTo({ top: 0, behavior: 'smooth' })
 
+const DEFAULT_GOAL = '식단 영양 관리'
+const DEFAULT_SUB_FILTERS = ['저당']
+
+const GOAL_TO_DB = {
+  '근육량 증가': 'muscle_gain',
+  '체중 관리': 'weight_control',
+  '식단 영양 관리': 'nutrition_management',
+  '영양제 탐색': 'supplement_search',
+}
+
+const DB_TO_GOAL = Object.fromEntries(
+  Object.entries(GOAL_TO_DB).map(([label, value]) => [value, label]),
+)
+
+function toPreferenceState(preferences) {
+  if (!preferences) return { subFilters: [], allergies: [] }
+
+  const subFilters = []
+  if (preferences.low_sugar) subFilters.push('저당')
+  if (preferences.low_sodium) subFilters.push('저염')
+  if (preferences.high_protein) subFilters.push('고단백')
+  if (preferences.exclude_caffeine) subFilters.push('카페인 제외')
+  if (preferences.excluded_allergens?.length) subFilters.push('알레르기 제외')
+
+  return {
+    subFilters,
+    allergies: preferences.excluded_allergens || [],
+  }
+}
+
 function toAppUser(authUser) {
   return {
     ...INITIAL_USER,
@@ -54,8 +84,8 @@ export function StoreProvider({ children }) {
   const [selectedProduct, setSelectedProduct] = useState(PRODUCTS[1])
 
   // 맞춤 조건
-  const [goal, setGoal] = useState('식단 영양 관리')
-  const [subFilters, setSubFilters] = useState(['저당'])
+  const [goal, setGoal] = useState(DEFAULT_GOAL)
+  const [subFilters, setSubFilters] = useState(DEFAULT_SUB_FILTERS)
   const [allergies, setAllergies] = useState([])
   const [search, setSearch] = useState('')
   const [sortBy, setSortBy] = useState('recommend')
@@ -80,6 +110,8 @@ export function StoreProvider({ children }) {
   const [products, setProducts] = useState(PRODUCTS)
   const [user, setUser] = useState(INITIAL_USER)
   const [isLoggedIn, setIsLoggedIn] = useState(false)
+  const [authUserId, setAuthUserId] = useState(null)
+  const [settingsLoading, setSettingsLoading] = useState(false)
 
   // 토스트
   const [toast, setToast] = useState(null)
@@ -94,11 +126,17 @@ export function StoreProvider({ children }) {
     if (session?.user) {
       setUser(toAppUser(session.user))
       setIsLoggedIn(true)
+      setAuthUserId(session.user.id)
       return
     }
 
     setUser(INITIAL_USER)
     setIsLoggedIn(false)
+    setAuthUserId(null)
+    setSettingsLoading(false)
+    setGoal(DEFAULT_GOAL)
+    setSubFilters(DEFAULT_SUB_FILTERS)
+    setAllergies([])
   }
 
   useEffect(() => {
@@ -127,6 +165,59 @@ export function StoreProvider({ children }) {
       listener.subscription.unsubscribe()
     }
   }, [])
+
+  useEffect(() => {
+    if (!authUserId) return undefined
+
+    let mounted = true
+
+    const loadWellnessSettings = async () => {
+      setSettingsLoading(true)
+
+      const [profileResult, preferencesResult] = await Promise.all([
+        supabase
+          .from('profiles')
+          .select('primary_goal')
+          .eq('user_id', authUserId)
+          .single(),
+        supabase
+          .from('user_preferences')
+          .select('low_sugar, low_sodium, high_protein, exclude_caffeine, excluded_allergens')
+          .eq('user_id', authUserId)
+          .maybeSingle(),
+      ])
+
+      if (!mounted) return
+
+      if (profileResult.error || preferencesResult.error) {
+        const error = profileResult.error || preferencesResult.error
+        showToast(`맞춤 설정을 불러오지 못했습니다. ${error.message}`)
+        setSettingsLoading(false)
+        return
+      }
+
+      const loadedGoal = DB_TO_GOAL[profileResult.data.primary_goal] || null
+      const loadedPreferences = toPreferenceState(preferencesResult.data)
+
+      setGoal(loadedGoal)
+      setSubFilters(loadedPreferences.subFilters)
+      setAllergies(loadedPreferences.allergies)
+      setSettingsLoading(false)
+
+      if (!loadedGoal) {
+        setView('goalSetup')
+        scrollTop()
+      }
+    }
+
+    loadWellnessSettings()
+
+    return () => {
+      mounted = false
+    }
+  // 인증 사용자 변경 시에만 DB 설정을 다시 불러온다.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [authUserId])
 
   const navigate = (v) => {
     setView(v)
@@ -217,6 +308,49 @@ export function StoreProvider({ children }) {
     showToast(`${id} · ${status} 처리되었습니다.`)
   }
 
+  const saveWellnessSettings = async () => {
+    if (!authUserId) {
+      showToast('로그인 후 맞춤 웰빙 설정을 저장할 수 있습니다.')
+      navigate('login')
+      return false
+    }
+
+    const primaryGoal = GOAL_TO_DB[goal]
+    if (!primaryGoal) {
+      showToast('핵심 구입 목적을 선택해 주세요.')
+      return false
+    }
+
+    const { error: goalError } = await supabase.rpc('set_my_primary_goal', {
+      goal: primaryGoal,
+    })
+
+    if (goalError) {
+      showToast(`주목표를 저장하지 못했습니다. ${goalError.message}`)
+      return false
+    }
+
+    const { error: preferencesError } = await supabase
+      .from('user_preferences')
+      .upsert({
+        user_id: authUserId,
+        low_sugar: subFilters.includes('저당'),
+        low_sodium: subFilters.includes('저염'),
+        high_protein: subFilters.includes('고단백'),
+        exclude_caffeine: subFilters.includes('카페인 제외'),
+        excluded_allergens: allergies,
+      }, { onConflict: 'user_id' })
+
+    if (preferencesError) {
+      showToast(`보조조건을 저장하지 못했습니다. ${preferencesError.message}`)
+      return false
+    }
+
+    navigate('main')
+    showToast('맞춤 웰빙 설정이 반영되었습니다.')
+    return true
+  }
+
   const login = async ({ email, password }) => {
     const { data, error } = await supabase.auth.signInWithPassword({ email, password })
 
@@ -275,7 +409,7 @@ export function StoreProvider({ children }) {
     () => ({
       view, navigate, setView,
       selectedProduct, openProduct, setSelectedProduct,
-      goal, setGoal,
+      goal, setGoal, saveWellnessSettings, settingsLoading,
       subFilters, setSubFilters, toggleSub,
       allergies, setAllergies, toggleAllergy,
       search, setSearch,
@@ -292,7 +426,7 @@ export function StoreProvider({ children }) {
       toast, showToast,
     }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [view, selectedProduct, goal, subFilters, allergies, search, searchMode, aiQuery, aiResult, shopCategory, shopSub, sortBy, wishlist, cart, drawerOpen, orders, products, user, isLoggedIn, toast],
+    [view, selectedProduct, goal, subFilters, allergies, search, searchMode, aiQuery, aiResult, shopCategory, shopSub, sortBy, wishlist, cart, drawerOpen, orders, products, user, isLoggedIn, authUserId, settingsLoading, toast],
   )
 
   return <StoreContext.Provider value={value}>{children}</StoreContext.Provider>

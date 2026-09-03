@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { useStore } from '../store'
 import { GOALS, SUB_FILTERS, ALLERGENS } from '../data/mock'
 import Icon from '../components/Icon'
@@ -5,8 +6,19 @@ import Icon from '../components/Icon'
 export default function GoalSetup() {
   const {
     goal, setGoal, subFilters, toggleSub,
-    allergies, toggleAllergy, navigate, showToast,
+    allergies, toggleAllergy, saveWellnessSettings, settingsLoading,
   } = useStore()
+  const [isSaving, setIsSaving] = useState(false)
+
+  const handleSave = async () => {
+    if (isSaving || settingsLoading) return
+    setIsSaving(true)
+    try {
+      await saveWellnessSettings()
+    } finally {
+      setIsSaving(false)
+    }
+  }
 
   return (
     <div className="wrap page">
@@ -75,7 +87,8 @@ export default function GoalSetup() {
           <div className="step">
             <button
               className="btn btn-primary btn-lg btn-block"
-              onClick={() => { navigate('main'); showToast('맞춤 웰빙 설정이 반영되었습니다.') }}
+              onClick={handleSave}
+              disabled={isSaving || settingsLoading}
             >
               <Icon name="check-circle" size={17} /> 맞춤 웰빙 마켓 입장하기
             </button>
