@@ -106,7 +106,6 @@ export default function Cart() {
               <h3>결제 금액 안내</h3>
               <div className="sum-row"><span>총 상품금액</span><b>{won(cartTotal)}</b></div>
               <div className="sum-row"><span>신선 보랭 배송비</span><b>{deliveryFee === 0 ? '무료배송' : won(deliveryFee)}</b></div>
-              <div className="sum-row" style={{ color: 'var(--brand-600)', fontWeight: 700 }}><span>웰빙 회원 특별할인</span><span>- 0원</span></div>
               <div className="sum-total">
                 <span className="lbl">총 결제금액</span>
                 <span className="val">{won(cartTotal + deliveryFee)}</span>
@@ -114,9 +113,6 @@ export default function Cart() {
               <button className="btn btn-primary btn-lg btn-block" style={{ marginTop: 18 }} disabled={cartLoading || cartPending > 0 || Boolean(cartError)} onClick={checkout}>
                 <Icon name="credit-card" size={17} /> 주문서 작성 및 결제
               </button>
-              <p style={{ fontSize: 11.5, color: 'var(--faint)', textAlign: 'center', marginTop: 12 }}>
-                실제 결제가 이루어지지 않는 가상 결제입니다.
-              </p>
             </div>
           </div>
         )}

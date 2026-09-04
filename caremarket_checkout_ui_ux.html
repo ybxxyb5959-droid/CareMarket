@@ -1,0 +1,1191 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CareMarket — 주문/결제 (Checkout Prototype)</title>
+  
+  <!-- Pretendard & Plus Jakarta Sans Web Fonts -->
+  <link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              cream: '#FAF7F2',       // 브랜드 시그니처 웜 크림 배경
+              creamDark: '#F2ECE1',   // 보조 크림톤
+              ivory: '#FFFDF9',       // 카드 베이스 아이보리
+              forest: '#1B3B2B',      // 다크 포레스트 그린 메인
+              forestDark: '#132B1F',  // 호버 딥 포레스트
+              forestLight: '#264E3A', // 하이라이트
+              sage: '#527763',        // 세이지 서브
+              sageLight: '#EAF1EC',   // 선택 인디케이터/배경
+              sageBorder: '#CAD9CE',  // 세이지 테두리
+              charcoal: '#222824',    // 가독성 높은 본문 텍스트
+              muted: '#6C756E',       // 보조 텍스트
+              borderSubtle: '#EAE6DD' // 얇은 내추럴 테두리
+            }
+          },
+          fontFamily: {
+            sans: ['Pretendard', 'Plus Jakarta Sans', '-apple-system', 'sans-serif'],
+            display: ['Plus Jakarta Sans', 'Pretendard', 'sans-serif']
+          },
+          boxShadow: {
+            'soft': '0 4px 20px -2px rgba(27, 59, 43, 0.05)',
+            'card': '0 2px 10px rgba(27, 59, 43, 0.03), 0 1px 2px rgba(27, 59, 43, 0.02)',
+            'floating': '0 12px 30px -4px rgba(27, 59, 43, 0.12)'
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    /* Custom Scrollbar for sleek wellness feel */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #FAF7F2;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #D8D2C5;
+      border-radius: 9999px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #B6AF9F;
+    }
+
+    /* Selection styling */
+    ::selection {
+      background: #EAF1EC;
+      color: #1B3B2B;
+    }
+
+    /* Device frame mockups */
+    .mobile-frame-mockup {
+      box-shadow: 0 25px 60px -15px rgba(27, 59, 43, 0.2), 0 0 0 10px #1E2320;
+    }
+
+    .custom-check-bullet {
+      background: radial-gradient(circle, #1B3B2B 40%, transparent 45%);
+    }
+
+    /* Pulse wave for checkout simulation */
+    @keyframes gentlePulse {
+      0%, 100% { transform: scale(1); opacity: 1; }
+      50% { transform: scale(1.02); opacity: 0.95; }
+    }
+    .animate-gentle-pulse {
+      animation: gentlePulse 2.5s infinite ease-in-out;
+    }
+  </style>
+</head>
+<body class="bg-[#F6F4ED] text-brand-charcoal antialiased min-h-screen flex flex-col font-sans selection:bg-brand-sageLight selection:text-brand-forest">
+
+  <!-- Top Prototype Control Bar (상단 프로토타입 뷰포트 전환 도구) -->
+  <aside aria-label="프로토타입 컨트롤 바" class="bg-brand-forest text-white text-xs py-2 px-4 sticky top-0 z-50 shadow-md">
+    <div class="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-3">
+      <div class="flex items-center space-x-2">
+        <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-700/80 text-emerald-100 border border-emerald-500/30">
+          PROTOTYPE v1.2
+        </span>
+        <span class="font-medium tracking-tight text-white/90">CareMarket 결제(Checkout) 인터랙티브 UI 시안</span>
+      </div>
+      
+      <!-- View Mode Selector -->
+      <div class="flex items-center bg-brand-forestDark p-1 rounded-lg border border-white/10 space-x-1">
+        <button id="btn-view-split" onclick="switchView('split')" class="px-2.5 py-1 rounded text-xs font-medium bg-emerald-700 text-white transition-all duration-150 flex items-center space-x-1">
+          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17V7m0 10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h2a2 2 0 012 2m0 10a2 2 0 002 2h2a2 2 0 002-2M9 7a2 2 0 012-2h2a2 2 0 012 2m0 10V7m0 10a2 2 0 002 2h2a2 2 0 002-2V7a2 2 0 00-2-2h-2a2 2 0 00-2 2" /></svg>
+          <span>듀얼 비교 (Desktop + Mobile)</span>
+        </button>
+        <button id="btn-view-desktop" onclick="switchView('desktop')" class="px-2.5 py-1 rounded text-xs font-medium text-emerald-200 hover:text-white transition-all duration-150 flex items-center space-x-1">
+          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>
+          <span>데스크탑 집중 모드</span>
+        </button>
+        <button id="btn-view-mobile" onclick="switchView('mobile')" class="px-2.5 py-1 rounded text-xs font-medium text-emerald-200 hover:text-white transition-all duration-150 flex items-center space-x-1">
+          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z" /></svg>
+          <span>모바일 집중 모드</span>
+        </button>
+      </div>
+
+      <div class="hidden sm:flex items-center space-x-3 text-emerald-200 text-xs">
+        <span class="flex items-center"><span class="w-2 h-2 rounded-full bg-emerald-400 mr-1.5 animate-pulse"></span>Toss Payments 연동형 UI</span>
+        <button onclick="resetPrototypeData()" class="hover:text-white underline decoration-emerald-500/50">초기화</button>
+      </div>
+    </div>
+  </aside>
+
+  <!-- Top Organic Banner (CareMarket 기존 메인 헤더 무드 유지) -->
+  <header class="w-full bg-[#FAF7F2] border-b border-brand-borderSubtle">
+    <!-- Clean Food Notification -->
+    <div class="bg-brand-forest text-white/90 text-xs py-1.5 px-4 text-center tracking-wide font-normal flex items-center justify-center space-x-2">
+      <span class="inline-block px-1.5 py-0.5 rounded bg-white/15 text-[10px] font-semibold tracking-wider text-emerald-200 uppercase">Organic & Clean</span>
+      <span>자연에서 온 무첨가 웰빙 식단 • 첫 구매 시 웰빙 스타터 30% 바우처 지급</span>
+      <a href="javascript:void(0)" class="underline text-emerald-200 font-medium ml-1.5 hover:text-white">내 맞춤 루틴 설계 →</a>
+    </div>
+
+    <!-- Main Navigation Bar -->
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3.5 flex items-center justify-between">
+      <!-- Logo Area -->
+      <div class="flex items-center space-x-8">
+        <a href="javascript:void(0)" class="flex items-center space-x-2.5 group">
+          <div class="w-8 h-8 rounded-full bg-brand-forest flex items-center justify-center text-white shadow-sm transition-transform group-hover:scale-105">
+            <!-- Organic Leaf Icon -->
+            <svg class="w-4.5 h-4.5 text-emerald-300" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10Z"/>
+              <path d="M2 21c0-3 1.85-5.36 5.08-6C9.5 14.52 12 13 13 12"/>
+            </svg>
+          </div>
+          <div>
+            <div class="text-xl font-bold tracking-tight text-brand-forest font-display flex items-center">
+              CareMarket
+            </div>
+            <div class="text-[9px] font-semibold text-brand-muted tracking-[0.2em] -mt-1 uppercase">
+              Pure & Clean Food
+            </div>
+          </div>
+        </a>
+
+        <!-- Category links for subtle e-commerce presence -->
+        <nav class="hidden md:flex items-center space-x-6 text-sm text-brand-muted">
+          <a href="javascript:void(0)" class="hover:text-brand-forest transition-colors">베스트</a>
+          <a href="javascript:void(0)" class="hover:text-brand-forest transition-colors">전체상품</a>
+          <a href="javascript:void(0)" class="hover:text-brand-forest transition-colors">프로틴</a>
+          <a href="javascript:void(0)" class="hover:text-brand-forest transition-colors">영양제</a>
+          <a href="javascript:void(0)" class="hover:text-brand-forest transition-colors">식료품</a>
+        </nav>
+      </div>
+
+      <!-- Right Header Indicators -->
+      <div class="flex items-center space-x-5 text-sm">
+        <div class="hidden sm:flex items-center text-xs text-brand-muted space-x-3">
+          <span class="flex items-center"><span class="w-1.5 h-1.5 rounded-full bg-emerald-600 mr-1.5"></span>콜드체인 배송조회</span>
+          <span class="text-brand-borderSubtle">|</span>
+          <span class="flex items-center text-emerald-800 font-medium">
+            <svg class="w-3.5 h-3.5 mr-1 text-emerald-700" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
+            안심 클린식품 100%
+          </span>
+        </div>
+
+        <div class="flex items-center space-x-2">
+          <div class="w-8 h-8 rounded-full bg-white border border-brand-borderSubtle flex items-center justify-center text-brand-muted hover:text-brand-forest cursor-pointer shadow-sm">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"/></svg>
+          </div>
+          <!-- Cart Indicator -->
+          <button class="bg-brand-forest hover:bg-brand-forestDark text-white px-3.5 py-1.5 rounded-full text-xs font-medium flex items-center space-x-2 shadow-sm transition-colors">
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"/></svg>
+            <span>장바구니</span>
+            <span class="bg-emerald-500 text-brand-forest font-bold text-[10px] w-4 h-4 rounded-full flex items-center justify-center">3</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- MAIN CONTAINER (Supports Split, Desktop-only, Mobile-only views) -->
+  <main class="flex-1 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 transition-all duration-300">
+    
+    <!-- Workspace Layout Wrapper -->
+    <div id="workspace-container" class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+
+      <!-- ========================================================= -->
+      <!-- [DESKTOP VIEW WRAPPER] (기본 65~70% + 30~35% 2-column) -->
+      <!-- ========================================================= -->
+      <section id="desktop-view-pane" class="lg:col-span-8 space-y-6 transition-all duration-300">
+        
+        <!-- Breadcrumb & Page Title (CareMarket Style) -->
+        <div class="flex flex-col sm:flex-row sm:items-baseline justify-between pb-3 border-b border-brand-borderSubtle">
+          <div>
+            <h1 class="text-2xl font-bold tracking-tight text-brand-charcoal flex items-center">
+              <span>주문/결제</span>
+              <span class="ml-3 text-xs font-normal text-brand-muted bg-brand-cream px-2 py-0.5 rounded border border-brand-borderSubtle">
+                주문 정보를 확인하고 안전하게 결제를 진행해 주세요.
+              </span>
+            </h1>
+          </div>
+          <!-- Stepper Breadcrumb -->
+          <nav aria-label="결제 진행 단계" class="flex items-center space-x-2 text-xs font-medium text-brand-muted mt-2 sm:mt-0">
+            <span class="hover:text-brand-charcoal cursor-pointer">장바구니</span>
+            <svg class="w-3 h-3 text-brand-borderSubtle" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+            <span class="text-brand-forest font-bold underline underline-offset-4 decoration-2 decoration-brand-forest flex items-center">
+              주문/결제
+            </span>
+            <svg class="w-3 h-3 text-brand-borderSubtle" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+            <span class="text-stone-400">결제완료</span>
+          </nav>
+        </div>
+
+        <!-- 1. 주문 상품 (3종 맞춤 건강식품) -->
+        <article class="bg-white rounded-2xl p-6 border border-brand-borderSubtle shadow-card transition-all">
+          <div class="flex items-center justify-between pb-4 mb-4 border-b border-stone-100">
+            <div class="flex items-center space-x-2">
+              <span class="w-2.5 h-2.5 rounded-full bg-brand-forest"></span>
+              <h2 class="text-base font-bold text-brand-charcoal">1. 주문 상품</h2>
+              <span class="text-xs font-medium px-2 py-0.5 rounded-full bg-brand-cream text-brand-forest border border-brand-borderSubtle">
+                총 3종 (4개)
+              </span>
+            </div>
+            <span class="text-xs text-brand-muted">당일 무료배송 혜택 적용 대상</span>
+          </div>
+
+          <!-- Product Item List -->
+          <div class="divide-y divide-stone-100" id="desktop-product-list">
+            
+            <!-- Item 1: 카브프로틴바 초코맛 -->
+            <div class="py-3.5 flex items-center justify-between group hover:bg-stone-50/50 rounded-xl px-2 -mx-2 transition-colors">
+              <div class="flex items-center space-x-4">
+                <div class="w-16 h-16 rounded-xl overflow-hidden bg-[#F2EFE8] border border-stone-200/70 relative flex items-center justify-center shrink-0">
+                  <!-- SVG illustration representing protein bar -->
+                  <div class="w-10 h-6 bg-[#6E4F32] rounded-md shadow-sm transform -rotate-12 flex items-center justify-center border border-[#523B25]">
+                    <div class="w-6 h-1 bg-[#876543] rounded-full"></div>
+                  </div>
+                  <span class="absolute bottom-1 right-1 bg-brand-forest text-white text-[9px] px-1 rounded font-mono font-medium">저당</span>
+                </div>
+                <div>
+                  <span class="text-[11px] font-semibold text-brand-sage uppercase tracking-wider">CARE RECIPE</span>
+                  <h3 class="text-sm font-semibold text-brand-charcoal hover:text-brand-forest cursor-pointer">
+                    카브프로틴바 초코맛
+                  </h3>
+                  <p class="text-xs text-brand-muted mt-0.5">단백질 15g • 60g × 2개</p>
+                </div>
+              </div>
+              <div class="text-right">
+                <div class="text-sm font-bold text-brand-charcoal font-display">5,800원</div>
+                <div class="text-xs text-stone-400 line-through">6,400원</div>
+              </div>
+            </div>
+
+            <!-- Item 2: 라이프 프로틴 웨이 단백질 파우더 -->
+            <div class="py-3.5 flex items-center justify-between group hover:bg-stone-50/50 rounded-xl px-2 -mx-2 transition-colors">
+              <div class="flex items-center space-x-4">
+                <div class="w-16 h-16 rounded-xl overflow-hidden bg-[#EBF0EC] border border-stone-200/70 relative flex items-center justify-center shrink-0">
+                  <!-- SVG illustration representing protein tub -->
+                  <div class="w-8 h-10 bg-[#354B3E] rounded-md shadow-sm flex flex-col items-center justify-center border border-[#23352B]">
+                    <div class="w-6 h-1.5 bg-[#4F6E5C] rounded-sm mb-1"></div>
+                    <div class="w-5 h-4 bg-white/20 rounded-sm"></div>
+                  </div>
+                  <span class="absolute bottom-1 right-1 bg-emerald-800 text-white text-[9px] px-1 rounded font-mono font-medium">WPI</span>
+                </div>
+                <div>
+                  <span class="text-[11px] font-semibold text-brand-sage uppercase tracking-wider">NUTRI LAB</span>
+                  <h3 class="text-sm font-semibold text-brand-charcoal hover:text-brand-forest cursor-pointer">
+                    라이프 프로틴 웨이 단백질
+                  </h3>
+                  <p class="text-xs text-brand-muted mt-0.5">순수 유청단백질 90% • 1kg × 1개</p>
+                </div>
+              </div>
+              <div class="text-right">
+                <div class="text-sm font-bold text-brand-charcoal font-display">23,900원</div>
+                <div class="text-xs text-stone-400 line-through">27,000원</div>
+              </div>
+            </div>
+
+            <!-- Item 3: 오트사이드 귀리음료 -->
+            <div class="py-3.5 flex items-center justify-between group hover:bg-stone-50/50 rounded-xl px-2 -mx-2 transition-colors">
+              <div class="flex items-center space-x-4">
+                <div class="w-16 h-16 rounded-xl overflow-hidden bg-[#F7F3E9] border border-stone-200/70 relative flex items-center justify-center shrink-0">
+                  <!-- SVG illustration representing oat milk carton -->
+                  <div class="w-7 h-11 bg-[#D8C7A8] rounded-md shadow-sm flex flex-col items-center justify-center border border-[#BBA582]">
+                    <div class="w-5 h-2 bg-white rounded-t-sm mb-1"></div>
+                    <div class="w-4 h-5 bg-[#5D4E37]/30 rounded-sm"></div>
+                  </div>
+                  <span class="absolute bottom-1 right-1 bg-[#84693C] text-white text-[9px] px-1 rounded font-mono font-medium">비건</span>
+                </div>
+                <div>
+                  <span class="text-[11px] font-semibold text-brand-sage uppercase tracking-wider">OATSIDE</span>
+                  <h3 class="text-sm font-semibold text-brand-charcoal hover:text-brand-forest cursor-pointer">
+                    오트사이드 바리스타 에디션 귀리음료
+                  </h3>
+                  <p class="text-xs text-brand-muted mt-0.5">식물성 100% 무가당 • 1L × 1개</p>
+                </div>
+              </div>
+              <div class="text-right">
+                <div class="text-sm font-bold text-brand-charcoal font-display">2,900원</div>
+                <div class="text-xs text-stone-400 line-through">3,500원</div>
+              </div>
+            </div>
+
+          </div>
+
+          <!-- Bottom Wellness Affirmation Note -->
+          <div class="mt-4 p-3 rounded-xl bg-brand-cream border border-brand-borderSubtle flex items-center space-x-2.5 text-xs text-brand-forest">
+            <svg class="w-4 h-4 text-emerald-700 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
+            <span class="font-medium">CareMarket은 당신의 건강하고 지속 가능한 웰니스 라이프를 응원합니다.</span>
+          </div>
+        </article>
+
+        <!-- 2. 주문자 정보 및 배송지 -->
+        <article class="bg-white rounded-2xl p-6 border border-brand-borderSubtle shadow-card">
+          <div class="flex items-center justify-between pb-4 mb-4 border-b border-stone-100">
+            <div class="flex items-center space-x-2">
+              <span class="w-2.5 h-2.5 rounded-full bg-brand-forest"></span>
+              <h2 class="text-base font-bold text-brand-charcoal">2. 주문자 정보</h2>
+            </div>
+            <button onclick="toggleShippingModal()" class="text-xs font-semibold text-brand-forest hover:text-brand-forestDark bg-brand-cream hover:bg-brand-creamDark px-3 py-1 rounded-lg border border-brand-borderSubtle transition-all">
+              정보 변경
+            </button>
+          </div>
+
+          <!-- Structured Information Grid (병원 같지 않고 깔끔한 카드 스타일) -->
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            
+            <!-- 주문자 기본 정보 -->
+            <div class="p-4 rounded-xl bg-[#FAF9F5] border border-stone-200/70 space-y-2">
+              <div class="flex items-center justify-between text-xs text-brand-muted pb-1 border-b border-stone-200/50">
+                <span class="font-medium text-stone-500">주문 고객</span>
+                <span class="inline-flex items-center text-[11px] text-emerald-800 font-semibold bg-emerald-100/70 px-1.5 py-0.5 rounded">
+                  웰니스 회원
+                </span>
+              </div>
+              <div class="flex items-center justify-between text-sm pt-1">
+                <span class="text-xs text-brand-muted">이름</span>
+                <span id="display-buyer-name" class="font-semibold text-brand-charcoal">김케어</span>
+              </div>
+              <div class="flex items-center justify-between text-sm">
+                <span class="text-xs text-brand-muted">연락처</span>
+                <span id="display-buyer-phone" class="font-medium text-brand-charcoal">010-1234-5678</span>
+              </div>
+              <div class="flex items-center justify-between text-sm">
+                <span class="text-xs text-brand-muted">이메일</span>
+                <span id="display-buyer-email" class="font-mono text-xs text-stone-700">care@caremarket.com</span>
+              </div>
+            </div>
+
+            <!-- 배송지 정보 -->
+            <div class="p-4 rounded-xl bg-[#FAF9F5] border border-stone-200/70 space-y-2">
+              <div class="flex items-center justify-between text-xs text-brand-muted pb-1 border-b border-stone-200/50">
+                <span class="font-medium text-stone-500">기본 배송지</span>
+                <span class="text-[11px] text-brand-forest font-medium">안심 신선 포장</span>
+              </div>
+              <div class="pt-1">
+                <div class="flex items-center space-x-2">
+                  <span class="text-xs font-bold text-brand-charcoal" id="display-receiver-name">김케어</span>
+                  <span class="text-[10px] bg-brand-forest text-white px-1.5 py-0.2 rounded font-medium">우리집</span>
+                </div>
+                <p id="display-shipping-address" class="text-xs font-normal text-stone-700 mt-1 leading-relaxed">
+                  서울특별시 강남구 테헤란로 123, 101동 1004호 (케어타워)
+                </p>
+                <div class="mt-2 text-[11px] text-brand-muted flex items-center space-x-1">
+                  <svg class="w-3 h-3 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+                  <span>문 앞 (부재 시 경비실 위탁)</span>
+                </div>
+              </div>
+            </div>
+
+          </div>
+        </article>
+
+        <!-- 3. 결제수단 선택 (Toss Payments 연동형 컴포넌트) -->
+        <article class="bg-white rounded-2xl p-6 border border-brand-borderSubtle shadow-card">
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between pb-4 mb-4 border-b border-stone-100 gap-2">
+            <div class="flex items-center space-x-2">
+              <span class="w-2.5 h-2.5 rounded-full bg-brand-forest"></span>
+              <h2 class="text-base font-bold text-brand-charcoal">3. 결제수단 선택</h2>
+              <span class="text-xs text-brand-muted">안전하고 다양한 간편 결제 지원</span>
+            </div>
+            
+            <!-- Toss Payments Certified Partner Badge -->
+            <div class="flex items-center space-x-2 bg-stone-50 px-2.5 py-1 rounded-lg border border-stone-200/60 self-start sm:self-auto">
+              <span class="w-2 h-2 rounded-full bg-blue-500"></span>
+              <span class="text-[11px] font-semibold tracking-tight text-stone-700">Toss Payments 안전결제망</span>
+            </div>
+          </div>
+
+          <!-- Payment Tabs (수평 탭 바) -->
+          <div class="flex items-center space-x-2 overflow-x-auto pb-2 scrollbar-none border-b border-stone-100 mb-5 text-xs font-medium">
+            <button onclick="selectPayTab('recommended')" id="tab-recommended" class="pay-tab-btn px-3 py-2 rounded-lg bg-brand-forest text-white font-semibold transition-all shrink-0 shadow-sm">
+              ✨ 추천 결제수단
+            </button>
+            <button onclick="selectPayTab('easy')" id="tab-easy" class="pay-tab-btn px-3 py-2 rounded-lg text-brand-muted hover:text-brand-charcoal hover:bg-stone-100 transition-all shrink-0">
+              간편결제 (페이)
+            </button>
+            <button onclick="selectPayTab('card')" id="tab-card" class="pay-tab-btn px-3 py-2 rounded-lg text-brand-muted hover:text-brand-charcoal hover:bg-stone-100 transition-all shrink-0">
+              신용/체크카드
+            </button>
+            <button onclick="selectPayTab('bank')" id="tab-bank" class="pay-tab-btn px-3 py-2 rounded-lg text-brand-muted hover:text-brand-charcoal hover:bg-stone-100 transition-all shrink-0">
+              계좌이체/가상계좌
+            </button>
+            <button onclick="selectPayTab('phone')" id="tab-phone" class="pay-tab-btn px-3 py-2 rounded-lg text-brand-muted hover:text-brand-charcoal hover:bg-stone-100 transition-all shrink-0">
+              휴대폰 결제
+            </button>
+          </div>
+
+          <!-- Payment Methods Container -->
+          <div class="space-y-4">
+
+            <!-- Subtitle info -->
+            <div class="flex items-center justify-between text-xs text-brand-muted px-1">
+              <span id="tab-current-indicator">원클릭으로 빠르게 결제되는 스마트 간편 결제입니다.</span>
+              <span class="text-emerald-800 text-[11px] font-medium">카드사 무이자 할부 혜택 안내</span>
+            </div>
+
+            <!-- Payment Options Grid -->
+            <div class="grid grid-cols-2 sm:grid-cols-3 gap-3" id="payment-options-grid">
+              
+              <!-- Option: Toss Pay (Default Selected) -->
+              <div onclick="selectPaymentMethod('tosspay')" id="pay-opt-tosspay" class="pay-option-card relative p-3.5 rounded-xl border-2 border-brand-forest bg-brand-sageLight/50 cursor-pointer transition-all hover:shadow-sm flex flex-col justify-between h-24">
+                <div class="flex items-center justify-between">
+                  <div class="flex items-center space-x-1.5">
+                    <!-- Toss Logo Icon -->
+                    <div class="w-6 h-6 rounded-md bg-[#0064FF] flex items-center justify-center text-white font-bold text-xs">
+                      t
+                    </div>
+                    <span class="text-xs font-bold text-brand-charcoal">토스페이</span>
+                  </div>
+                  <!-- Check Bullet -->
+                  <div class="w-4 h-4 rounded-full border border-brand-forest bg-brand-forest flex items-center justify-center text-white check-icon">
+                    <svg class="w-2.5 h-2.5" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"></path></svg>
+                  </div>
+                </div>
+                <div class="text-[11px] text-emerald-900 font-medium">
+                  첫 결제 시 2,000P 적립
+                </div>
+              </div>
+
+              <!-- Option: Kakao Pay -->
+              <div onclick="selectPaymentMethod('kakaopay')" id="pay-opt-kakaopay" class="pay-option-card relative p-3.5 rounded-xl border border-stone-200 bg-white cursor-pointer transition-all hover:border-brand-sage hover:bg-stone-50/50 flex flex-col justify-between h-24">
+                <div class="flex items-center justify-between">
+                  <div class="flex items-center space-x-1.5">
+                    <div class="w-6 h-6 rounded-md bg-[#FEE500] flex items-center justify-center text-[#191919] font-bold text-[10px]">
+                      pay
+                    </div>
+                    <span class="text-xs font-bold text-brand-charcoal">카카오페이</span>
+                  </div>
+                  <div class="w-4 h-4 rounded-full border border-stone-300 bg-white flex items-center justify-center text-white check-icon">
+                    <svg class="w-2.5 h-2.5 opacity-0" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"></path></svg>
+                  </div>
+                </div>
+                <div class="text-[11px] text-brand-muted">
+                  카카오머니 및 카드
+                </div>
+              </div>
+
+              <!-- Option: Naver Pay -->
+              <div onclick="selectPaymentMethod('naverpay')" id="pay-opt-naverpay" class="pay-option-card relative p-3.5 rounded-xl border border-stone-200 bg-white cursor-pointer transition-all hover:border-brand-sage hover:bg-stone-50/50 flex flex-col justify-between h-24">
+                <div class="flex items-center justify-between">
+                  <div class="flex items-center space-x-1.5">
+                    <div class="w-6 h-6 rounded-md bg-[#03C75A] flex items-center justify-center text-white font-bold text-[11px]">
+                      N
+                    </div>
+                    <span class="text-xs font-bold text-brand-charcoal">네이버페이</span>
+                  </div>
+                  <div class="w-4 h-4 rounded-full border border-stone-300 bg-white flex items-center justify-center text-white check-icon">
+                    <svg class="w-2.5 h-2.5 opacity-0" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"></path></svg>
+                  </div>
+                </div>
+                <div class="text-[11px] text-brand-muted">
+                  네이버포인트 복합결제
+                </div>
+              </div>
+
+              <!-- Option: Samsung Pay -->
+              <div onclick="selectPaymentMethod('samsungpay')" id="pay-opt-samsungpay" class="pay-option-card relative p-3.5 rounded-xl border border-stone-200 bg-white cursor-pointer transition-all hover:border-brand-sage hover:bg-stone-50/50 flex flex-col justify-between h-24">
+                <div class="flex items-center justify-between">
+                  <div class="flex items-center space-x-1.5">
+                    <div class="w-6 h-6 rounded-md bg-[#1428A0] flex items-center justify-center text-white font-bold text-[9px]">
+                      Pay
+                    </div>
+                    <span class="text-xs font-bold text-brand-charcoal">삼성페이</span>
+                  </div>
+                  <div class="w-4 h-4 rounded-full border border-stone-300 bg-white flex items-center justify-center text-white check-icon">
+                    <svg class="w-2.5 h-2.5 opacity-0" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"></path></svg>
+                  </div>
+                </div>
+                <div class="text-[11px] text-brand-muted">
+                  생체인증 간편결제
+                </div>
+              </div>
+
+              <!-- Option: Credit/Check Card -->
+              <div onclick="selectPaymentMethod('card')" id="pay-opt-card" class="pay-option-card relative p-3.5 rounded-xl border border-stone-200 bg-white cursor-pointer transition-all hover:border-brand-sage hover:bg-stone-50/50 flex flex-col justify-between h-24">
+                <div class="flex items-center justify-between">
+                  <div class="flex items-center space-x-1.5">
+                    <div class="w-6 h-6 rounded-md bg-stone-700 flex items-center justify-center text-white">
+                      <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"/></svg>
+                    </div>
+                    <span class="text-xs font-bold text-brand-charcoal">일반 신용카드</span>
+                  </div>
+                  <div class="w-4 h-4 rounded-full border border-stone-300 bg-white flex items-center justify-center text-white check-icon">
+                    <svg class="w-2.5 h-2.5 opacity-0" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"></path></svg>
+                  </div>
+                </div>
+                <div class="text-[11px] text-brand-muted">
+                  모든 국내/해외 카드
+                </div>
+              </div>
+
+              <!-- Option: Account Transfer -->
+              <div onclick="selectPaymentMethod('bank')" id="pay-opt-bank" class="pay-option-card relative p-3.5 rounded-xl border border-stone-200 bg-white cursor-pointer transition-all hover:border-brand-sage hover:bg-stone-50/50 flex flex-col justify-between h-24">
+                <div class="flex items-center justify-between">
+                  <div class="flex items-center space-x-1.5">
+                    <div class="w-6 h-6 rounded-md bg-stone-600 flex items-center justify-center text-white">
+                      <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 14v3m4-3v3m4-3v3M3 21h18M3 10h18M3 7l9-4 9 4M4 10h16v11H4V10z"/></svg>
+                    </div>
+                    <span class="text-xs font-bold text-brand-charcoal">실시간 계좌이체</span>
+                  </div>
+                  <div class="w-4 h-4 rounded-full border border-stone-300 bg-white flex items-center justify-center text-white check-icon">
+                    <svg class="w-2.5 h-2.5 opacity-0" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"></path></svg>
+                  </div>
+                </div>
+                <div class="text-[11px] text-brand-muted">
+                  현금영수증 자동발급
+                </div>
+              </div>
+
+            </div>
+
+            <!-- Toss Payments Embed Context Box (자연스러운 연동 안내 카드) -->
+            <div class="p-4 rounded-xl bg-stone-50 border border-stone-200/80 flex items-start space-x-3 text-xs text-stone-600 mt-3">
+              <!-- Shield Icon -->
+              <svg class="w-4 h-4 text-brand-forest mt-0.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
+              <div>
+                <p class="font-medium text-brand-charcoal">토스페이먼츠(Toss Payments)의 안전한 결제 모듈로 보호됩니다.</p>
+                <p class="text-stone-500 text-[11px] mt-0.5">CareMarket은 고객님의 금융 결제 정보를 직접 보관하지 않으며 모든 트랜잭션은 256bit SSL 암호화 처리됩니다.</p>
+              </div>
+            </div>
+
+          </div>
+        </article>
+
+      </section>
+
+      <!-- ========================================================= -->
+      <!-- [RIGHT COLUMN: ORDER SUMMARY & PRIMARY CTA] (Desktop 30-35%) -->
+      <!-- ========================================================= -->
+      <aside id="desktop-summary-pane" class="lg:col-span-4 space-y-5 lg:sticky lg:top-16">
+        
+        <!-- 4. 주문 요약 카드 -->
+        <div class="bg-white rounded-2xl p-6 border border-brand-borderSubtle shadow-card">
+          <div class="flex items-center justify-between pb-3 mb-4 border-b border-stone-100">
+            <h2 class="text-base font-bold text-brand-charcoal">4. 주문 요약</h2>
+            <span class="text-xs font-medium text-brand-sage">웰니스 할인 적용</span>
+          </div>
+
+          <!-- Price Calculations -->
+          <div class="space-y-3 text-sm">
+            <div class="flex justify-between items-center text-stone-600">
+              <span class="text-xs">총 상품 금액</span>
+              <span class="font-medium text-brand-charcoal font-display">32,600원</span>
+            </div>
+
+            <div class="flex justify-between items-center text-stone-600">
+              <span class="text-xs flex items-center">
+                배송비
+                <span class="ml-1.5 px-1 py-0.2 rounded bg-emerald-100 text-emerald-800 text-[10px] font-medium">무료배송</span>
+              </span>
+              <span class="font-medium text-brand-forest font-display">0원</span>
+            </div>
+
+            <div class="flex justify-between items-center text-stone-600">
+              <span class="text-xs">맞춤 바우처 할인</span>
+              <span class="font-medium text-emerald-700 font-display">-3,700원</span>
+            </div>
+
+            <!-- Subtle Coupon Input Box -->
+            <div class="pt-2">
+              <div class="flex items-center space-x-1.5">
+                <input type="text" value="WELCOME_WELLNESS" readonly class="w-full bg-[#FAF9F5] border border-stone-200 text-xs text-stone-700 px-3 py-1.5 rounded-lg font-mono focus:outline-none" />
+                <span class="shrink-0 px-2 py-1.5 bg-brand-cream border border-brand-borderSubtle text-[11px] font-medium text-brand-forest rounded-lg">적용됨</span>
+              </div>
+            </div>
+
+            <!-- Divider -->
+            <div class="pt-3 border-t border-dashed border-stone-200">
+              <div class="flex justify-between items-baseline">
+                <span class="text-sm font-bold text-brand-charcoal">최종 결제 금액</span>
+                <div class="text-right">
+                  <span class="text-2xl font-extrabold text-brand-forest font-display tracking-tight">28,900</span>
+                  <span class="text-base font-bold text-brand-forest">원</span>
+                </div>
+              </div>
+              <!-- Reward points estimate -->
+              <p class="text-[11px] text-right text-brand-muted mt-1">
+                구매 확정 시 <strong class="text-emerald-800 font-semibold">289P (1%)</strong> 즉시 적립
+              </p>
+            </div>
+          </div>
+
+          <!-- Big Primary CTA Button -->
+          <div class="mt-6">
+            <button onclick="handleCheckoutExecution()" id="btn-desktop-checkout" class="w-full py-4 rounded-xl bg-brand-forest hover:bg-brand-forestDark active:scale-[0.99] text-white font-bold text-base shadow-soft hover:shadow-lg transition-all duration-150 flex items-center justify-center space-x-2">
+              <svg class="w-5 h-5 text-emerald-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
+              <span>28,900원 결제하기</span>
+            </button>
+
+            <a href="javascript:void(0)" class="block text-center text-xs text-brand-muted hover:text-brand-charcoal mt-3 transition-colors">
+              ‹ 장바구니로 돌아가기
+            </a>
+          </div>
+
+          <!-- Trust & Security Badges (절제된 신뢰 요소) -->
+          <div class="mt-6 pt-5 border-t border-stone-100 space-y-2.5 text-xs text-stone-500">
+            <div class="flex items-center space-x-2.5">
+              <div class="w-6 h-6 rounded-full bg-brand-cream border border-brand-borderSubtle flex items-center justify-center text-brand-forest shrink-0">
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
+              </div>
+              <div>
+                <span class="font-medium text-brand-charcoal">토스페이먼츠 보안 결제</span>
+                <span class="block text-[11px] text-stone-400">금융감독원 인가 전자결제 대행</span>
+              </div>
+            </div>
+
+            <div class="flex items-center space-x-2.5">
+              <div class="w-6 h-6 rounded-full bg-brand-cream border border-brand-borderSubtle flex items-center justify-center text-brand-forest shrink-0">
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
+              </div>
+              <div>
+                <span class="font-medium text-brand-charcoal">개인정보 암호화 보호</span>
+                <span class="block text-[11px] text-stone-400">주문 정보의 안전한 보관 및 처리</span>
+              </div>
+            </div>
+
+            <div class="flex items-center space-x-2.5">
+              <div class="w-6 h-6 rounded-full bg-brand-cream border border-brand-borderSubtle flex items-center justify-center text-brand-forest shrink-0">
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"/></svg>
+              </div>
+              <div>
+                <span class="font-medium text-brand-charcoal">주문 완료 후 실시간 안내</span>
+                <span class="block text-[11px] text-stone-400">카카오 알림톡 배송 추적 링크 발송</span>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </aside>
+
+      <!-- ========================================================= -->
+      <!-- [MOBILE VIEW WRAPPER] (실제 스마트폰 1-column 인터랙티브 화면) -->
+      <!-- ========================================================= -->
+      <section id="mobile-view-pane" class="lg:col-span-12 flex justify-center py-4">
+        
+        <div class="w-full max-w-[380px] bg-white rounded-[36px] overflow-hidden mobile-frame-mockup border-[6px] border-[#222A25] relative">
+          
+          <!-- Mobile Status Bar Mockup -->
+          <div class="bg-[#FAF7F2] px-6 py-2 flex items-center justify-between text-[11px] font-semibold text-stone-800 border-b border-stone-200/50">
+            <span>9:41</span>
+            <div class="w-16 h-4 bg-black rounded-full mx-auto"></div>
+            <div class="flex items-center space-x-1">
+              <span class="text-[9px]">5G</span>
+              <div class="w-4 h-2 bg-stone-700 rounded-sm"></div>
+            </div>
+          </div>
+
+          <!-- Mobile App Header -->
+          <div class="bg-[#FAF7F2] px-4 py-3 border-b border-brand-borderSubtle flex items-center justify-between">
+            <button class="text-stone-700">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
+            </button>
+            <div class="text-sm font-bold text-brand-forest font-display flex items-center">
+              CareMarket
+            </div>
+            <div class="w-5 h-5 flex items-center justify-center text-stone-700">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"/></svg>
+            </div>
+          </div>
+
+          <!-- Mobile Stepper & Heading -->
+          <div class="p-4 bg-[#FAF7F2] border-b border-stone-200/60">
+            <div class="flex items-center space-x-2 text-[10px] text-brand-muted font-medium mb-1">
+              <span>장바구니</span>
+              <span>›</span>
+              <span class="text-brand-forest font-bold">주문/결제</span>
+              <span>›</span>
+              <span class="text-stone-400">완료</span>
+            </div>
+            <h2 class="text-lg font-bold text-brand-charcoal">주문/결제</h2>
+            <p class="text-[11px] text-brand-muted">주문 상품과 배송지를 확인해 주세요.</p>
+          </div>
+
+          <!-- Mobile 1-Column Content Body (Scrollable) -->
+          <div class="p-4 space-y-4 max-h-[580px] overflow-y-auto bg-[#F9F7F3]">
+            
+            <!-- M1. 주문 상품 (Accordion Style) -->
+            <div class="bg-white rounded-xl p-3.5 border border-stone-200/80 shadow-sm">
+              <div onclick="toggleMobileAccordion('mobile-order-items')" class="flex items-center justify-between cursor-pointer">
+                <div class="flex items-center space-x-2">
+                  <span class="text-xs font-bold text-brand-charcoal">주문 상품</span>
+                  <span class="text-[10px] bg-brand-cream px-1.5 py-0.5 rounded text-brand-forest font-medium">3건</span>
+                </div>
+                <div class="flex items-center space-x-1 text-xs text-brand-muted">
+                  <span class="font-bold text-brand-charcoal font-display">28,900원</span>
+                  <svg id="arrow-mobile-order-items" class="w-4 h-4 transform transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+                </div>
+              </div>
+
+              <!-- Accordion Content -->
+              <div id="content-mobile-order-items" class="mt-3 pt-3 border-t border-stone-100 space-y-2.5">
+                <div class="flex items-center justify-between text-xs">
+                  <div class="flex items-center space-x-2">
+                    <div class="w-8 h-8 rounded bg-[#F2EFE8] flex items-center justify-center text-[10px] font-bold text-[#523B25]">바</div>
+                    <div>
+                      <p class="font-medium text-stone-800">카브프로틴바 초코맛 (2개)</p>
+                      <p class="text-[10px] text-stone-400">60g</p>
+                    </div>
+                  </div>
+                  <span class="font-bold text-stone-800">5,800원</span>
+                </div>
+
+                <div class="flex items-center justify-between text-xs">
+                  <div class="flex items-center space-x-2">
+                    <div class="w-8 h-8 rounded bg-[#EBF0EC] flex items-center justify-center text-[10px] font-bold text-emerald-800">웨이</div>
+                    <div>
+                      <p class="font-medium text-stone-800">라이프 프로틴 웨이 (1kg)</p>
+                      <p class="text-[10px] text-stone-400">초코맛</p>
+                    </div>
+                  </div>
+                  <span class="font-bold text-stone-800">23,900원</span>
+                </div>
+
+                <div class="flex items-center justify-between text-xs">
+                  <div class="flex items-center space-x-2">
+                    <div class="w-8 h-8 rounded bg-[#F7F3E9] flex items-center justify-center text-[10px] font-bold text-[#84693C]">오트</div>
+                    <div>
+                      <p class="font-medium text-stone-800">오트사이드 귀리음료 (1L)</p>
+                      <p class="text-[10px] text-stone-400">1개</p>
+                    </div>
+                  </div>
+                  <span class="font-bold text-stone-800">2,900원</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- M2. 배송지 정보 -->
+            <div class="bg-white rounded-xl p-3.5 border border-stone-200/80 shadow-sm">
+              <div class="flex items-center justify-between pb-2 border-b border-stone-100">
+                <span class="text-xs font-bold text-brand-charcoal">배송지 & 주문자</span>
+                <button onclick="toggleShippingModal()" class="text-[11px] text-brand-forest font-semibold underline">변경</button>
+              </div>
+              <div class="pt-2 text-xs">
+                <div class="flex items-center space-x-1.5">
+                  <span class="font-bold text-stone-800">김케어</span>
+                  <span class="text-[10px] text-stone-400 font-mono">010-1234-5678</span>
+                </div>
+                <p class="text-stone-600 mt-1 text-[11px] leading-snug">
+                  서울특별시 강남구 테헤란로 123, 101동 1004호
+                </p>
+              </div>
+            </div>
+
+            <!-- M3. 결제수단 선택 (모바일 컴팩트 뷰) -->
+            <div class="bg-white rounded-xl p-3.5 border border-stone-200/80 shadow-sm space-y-2.5">
+              <div class="flex items-center justify-between pb-2 border-b border-stone-100">
+                <span class="text-xs font-bold text-brand-charcoal">결제수단 선택</span>
+                <span class="text-[10px] text-blue-600 font-medium">Toss Safe Pay</span>
+              </div>
+
+              <!-- Quick Radio style list -->
+              <div class="space-y-2 text-xs">
+                <label onclick="selectPaymentMethod('tosspay')" class="flex items-center justify-between p-2 rounded-lg border-2 border-brand-forest bg-brand-sageLight/40 cursor-pointer">
+                  <div class="flex items-center space-x-2">
+                    <div class="w-5 h-5 rounded bg-[#0064FF] text-white flex items-center justify-center text-[10px] font-bold">t</div>
+                    <span class="font-bold text-brand-charcoal">토스페이 (Toss)</span>
+                  </div>
+                  <span class="w-3.5 h-3.5 rounded-full bg-brand-forest flex items-center justify-center text-white">
+                    <svg class="w-2 h-2" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"></path></svg>
+                  </span>
+                </label>
+
+                <label onclick="selectPaymentMethod('kakaopay')" class="flex items-center justify-between p-2 rounded-lg border border-stone-200 bg-white cursor-pointer hover:bg-stone-50">
+                  <div class="flex items-center space-x-2">
+                    <div class="w-5 h-5 rounded bg-[#FEE500] text-[#191919] flex items-center justify-center text-[9px] font-bold">pay</div>
+                    <span class="font-medium text-stone-800">카카오페이</span>
+                  </div>
+                  <span class="w-3.5 h-3.5 rounded-full border border-stone-300"></span>
+                </label>
+
+                <label onclick="selectPaymentMethod('naverpay')" class="flex items-center justify-between p-2 rounded-lg border border-stone-200 bg-white cursor-pointer hover:bg-stone-50">
+                  <div class="flex items-center space-x-2">
+                    <div class="w-5 h-5 rounded bg-[#03C75A] text-white flex items-center justify-center text-[9px] font-bold">N</div>
+                    <span class="font-medium text-stone-800">네이버페이</span>
+                  </div>
+                  <span class="w-3.5 h-3.5 rounded-full border border-stone-300"></span>
+                </label>
+              </div>
+            </div>
+
+            <!-- M4. 주문 금액 요약 -->
+            <div class="bg-white rounded-xl p-3.5 border border-stone-200/80 shadow-sm space-y-2 text-xs">
+              <div class="flex justify-between text-stone-500">
+                <span>상품금액</span>
+                <span class="text-stone-800">32,600원</span>
+              </div>
+              <div class="flex justify-between text-stone-500">
+                <span>배송비</span>
+                <span class="text-brand-forest font-medium">0원 (무료배송)</span>
+              </div>
+              <div class="flex justify-between text-stone-500">
+                <span>쿠폰할인</span>
+                <span class="text-emerald-700 font-medium">-3,700원</span>
+              </div>
+              <div class="pt-2 border-t border-stone-100 flex justify-between items-baseline">
+                <span class="font-bold text-stone-800">최종 결제 금액</span>
+                <span class="text-lg font-black text-brand-forest font-display">28,900원</span>
+              </div>
+            </div>
+
+            <!-- M5. Mobile CTA Button -->
+            <button onclick="handleCheckoutExecution()" class="w-full py-3.5 rounded-xl bg-brand-forest active:scale-[0.99] text-white font-bold text-sm shadow-md flex items-center justify-center space-x-1.5">
+              <svg class="w-4 h-4 text-emerald-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
+              <span>28,900원 결제하기</span>
+            </button>
+
+            <!-- Safe guarantee microcopy -->
+            <p class="text-[10px] text-center text-stone-400 pb-2">
+              실제 결제는 토스페이먼츠 암호화 세션에서 처리됩니다.
+            </p>
+
+          </div>
+        </div>
+
+      </section>
+
+    </div>
+
+  </main>
+
+  <!-- Footer (CareMarket 하단 4대 신뢰 배너) -->
+  <footer class="w-full bg-[#FAF7F2] border-t border-brand-borderSubtle mt-16 py-10">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      
+      <!-- 4 Core Trust Values -->
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-6 pb-8 border-b border-brand-borderSubtle/60 text-center sm:text-left">
+        <div class="flex flex-col sm:flex-row items-center sm:items-start space-y-2 sm:space-y-0 sm:space-x-3">
+          <div class="w-10 h-10 rounded-full bg-brand-cream border border-brand-borderSubtle flex items-center justify-center text-brand-forest shrink-0">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4"/></svg>
+          </div>
+          <div>
+            <h4 class="text-xs font-bold text-brand-charcoal">무료배송</h4>
+            <p class="text-[11px] text-brand-muted mt-0.5">3만원 이상 구매 시 전 상품 무료</p>
+          </div>
+        </div>
+
+        <div class="flex flex-col sm:flex-row items-center sm:items-start space-y-2 sm:space-y-0 sm:space-x-3">
+          <div class="w-10 h-10 rounded-full bg-brand-cream border border-brand-borderSubtle flex items-center justify-center text-brand-forest shrink-0">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+          </div>
+          <div>
+            <h4 class="text-xs font-bold text-brand-charcoal">당일 신선 출고</h4>
+            <p class="text-[11px] text-brand-muted mt-0.5">평일 오후 2시 이전 주문 시</p>
+          </div>
+        </div>
+
+        <div class="flex flex-col sm:flex-row items-center sm:items-start space-y-2 sm:space-y-0 sm:space-x-3">
+          <div class="w-10 h-10 rounded-full bg-brand-cream border border-brand-borderSubtle flex items-center justify-center text-brand-forest shrink-0">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/></svg>
+          </div>
+          <div>
+            <h4 class="text-xs font-bold text-brand-charcoal">친환경 에코 패키지</h4>
+            <p class="text-[11px] text-brand-muted mt-0.5">100% 종이 보냉박스 사용</p>
+          </div>
+        </div>
+
+        <div class="flex flex-col sm:flex-row items-center sm:items-start space-y-2 sm:space-y-0 sm:space-x-3">
+          <div class="w-10 h-10 rounded-full bg-brand-cream border border-brand-borderSubtle flex items-center justify-center text-brand-forest shrink-0">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
+          </div>
+          <div>
+            <h4 class="text-xs font-bold text-brand-charcoal">신선도 안심 보장</h4>
+            <p class="text-[11px] text-brand-muted mt-0.5">불만족 시 7일 이내 안심 교환/반품</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Legal & Copyright -->
+      <div class="pt-6 flex flex-col md:flex-row justify-between items-center text-xs text-stone-400 gap-3">
+        <p>© 2026 CareMarket. Pure & Clean Food Commerce Inc. All rights reserved.</p>
+        <div class="flex items-center space-x-4">
+          <a href="javascript:void(0)" class="hover:underline">이용약관</a>
+          <a href="javascript:void(0)" class="hover:underline font-bold text-stone-500">개인정보처리방침</a>
+          <a href="javascript:void(0)" class="hover:underline">에스크로 가입사실 확인</a>
+        </div>
+      </div>
+    </div>
+  </footer>
+
+  <!-- Shipping Address Change Modal (배송지 정보 변경 모달) -->
+  <div id="shipping-modal" class="fixed inset-0 bg-black/40 backdrop-blur-xs z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-white w-full max-w-md rounded-2xl p-6 shadow-floating border border-brand-borderSubtle transform transition-all">
+      <div class="flex items-center justify-between pb-3 border-b border-stone-100">
+        <h3 class="text-base font-bold text-brand-charcoal">배송지 및 수령인 변경</h3>
+        <button onclick="toggleShippingModal()" class="text-stone-400 hover:text-stone-700">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+        </button>
+      </div>
+
+      <div class="py-4 space-y-3">
+        <div>
+          <label class="block text-xs font-semibold text-stone-600 mb-1">받는 분 성함</label>
+          <input type="text" id="modal-input-name" value="김케어" class="w-full text-xs p-2.5 rounded-lg border border-stone-200 focus:outline-none focus:border-brand-forest" />
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-stone-600 mb-1">연락처</label>
+          <input type="text" id="modal-input-phone" value="010-1234-5678" class="w-full text-xs p-2.5 rounded-lg border border-stone-200 focus:outline-none focus:border-brand-forest" />
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-stone-600 mb-1">배송 주소</label>
+          <input type="text" id="modal-input-address" value="서울특별시 강남구 테헤란로 123, 101동 1004호 (케어타워)" class="w-full text-xs p-2.5 rounded-lg border border-stone-200 focus:outline-none focus:border-brand-forest" />
+        </div>
+      </div>
+
+      <div class="flex items-center justify-end space-x-2 pt-3 border-t border-stone-100">
+        <button onclick="toggleShippingModal()" class="px-4 py-2 rounded-lg text-xs font-medium text-stone-500 hover:bg-stone-100">취소</button>
+        <button onclick="saveShippingModal()" class="px-4 py-2 rounded-lg text-xs font-bold text-white bg-brand-forest hover:bg-brand-forestDark">적용하기</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toss Payments Checkout Simulation Modal -->
+  <div id="checkout-simulation-modal" class="fixed inset-0 bg-black/50 backdrop-blur-xs z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-white w-full max-w-sm rounded-3xl p-6 shadow-floating border border-stone-100 text-center relative overflow-hidden">
+      <!-- Top Brand Color Stripe -->
+      <div class="absolute top-0 left-0 right-0 h-2 bg-gradient-to-r from-blue-600 via-emerald-600 to-brand-forest"></div>
+
+      <!-- Spinner or Success Icon -->
+      <div id="checkout-loading-state" class="py-6 space-y-4">
+        <div class="w-14 h-14 mx-auto rounded-full border-4 border-stone-200 border-t-brand-forest animate-spin"></div>
+        <h4 class="text-base font-bold text-stone-800">토스페이먼츠 보안 결제창 연결 중</h4>
+        <p class="text-xs text-stone-500 leading-relaxed">
+          고객님의 안전한 결제 승인을 위해<br>암호화 통신 채널을 구성하고 있습니다.
+        </p>
+      </div>
+
+      <div id="checkout-success-state" class="py-4 space-y-3 hidden">
+        <div class="w-14 h-14 mx-auto rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center">
+          <svg class="w-8 h-8" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
+        </div>
+        <h4 class="text-base font-bold text-brand-forest">주문 및 결제가 완료되었습니다!</h4>
+        <div class="bg-[#FAF9F5] p-3 rounded-xl text-xs text-stone-600 space-y-1 text-left">
+          <div class="flex justify-between"><span>주문번호:</span><strong class="font-mono text-stone-800">CM-20260904-8921</strong></div>
+          <div class="flex justify-between"><span>결제금액:</span><strong class="text-brand-forest font-bold">28,900원</strong></div>
+          <div class="flex justify-between"><span>결제수단:</span><span id="completed-payment-method" class="font-medium">토스페이</span></div>
+        </div>
+        <button onclick="closeCheckoutModal()" class="w-full py-3 rounded-xl bg-brand-forest text-white font-bold text-xs mt-2 hover:bg-brand-forestDark">
+          확인 (쇼핑 계속하기)
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Custom Notification Toast -->
+  <div id="custom-toast" class="fixed bottom-6 right-6 bg-brand-forest text-white px-4 py-3 rounded-xl shadow-floating text-xs font-medium flex items-center space-x-2 transform translate-y-20 opacity-0 transition-all duration-300 z-50">
+    <svg class="w-4 h-4 text-emerald-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+    <span id="toast-message">배송지 정보가 정상적으로 업데이트되었습니다.</span>
+  </div>
+
+  <script>
+    // State Variables
+    let currentSelectedPayment = 'tosspay';
+    let currentActiveTab = 'recommended';
+    let isSplitView = true;
+
+    // Switch Views (Split, Desktop, Mobile)
+    function switchView(mode) {
+      const workspace = document.getElementById('workspace-container');
+      const desktopPane = document.getElementById('desktop-view-pane');
+      const summaryPane = document.getElementById('desktop-summary-pane');
+      const mobilePane = document.getElementById('mobile-view-pane');
+
+      const btnSplit = document.getElementById('btn-view-split');
+      const btnDesktop = document.getElementById('btn-view-desktop');
+      const btnMobile = document.getElementById('btn-view-mobile');
+
+      // Reset Active Button styles
+      [btnSplit, btnDesktop, btnMobile].forEach(btn => {
+        btn.classList.remove('bg-emerald-700', 'text-white');
+        btn.classList.add('text-emerald-200');
+      });
+
+      if (mode === 'split') {
+        btnSplit.classList.add('bg-emerald-700', 'text-white');
+        btnSplit.classList.remove('text-emerald-200');
+
+        workspace.className = "grid grid-cols-1 xl:grid-cols-12 gap-8 items-start";
+        desktopPane.className = "xl:col-span-8 space-y-6 block";
+        summaryPane.className = "xl:col-span-4 space-y-5 xl:sticky xl:top-16 block";
+        mobilePane.className = "xl:col-span-12 flex justify-center py-6 mt-6 border-t border-brand-borderSubtle";
+      } else if (mode === 'desktop') {
+        btnDesktop.classList.add('bg-emerald-700', 'text-white');
+        btnDesktop.classList.remove('text-emerald-200');
+
+        workspace.className = "grid grid-cols-1 lg:grid-cols-12 gap-8 items-start";
+        desktopPane.className = "lg:col-span-8 space-y-6 block";
+        summaryPane.className = "lg:col-span-4 space-y-5 lg:sticky lg:top-16 block";
+        mobilePane.className = "hidden";
+      } else if (mode === 'mobile') {
+        btnMobile.classList.add('bg-emerald-700', 'text-white');
+        btnMobile.classList.remove('text-emerald-200');
+
+        workspace.className = "block";
+        desktopPane.className = "hidden";
+        summaryPane.className = "hidden";
+        mobilePane.className = "flex justify-center py-4";
+      }
+    }
+
+    // Payment Tab Selector Handler
+    function selectPayTab(tabKey) {
+      currentActiveTab = tabKey;
+      const tabs = ['recommended', 'easy', 'card', 'bank', 'phone'];
+      tabs.forEach(t => {
+        const btn = document.getElementById('tab-' + t);
+        if (btn) {
+          if (t === tabKey) {
+            btn.className = "pay-tab-btn px-3 py-2 rounded-lg bg-brand-forest text-white font-semibold transition-all shrink-0 shadow-sm";
+          } else {
+            btn.className = "pay-tab-btn px-3 py-2 rounded-lg text-brand-muted hover:text-brand-charcoal hover:bg-stone-100 transition-all shrink-0";
+          }
+        }
+      });
+
+      const indicator = document.getElementById('tab-current-indicator');
+      if (tabKey === 'recommended') {
+        indicator.textContent = "가장 많이 사용하는 빠른 결제 수단입니다.";
+      } else if (tabKey === 'easy') {
+        indicator.textContent = "토스, 카카오, 네이버, 삼성 간편결제 연동";
+      } else if (tabKey === 'card') {
+        indicator.textContent = "국내/해외 모든 카드사 무이자 혜택 지원";
+      } else if (tabKey === 'bank') {
+        indicator.textContent = "실시간 계좌이체 및 가상계좌 무통장입금";
+      } else if (tabKey === 'phone') {
+        indicator.textContent = "통신사 익월 휴대폰 요금 합산 청구";
+      }
+    }
+
+    // Payment Method Selector Handler
+    function selectPaymentMethod(methodKey) {
+      currentSelectedPayment = methodKey;
+      const options = ['tosspay', 'kakaopay', 'naverpay', 'samsungpay', 'card', 'bank'];
+
+      options.forEach(opt => {
+        const card = document.getElementById('pay-opt-' + opt);
+        if (card) {
+          const checkCircle = card.querySelector('.check-icon');
+          const checkSvg = checkCircle.querySelector('svg');
+
+          if (opt === methodKey) {
+            // Selected Style: Forest Green Border + Sage Light Background + Checked bullet
+            card.classList.remove('border-stone-200', 'bg-white');
+            card.classList.add('border-2', 'border-brand-forest', 'bg-brand-sageLight/50');
+            checkCircle.classList.remove('border-stone-300', 'bg-white');
+            checkCircle.classList.add('border-brand-forest', 'bg-brand-forest', 'text-white');
+            checkSvg.classList.remove('opacity-0');
+          } else {
+            // Unselected Style
+            card.classList.add('border', 'border-stone-200', 'bg-white');
+            card.classList.remove('border-2', 'border-brand-forest', 'bg-brand-sageLight/50');
+            checkCircle.classList.add('border-stone-300', 'bg-white');
+            checkCircle.classList.remove('border-brand-forest', 'bg-brand-forest', 'text-white');
+            checkSvg.classList.add('opacity-0');
+          }
+        }
+      });
+
+      showToast(`결제수단이 [${getMethodName(methodKey)}]로 선택되었습니다.`);
+    }
+
+    function getMethodName(key) {
+      const names = {
+        tosspay: '토스페이 (Toss Payments)',
+        kakaopay: '카카오페이',
+        naverpay: '네이버페이',
+        samsungpay: '삼성페이',
+        card: '신용/체크카드',
+        bank: '실시간 계좌이체'
+      };
+      return names[key] || '선택 결제수단';
+    }
+
+    // Toggle Shipping Information Modal
+    function toggleShippingModal() {
+      const modal = document.getElementById('shipping-modal');
+      modal.classList.toggle('hidden');
+    }
+
+    // Save Shipping Information from Modal
+    function saveShippingModal() {
+      const name = document.getElementById('modal-input-name').value;
+      const phone = document.getElementById('modal-input-phone').value;
+      const addr = document.getElementById('modal-input-address').value;
+
+      document.getElementById('display-buyer-name').textContent = name;
+      document.getElementById('display-receiver-name').textContent = name;
+      document.getElementById('display-buyer-phone').textContent = phone;
+      document.getElementById('display-shipping-address').textContent = addr;
+
+      toggleShippingModal();
+      showToast("배송지 및 주문자 정보가 업데이트되었습니다.");
+    }
+
+    // Mobile Accordion Toggle
+    function toggleMobileAccordion(id) {
+      const content = document.getElementById('content-' + id);
+      const arrow = document.getElementById('arrow-' + id);
+      if (content.classList.contains('hidden')) {
+        content.classList.remove('hidden');
+        arrow.classList.remove('rotate-180');
+      } else {
+        content.classList.add('hidden');
+        arrow.classList.add('rotate-180');
+      }
+    }
+
+    // Checkout Execution Simulation
+    function handleCheckoutExecution() {
+      const modal = document.getElementById('checkout-simulation-modal');
+      const loadingState = document.getElementById('checkout-loading-state');
+      const successState = document.getElementById('checkout-success-state');
+      const methodLabel = document.getElementById('completed-payment-method');
+
+      methodLabel.textContent = getMethodName(currentSelectedPayment);
+      modal.classList.remove('hidden');
+      loadingState.classList.remove('hidden');
+      successState.classList.add('hidden');
+
+      setTimeout(() => {
+        loadingState.classList.add('hidden');
+        successState.classList.remove('hidden');
+      }, 1200);
+    }
+
+    function closeCheckoutModal() {
+      document.getElementById('checkout-simulation-modal').classList.add('hidden');
+    }
+
+    // Reset Prototype Demo
+    function resetPrototypeData() {
+      selectPaymentMethod('tosspay');
+      selectPayTab('recommended');
+      switchView('split');
+      showToast("프로토타입이 초기 상태로 재설정되었습니다.");
+    }
+
+    // Toast Notification Trigger
+    function showToast(msg) {
+      const toast = document.getElementById('custom-toast');
+      document.getElementById('toast-message').textContent = msg;
+      toast.classList.remove('translate-y-20', 'opacity-0');
+      toast.classList.add('translate-y-0', 'opacity-100');
+
+      setTimeout(() => {
+        toast.classList.remove('translate-y-0', 'opacity-100');
+        toast.classList.add('translate-y-20', 'opacity-0');
+      }, 2500);
+    }
+
+    // On Load Initialization
+    window.addEventListener('DOMContentLoaded', () => {
+      // Default to dual split view for portfolio review
+      switchView('split');
+    });
+  </script>
+</body>
+</html>

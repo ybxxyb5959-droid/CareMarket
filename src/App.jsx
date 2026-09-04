@@ -8,9 +8,13 @@ import CartDrawer from './components/CartDrawer'
 import CartLoginPrompt from './components/CartLoginPrompt'
 import EventPopup from './components/EventPopup'
 import Home from './pages/Home'
+import AllProducts from './pages/AllProducts'
 import GoalSetup from './pages/GoalSetup'
 import ProductDetail from './pages/ProductDetail'
 import Cart from './pages/Cart'
+import Checkout from './pages/Checkout'
+import PaymentSuccess from './pages/PaymentSuccess'
+import PaymentFail from './pages/PaymentFail'
 import Orders from './pages/Orders'
 import MyPage from './pages/MyPage'
 import Login from './pages/Login'
@@ -20,9 +24,13 @@ import AdminOrders from './pages/AdminOrders'
 
 const PAGES = {
   main: Home,
+  products: AllProducts,
   goalSetup: GoalSetup,
   detail: ProductDetail,
   cart: Cart,
+  checkout: Checkout,
+  paymentSuccess: PaymentSuccess,
+  paymentFail: PaymentFail,
   orders: Orders,
   mypage: MyPage,
   login: Login,
@@ -39,7 +47,9 @@ function Shell() {
       <DemoNav />
       <Header />
       <main>
-        <Page />
+        <div className="view-fade" key={view}>
+          <Page />
+        </div>
       </main>
       <Footer />
       <CartDrawer />

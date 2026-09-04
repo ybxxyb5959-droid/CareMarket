@@ -30,7 +30,6 @@ function toPreferenceState(preferences) {
   if (preferences.low_sodium) subFilters.push('저염')
   if (preferences.high_protein) subFilters.push('고단백')
   if (preferences.exclude_caffeine) subFilters.push('카페인 제외')
-  if (preferences.excluded_allergens?.length) subFilters.push('알레르기 제외')
 
   return {
     subFilters,
@@ -50,7 +49,10 @@ function toAppUser(authUser) {
 }
 
 export function StoreProvider({ children }) {
-  const [view, setView] = useState('main')
+  const [view, setView] = useState(() => ({
+    '/payment/success': 'paymentSuccess',
+    '/payment/fail': 'paymentFail',
+  })[window.location.pathname] || 'main')
   const [selectedProduct, setSelectedProduct] = useState(null)
 
   // 맞춤 조건
@@ -87,6 +89,7 @@ export function StoreProvider({ children }) {
   const [user, setUser] = useState(null)
   const [isLoggedIn, setIsLoggedIn] = useState(false)
   const [authUserId, setAuthUserId] = useState(null)
+  const [authLoading, setAuthLoading] = useState(true)
   const [settingsLoading, setSettingsLoading] = useState(false)
 
   // 토스트
@@ -94,10 +97,11 @@ export function StoreProvider({ children }) {
   const toastTimer = useRef(null)
   const loggingOut = useRef(false)
 
-  const showToast = useCallback((msg) => {
-    setToast(msg)
+  // kind: 'default'(우측 하단 · 일반 쇼핑) | 'auth'(상단 중앙 성공) | 'auth-error'(상단 중앙 실패)
+  const showToast = useCallback((msg, kind = 'default') => {
+    setToast({ msg, kind })
     window.clearTimeout(toastTimer.current)
-    toastTimer.current = window.setTimeout(() => setToast(null), 2800)
+    toastTimer.current = window.setTimeout(() => setToast(null), kind.startsWith('auth') ? 3200 : 2800)
   }, [])
   const cartController = useMemo(() => createCartController(supabase, setCartState, showToast), [showToast])
   const cart = useMemo(() => {
@@ -114,6 +118,7 @@ export function StoreProvider({ children }) {
 
   const syncAuthSession = useCallback((session) => {
     if (loggingOut.current && session?.user) return
+    setAuthLoading(false)
     const nextId = session?.user?.id || null
     if (cartController.getOwner() !== nextId) {
       cartController.setOwner(nextId)
@@ -193,6 +198,7 @@ export function StoreProvider({ children }) {
 
       if (error) {
         console.error('Supabase session restore failed:', error.message)
+        setAuthLoading(false)
         return
       }
 
@@ -225,7 +231,7 @@ export function StoreProvider({ children }) {
       const [profileResult, preferencesResult] = await Promise.all([
         supabase
           .from('profiles')
-          .select('primary_goal')
+          .select('display_name, primary_goal')
           .eq('user_id', authUserId)
           .single(),
         supabase
@@ -247,12 +253,15 @@ export function StoreProvider({ children }) {
       const loadedGoal = DB_TO_GOAL[profileResult.data.primary_goal] || null
       const loadedPreferences = toPreferenceState(preferencesResult.data)
 
+      setUser((current) => current && profileResult.data.display_name
+        ? { ...current, name: profileResult.data.display_name }
+        : current)
       setGoal(loadedGoal)
       setSubFilters(loadedPreferences.subFilters)
       setAllergies(loadedPreferences.allergies)
       setSettingsLoading(false)
 
-      if (!loadedGoal) {
+      if (!loadedGoal && !window.location.pathname.startsWith('/payment/')) {
         setView('goalSetup')
         scrollTop()
       }
@@ -268,6 +277,9 @@ export function StoreProvider({ children }) {
   }, [authUserId])
 
   const navigate = (v) => {
+    if (window.location.pathname.startsWith('/payment/')) {
+      window.history.replaceState({}, '', '/')
+    }
     setView(v)
     scrollTop()
   }
@@ -288,7 +300,7 @@ export function StoreProvider({ children }) {
     setAiResult(null)
     setAiError(null)
     setAiLoading(true)
-    setView('main')
+    setView('products')
     window.setTimeout(() => document.getElementById('product-list')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 0)
     try {
       const filters = await requestAiConditions(supabase, query, request.signal)
@@ -365,21 +377,9 @@ export function StoreProvider({ children }) {
   const cartCount = cart.reduce((s, i) => s + i.quantity, 0)
 
   const checkout = () => {
-    if (!requireCartLogin() || cart.length === 0 || cartPending || cartLoading) return
-    const newOrder = {
-      id: `ORD-20260903-${Math.floor(1000 + Math.random() * 9000)}`,
-      date: '2026. 09. 03  방금',
-      status: '결제완료',
-      active: true,
-      totalAmount: cartTotal + deliveryFee,
-      items: cart.map((c) => ({ name: c.product.name, count: c.quantity, price: c.product.price })),
-      tracker: '우체국 안심콜드체인 대기',
-    }
-    setOrders((prev) => [newOrder, ...prev])
-    // Mock orders must not delete persistent cart rows without a real order transaction.
+    if (!requireCartLogin() || cart.length === 0 || cartPending || cartLoading || cartError) return
     setDrawerOpen(false)
-    navigate('orders')
-    showToast('가상 주문이 생성되었습니다. 실제 장바구니는 유지됩니다.')
+    navigate('checkout')
   }
 
   const updateOrderStatus = (id, status, active) => {
@@ -434,13 +434,15 @@ export function StoreProvider({ children }) {
     const { data, error } = await supabase.auth.signInWithPassword({ email, password })
 
     if (error) {
-      showToast(`로그인에 실패했습니다. ${error.message}`)
+      console.error('Supabase sign in failed:', error?.message)
+      showToast('로그인에 실패했습니다. 이메일 또는 비밀번호를 확인해주세요.', 'auth-error')
       return false
     }
 
     syncAuthSession(data.session)
     navigate('main')
-    showToast(`${toAppUser(data.user).name} 님, 환영합니다.`)
+    const displayName = data.user?.user_metadata?.display_name?.trim()
+    showToast(displayName ? `${displayName}님, 안녕하세요.` : '안녕하세요.', 'auth')
     return true
   }
 
@@ -454,17 +456,18 @@ export function StoreProvider({ children }) {
     })
 
     if (error) {
-      showToast(`회원가입에 실패했습니다. ${error.message}`)
+      console.error('Supabase sign up failed:', error?.message)
+      showToast('회원가입에 실패했습니다.', 'auth-error')
       return false
     }
 
     if (data.session) {
       syncAuthSession(data.session)
       navigate('goalSetup')
-      showToast('가입 완료! 웰빙 목표 설정으로 이동합니다.')
+      showToast('회원가입이 완료되었습니다.', 'auth')
     } else {
       navigate('login')
-      showToast('가입 확인 이메일을 보냈습니다. 인증 후 로그인해 주세요.')
+      showToast('가입 확인 이메일을 보냈습니다. 인증 후 로그인해 주세요.', 'auth')
     }
 
     return true
@@ -495,13 +498,13 @@ export function StoreProvider({ children }) {
         console.error('Supabase session recovery failed:', sessionError)
         syncAuthSession(null)
       }
-      showToast(`로그아웃에 실패했습니다. ${error.message}`)
+      showToast('로그아웃에 실패했습니다.', 'auth-error')
       return false
     }
 
     syncAuthSession(null)
     navigate('main')
-    showToast('로그아웃되었습니다.')
+    showToast('로그아웃되었습니다.', 'auth')
     return true
   }
 
@@ -522,12 +525,12 @@ export function StoreProvider({ children }) {
       drawerOpen, setDrawerOpen,
       orders, checkout, updateOrderStatus,
       products, setProducts, productsLoading, productsError, reloadProducts,
-      user, setUser, login, register, logout, isLoggedIn,
+      user, setUser, login, register, logout, isLoggedIn, authUserId, authLoading,
       cartTotal, deliveryFee, cartCount,
       toast, showToast,
     }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [view, selectedProduct, goal, subFilters, allergies, search, searchMode, aiQuery, aiResult, aiLoading, aiError, shopCategory, shopSub, sortBy, wishlist, cart, cartState, loginPromptOpen, drawerOpen, orders, products, productsLoading, productsError, user, isLoggedIn, authUserId, settingsLoading, toast],
+    [view, selectedProduct, goal, subFilters, allergies, search, searchMode, aiQuery, aiResult, aiLoading, aiError, shopCategory, shopSub, sortBy, wishlist, cart, cartState, loginPromptOpen, drawerOpen, orders, products, productsLoading, productsError, user, isLoggedIn, authUserId, authLoading, settingsLoading, toast],
   )
 
   return <StoreContext.Provider value={value}>{children}</StoreContext.Provider>

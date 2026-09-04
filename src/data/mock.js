@@ -48,7 +48,6 @@ export const SUB_FILTERS = [
   { id: 'low_sodium', tag: '저염', label: '저염', hint: '나트륨 250mg 이하' },
   { id: 'high_protein', tag: '고단백', label: '고단백', hint: '단백질 15g 이상' },
   { id: 'no_caffeine', tag: '카페인 제외', label: '카페인 제외', hint: '디카페인' },
-  { id: 'no_allergy', tag: '알레르기 제외', label: '알레르기 제외', hint: '선택 성분 차단' },
 ]
 
 export const ALLERGENS = [
@@ -86,67 +85,78 @@ export const HERO_SLIDES = [
     desc: '탄산음료 대신 천연 발효 음료로 장 건강과 수분 리듬을 편안하게 깨워보세요.',
     badge: '無합성감미료 원칙',
     btn: '저당 음료 컬렉션',
-    collection: { category: '식료품', sub: '음료', subFilters: ['저당'] },
+    collection: { category: '건강음료', sub: '전체', subFilters: ['저당'] },
     image:
       'https://images.unsplash.com/photo-1556881286-fc6915169721?w=1400&auto=format&fit=crop&q=80',
   },
 ]
 
-// 상단 제품 카테고리 (iHerb 스타일). Supabase 상품군/상품명으로 매칭한다.
+// 상단 제품 카테고리 = "상품 종류". (저당/고단백 등 영양 특성은 별도 필터로 분리)
+// DB category가 완벽히 정규화되지 않아 프론트에서 최소 normalization만 수행한다.
+// (Supabase Schema/seed는 변경하지 않음)
 export const CATEGORIES = [
   { id: 'best', name: '베스트' }, // isBest 상품
   { id: 'all', name: '전체상품' },
-  {
-    id: 'protein',
-    name: '프로틴',
-    categories: ['닭가슴살·고단백 식품', '프로틴바·건강간식', '음료·프로틴음료'],
-  },
-  {
-    id: 'supplement',
-    name: '영양제',
-    categories: ['영양제·비타민'],
-    subs: [
-      { name: '비타민', keywords: ['비타민'] },
-      { name: '오메가3', keywords: ['오메가3'] },
-      { name: '유산균', keywords: ['유산균', '프로바이오틱스'] },
-    ],
-  },
-  {
-    id: 'food',
-    name: '식료품',
-    categories: [
-      '닭가슴살·고단백 식품',
-      '도시락·간편식',
-      '시리얼·그래놀라',
-      '유제품·대체유',
-      '견과·건과류',
-      '소스·조미료',
-      '기타 건강식품',
-    ],
-    subs: [
-      { name: '간편식', categories: ['도시락·간편식'] },
-      { name: '음료', categories: ['유제품·대체유', '음료·프로틴음료'] },
-      { name: '육류', categories: ['닭가슴살·고단백 식품'] },
-    ],
-  },
+  { id: 'protein', name: '프로틴', group: '프로틴', subs: [
+    { name: '프로틴 음료', db: ['음료·프로틴음료', '유제품·대체유'] },
+    { name: '프로틴 바·스낵', db: ['프로틴바·건강간식'] },
+  ] },
+  { id: 'meal', name: '간편식', group: '간편식', subs: [
+    { name: '도시락·볶음밥', db: ['도시락·간편식'] },
+    { name: '닭가슴살·육류', db: ['닭가슴살·고단백 식품'] },
+  ] },
+  { id: 'drink', name: '건강음료', group: '건강음료', subs: [
+    { name: '대체유', db: ['유제품·대체유'] },
+    { name: '기능성·스포츠', db: ['음료·프로틴음료'] },
+  ] },
+  { id: 'snack', name: '건강간식', group: '건강간식', subs: [
+    { name: '견과·건과류', db: ['견과·건과류'] },
+    { name: '시리얼·그래놀라', db: ['시리얼·그래놀라'] },
+    { name: '프로틴바·스낵', db: ['프로틴바·건강간식'] },
+  ] },
+  { id: 'supplement', name: '영양제', group: '영양제', subs: [
+    { name: '비타민', kw: ['비타민'] },
+    { name: '오메가3', kw: ['오메가'] },
+    { name: '유산균', kw: ['유산균', '바이오틱스'] },
+  ] },
 ]
 
-// 카테고리/서브카테고리 매칭 (상품 목록 필터에 사용)
+// 실제 "단백질 제품"만 프로틴으로 인정 (고단백 tag 하나만으로 분류하지 않음)
+const PROTEIN_PRODUCT_RE = /(프로틴|단백질|단백 100|WPI|WPC)/
+
+// 상품 → 상품 종류(그룹) 정규화. DB category + 상품명 기반.
+export function productGroup(product) {
+  const c = product.category || ''
+  const name = product.name || ''
+  if (c === '영양제·비타민') return '영양제'
+  if (c === '소스·조미료') return '소스·조미료'
+  if (c === '도시락·간편식' || c === '닭가슴살·고단백 식품') return '간편식'
+  if (c === '견과·건과류' || c === '시리얼·그래놀라') return '건강간식'
+  // 아래 두 DB 카테고리는 단백질 제품과 일반 웰니스 제품이 섞여 있어 상품명으로 분리
+  if (c === '프로틴바·건강간식') return PROTEIN_PRODUCT_RE.test(name) ? '프로틴' : '건강간식'
+  if (c === '음료·프로틴음료') return PROTEIN_PRODUCT_RE.test(name) ? '프로틴' : '건강음료'
+  if (c === '유제품·대체유') {
+    if (PROTEIN_PRODUCT_RE.test(name)) return '프로틴'
+    if (/(요거트|치즈|코티지)/.test(name) && !/(드링크|음료)/.test(name)) return '건강간식'
+    return '건강음료'
+  }
+  return '기타'
+}
+
+// 카테고리 + 하위(드롭다운) 매칭 (상품 목록 필터에 사용)
 export function matchCategory(product, catName, subName) {
   if (!catName || catName === '전체상품') return true
   if (catName === '베스트') return product.isBest
   const cat = CATEGORIES.find((c) => c.name === catName)
-  if (!cat || !cat.categories) return true
+  if (!cat || !cat.group) return true
+  if (productGroup(product) !== cat.group) return false
   if (cat.subs && subName && subName !== '전체') {
     const sub = cat.subs.find((s) => s.name === subName)
-    if (!sub) return cat.categories.includes(product.category)
-    if (sub.categories) return sub.categories.includes(product.category)
-    if (sub.keywords) {
-      const searchable = [product.name, ...(product.mainIngredients || [])].join(' ')
-      return sub.keywords.some((keyword) => searchable.includes(keyword))
-    }
+    if (!sub) return true
+    if (sub.db) return sub.db.includes(product.category)
+    if (sub.kw) return sub.kw.some((k) => (product.name || '').includes(k))
   }
-  return cat.categories.includes(product.category)
+  return true
 }
 
 // 시간대별 웰빙 루틴 (중앙부 인터랙션)

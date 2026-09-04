@@ -81,7 +81,7 @@ export default function WellnessTable() {
                 onClick={() => togglePin(h.key)}
                 aria-label={`${h.label} 추천 상품 보기`}
               >
-                <Icon name={active === h.key ? 'x' : 'plus'} size={16} strokeWidth={2.4} />
+                <Icon name="plus" size={16} strokeWidth={2.4} className="hotspot-ico" />
               </button>
             ))}
 

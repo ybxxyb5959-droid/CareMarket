@@ -1,7 +1,9 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useStore } from '../store'
 import { CATEGORIES } from '../data/mock'
 import Icon from './Icon'
+import ProductImage from './ProductImage'
+import { won } from '../lib/format'
 import { QUERY_MAX_LENGTH } from '../../supabase/functions/_shared/ai-search-contract.js'
 
 const AI_SEARCH_EXAMPLES = [
@@ -10,32 +12,63 @@ const AI_SEARCH_EXAMPLES = [
   '나트륨 낮은 식품 찾아줘',
 ]
 
+// 자동완성: 실제 상품 데이터에서 추천 검색어 vocab을 만든다 (하드코딩 배열 아님)
+const SUG_SEED = ['프로틴', '간편식', '건강음료', '건강간식', '영양제', '저당', '저염', '고단백', '카페인 제외']
+const SUG_STOP = new Set(['오리지널', '프리미엄', '데일리', '스페셜', '에디션', '오늘', '한입', '리얼', '순수', '고소한', '부드러운', '꾸덕한', '생생', '천연', '국산', '유기농', '무첨가', '무가당', '무염', '저온', '저칼로리', '저지방', '로우', '제로', '하이', '베이스', '믹스', '맛'])
+
+function buildVocab(products) {
+  const freq = new Map()
+  for (const p of products) {
+    for (const raw of String(p.name || '').split(/[\s()·&,%/+]+/)) {
+      const t = raw.replace(/\d+([.,]\d+)?\s*(g|kg|ml|l|iu|mg|억|종|정|포|캡슐|알|팩|개입|개|x)?$/i, '').trim()
+      if (t.length < 2 || SUG_STOP.has(t) || /^\d/.test(t)) continue
+      freq.set(t, (freq.get(t) || 0) + 1)
+    }
+  }
+  return [...freq.entries()].sort((a, b) => b[1] - a[1]).map((e) => e[0])
+}
+
+function buildSuggestions(products, vocab, query) {
+  const q = query.trim().toLowerCase()
+  if (!q) return { terms: [], items: [] }
+  const has = (s) => String(s || '').toLowerCase().includes(q)
+  const terms = []
+  for (const t of [...SUG_SEED, ...vocab]) {
+    if (has(t) && !terms.includes(t)) terms.push(t)
+    if (terms.length >= 5) break
+  }
+  const items = products.filter((p) => has(p.name) || has(p.category) || (p.tags || []).some(has)).slice(0, 3)
+  return { terms, items }
+}
+
 export default function Header() {
   const {
     view, navigate, setView, search, setSearch,
     searchMode, setSearchMode, aiQuery, setAiQuery, aiLoading, runAiSearch, clearAiSearch,
     shopCategory, setShopCategory, shopSub, setShopSub,
     wishlist, cartCount, setDrawerOpen, showToast, isLoggedIn, requireCartLogin,
+    products, openProduct,
   } = useStore()
   const [aiPlaceholder, setAiPlaceholder] = useState('')
   const [searchFocused, setSearchFocused] = useState(false)
+  const [sugOpen, setSugOpen] = useState(false)
+  const [hi, setHi] = useState(-1)
 
   const isAi = searchMode === 'ai'
   // 일반 검색: 클릭(focus) 또는 입력 시 왼쪽 돋보기를 숨기고 오른쪽 검색 버튼을 노출
   const normalActive = !isAi && (searchFocused || Boolean(search))
 
+  // 자동완성 (일반 검색 전용, 실제 상품 데이터 기반)
+  const vocab = useMemo(() => buildVocab(products), [products])
+  const suggestions = useMemo(() => buildSuggestions(products, vocab, search), [products, vocab, search])
+  const sugCount = suggestions.terms.length + suggestions.items.length
+  const sugVisible = !isAi && searchFocused && sugOpen && search.trim().length >= 1 && sugCount > 0
+
   // 카테고리/하위 선택 → 필터 적용 후 상품 목록으로 스크롤
   const openCategory = (c, sub) => {
     setShopCategory(c.name)
     setShopSub(sub)
-    setView('main')
-    window.setTimeout(() => {
-      const el = document.getElementById('product-list')
-      if (el) {
-        const y = el.getBoundingClientRect().top + window.scrollY - 150
-        window.scrollTo({ top: Math.max(0, y), behavior: 'smooth' })
-      }
-    }, 80)
+    navigate('products')
   }
 
   useEffect(() => {
@@ -73,16 +106,27 @@ export default function Header() {
     if (view !== 'main') navigate('main')
   }
   const scrollToResults = () => {
-    if (view !== 'main') setView('main')
-    window.setTimeout(() => {
-      const el = document.getElementById('product-list')
-      if (el) window.scrollTo({ top: Math.max(0, el.getBoundingClientRect().top + window.scrollY - 150), behavior: 'smooth' })
-    }, 60)
+    navigate('products')
   }
   const onSearchSubmit = (e) => {
     e.preventDefault()
     if (isAi) { if (!aiLoading) void runAiSearch(); return }
+    setSugOpen(false)
     scrollToResults()
+  }
+
+  const selectTerm = (t) => { setSearch(t); setSugOpen(false); setHi(-1); scrollToResults() }
+  const selectProduct = (p) => { setSugOpen(false); setHi(-1); openProduct(p) }
+  const onSearchKeyDown = (e) => {
+    if (e.key === 'Escape') { setSugOpen(false); setHi(-1); return }
+    if (!sugVisible) return
+    if (e.key === 'ArrowDown') { e.preventDefault(); setHi((h) => Math.min(h + 1, sugCount - 1)) }
+    else if (e.key === 'ArrowUp') { e.preventDefault(); setHi((h) => Math.max(h - 1, -1)) }
+    else if (e.key === 'Enter' && hi >= 0) {
+      e.preventDefault()
+      if (hi < suggestions.terms.length) selectTerm(suggestions.terms[hi])
+      else selectProduct(suggestions.items[hi - suggestions.terms.length])
+    }
   }
 
   return (
@@ -128,10 +172,14 @@ export default function Header() {
                   type="text"
                   placeholder="상품명 또는 카테고리 검색"
                   value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  onFocus={() => { setSearchFocused(true); if (view !== 'main') setView('main') }}
+                  onChange={(e) => { setSearch(e.target.value); setSugOpen(e.target.value.trim().length >= 1); setHi(-1) }}
+                  onFocus={() => { setSearchFocused(true); if (search.trim()) setSugOpen(true); if (view !== 'main') setView('main') }}
                   onBlur={() => setSearchFocused(false)}
+                  onKeyDown={onSearchKeyDown}
                   aria-label="상품명 또는 카테고리 검색"
+                  role="combobox"
+                  aria-expanded={sugVisible}
+                  aria-autocomplete="list"
                 />
               )}
               {isAi && (
@@ -157,6 +205,38 @@ export default function Header() {
                       <Icon name="x" size={15} />
                     </button>
                   )}
+
+              {sugVisible && (
+                <div className="search-sug" role="listbox" onMouseDown={(e) => e.preventDefault()}>
+                  {suggestions.terms.length > 0 && (
+                    <div className="sug-group">
+                      <div className="sug-label">추천 검색어</div>
+                      {suggestions.terms.map((t, i) => (
+                        <button type="button" key={t} className={`sug-term${hi === i ? ' hi' : ''}`}
+                          onMouseEnter={() => setHi(i)} onClick={() => selectTerm(t)}>
+                          <Icon name="search" size={14} /> <span>{t}</span>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                  {suggestions.items.length > 0 && (
+                    <div className="sug-group">
+                      <div className="sug-label">관련 상품</div>
+                      {suggestions.items.map((p, i) => {
+                        const idx = suggestions.terms.length + i
+                        return (
+                          <button type="button" key={p.id} className={`sug-prod${hi === idx ? ' hi' : ''}`}
+                            onMouseEnter={() => setHi(idx)} onClick={() => selectProduct(p)}>
+                            <span className="sug-thumb"><ProductImage src={p.image} alt="" /></span>
+                            <span className="sug-pname">{p.name}</span>
+                            <span className="sug-pprice">{won(p.price)}</span>
+                          </button>
+                        )
+                      })}
+                    </div>
+                  )}
+                </div>
+              )}
             </form>
 
             {isAi ? (

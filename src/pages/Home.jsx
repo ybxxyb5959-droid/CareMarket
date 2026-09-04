@@ -1,44 +1,10 @@
 import { useMemo, useState } from 'react'
 import { useStore, useAutoSlide } from '../store'
-import { GOALS, HERO_SLIDES, ROUTINE, SUB_FILTERS, VALUES, matchCategory } from '../data/mock'
+import { GOALS, HERO_SLIDES, ROUTINE, SUB_FILTERS, VALUES } from '../data/mock'
 import Icon from '../components/Icon'
 import ProductCard from '../components/ProductCard'
 import WellnessTable from '../components/WellnessTable'
-import { AI_SORT_TO_UI, filterAiProducts } from '../lib/ai-search'
-
-function goalScore(product, goal) {
-  const nutrition = product.nutrition
-
-  if (goal === '근육량 증가') return nutrition.protein * 20 - nutrition.sugar
-  if (goal === '체중 관리') return 1000 - nutrition.calories - nutrition.sugar * 20
-  if (goal === '영양제 탐색') return product.category === '영양제·비타민' ? 1000 : 0
-  return 1000 - nutrition.sodium - nutrition.sugar * 5
-}
-
-function filterAndSort(products, { search, subFilters, allergies, sortBy, goal, shopCategory, shopSub }) {
-  let list = products.filter((p) => {
-    if (!matchCategory(p, shopCategory, shopSub)) return false
-    if (search) {
-      const q = search.toLowerCase()
-      if (!p.name.toLowerCase().includes(q) && !p.brand.toLowerCase().includes(q) && !p.category.toLowerCase().includes(q)) return false
-    }
-    for (const tag of subFilters) {
-      if (tag === '고단백' && p.nutrition.protein < 15) return false
-      if (tag === '저당' && p.nutrition.sugar > 5) return false
-      if (tag === '저염' && p.nutrition.sodium > 250) return false
-      if (tag === '카페인 제외' && p.caffeine) return false
-      if (tag === '알레르기 제외' && allergies.some((a) => p.allergens.includes(a))) return false
-    }
-    return true
-  })
-  if (sortBy === 'lowPrice') list = [...list].sort((a, b) => a.price - b.price)
-  else if (sortBy === 'highPrice') list = [...list].sort((a, b) => b.price - a.price)
-  else if (sortBy === 'review') list = [...list].sort((a, b) => b.reviewCount - a.reviewCount)
-  else list = [...list].sort((a, b) => goalScore(b, goal) - goalScore(a, goal) || a.id - b.id)
-  return list
-}
-
-const AI_EXAMPLES = ['카페인 없는 영양제 찾아줘', '당류 낮고 단백질 높은 간식 찾아줘', '저염 식품 찾아줘']
+import { filterAndSort } from '../lib/catalog'
 
 // 주목표별 강조 안내문
 const GOAL_GUIDE = {
@@ -50,52 +16,53 @@ const GOAL_GUIDE = {
 
 export default function Home() {
   const {
-    goal, setGoal, search, setSearch, sortBy, setSortBy,
-    subFilters, toggleSub, setSubFilters, allergies,
-    products, productsLoading, productsError, reloadProducts, openProduct, navigate,
-    searchMode, aiResult: aiSearch, aiLoading, aiError, runAiSearch, clearAiSearch,
-    isLoggedIn, logout, shopCategory, setShopCategory, shopSub, setShopSub,
+    goal, setGoal, subFilters, toggleSub, setSubFilters, allergies,
+    products, productsLoading, openProduct, navigate,
+    isLoggedIn, logout, setShopCategory, setShopSub, setSortBy, showToast,
   } = useStore()
 
-  // Hero 컬렉션 CTA → 실제 상품 필터(collection) 상태 변경 후 상품 목록으로 이동
+  const [slide, setSlide] = useAutoSlide(HERO_SLIDES.length)
+  const [routineIdx, setRoutineIdx] = useState(1)
+  const [focusGoal, setFocusGoal] = useState(null) // 비로그인 목표 셀렉터: 포커스된 목표
+  const [email, setEmail] = useState('')
+  const hero = HERO_SLIDES[slide]
+  const activeGoal = GOALS.find((g) => g.name === focusGoal)
+
+  const routine = ROUTINE[routineIdx]
+  const routineCategories = ['영양제·비타민', '도시락·간편식', '프로틴바·건강간식', '닭가슴살·고단백 식품']
+  const routineProduct = products.find((product) => product.category === routineCategories[routineIdx])
+
+  // 맞춤 추천 4개 (목표 기반, 필터 무관) / 전체상품 프리뷰 8개 (보조조건 반영)
+  const recommended = useMemo(
+    () => filterAndSort(products, { search: '', subFilters: [], allergies, sortBy: 'recommend', goal, shopCategory: '전체상품', shopSub: '전체' }).slice(0, 4),
+    [products, allergies, goal],
+  )
+  const previewAll = useMemo(
+    () => filterAndSort(products, { search: '', subFilters, allergies, sortBy: 'recommend', goal, shopCategory: '전체상품', shopSub: '전체' }).slice(0, 8),
+    [products, subFilters, allergies, goal],
+  )
+
+  // Hero 컬렉션 CTA → 컬렉션 필터 설정 후 전체상품 페이지로 이동
   const applyCollection = (col) => {
     if (!col) return
     setShopCategory(col.category)
     setShopSub(col.sub)
     setSubFilters(col.subFilters || [])
-    window.setTimeout(() => {
-      const el = document.getElementById('product-list')
-      if (el) {
-        const y = el.getBoundingClientRect().top + window.scrollY - 150
-        window.scrollTo({ top: Math.max(0, y), behavior: 'smooth' })
-      }
-    }, 60)
+    navigate('products')
   }
-
-  const [slide, setSlide] = useAutoSlide(HERO_SLIDES.length)
-  const [routineIdx, setRoutineIdx] = useState(1)
-  const [focusGoal, setFocusGoal] = useState(null) // 비로그인 목표 셀렉터: 포커스된 목표
-  const hero = HERO_SLIDES[slide]
-  const activeGoal = GOALS.find((g) => g.name === focusGoal)
-
-  const filtered = useMemo(
-    () => filterAndSort(products, { search: searchMode === 'ai' ? '' : search, subFilters, allergies, sortBy, goal, shopCategory, shopSub }),
-    [products, search, searchMode, subFilters, allergies, sortBy, goal, shopCategory, shopSub],
-  )
-
-  const routine = ROUTINE[routineIdx]
-  const routineCategories = ['영양제·비타민', '도시락·간편식', '프로틴바·건강간식', '닭가슴살·고단백 식품']
-  const routineProduct = products.find((product) => product.category === routineCategories[routineIdx])
-  const aiProducts = useMemo(
-    () => {
-      if (searchMode !== 'ai') return filtered
-      if (aiLoading || aiError) return []
-      if (!aiSearch) return filtered
-      const sort = Object.entries(AI_SORT_TO_UI).find(([, ui]) => ui === sortBy)?.[0] || 'review'
-      return filterAiProducts(filtered, aiSearch.filters, sort)
-    },
-    [aiSearch, filtered, searchMode, aiLoading, aiError, sortBy],
-  )
+  const goToProducts = (opts = {}) => {
+    setShopCategory('전체상품')
+    setShopSub('전체')
+    if (opts.recommend) setSortBy('recommend')
+    navigate('products')
+  }
+  const subscribeNewsletter = () => {
+    const v = email.trim()
+    if (!v) { showToast('이메일을 입력해주세요.'); return }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v)) { showToast('올바른 이메일 주소를 입력해주세요.'); return }
+    setEmail('')
+    showToast('구독 신청이 접수되었습니다.')
+  }
 
   return (
     <div>
@@ -260,115 +227,49 @@ export default function Home() {
         </section>
       )}
 
-      {/* ── 필터 & 상품 목록 (쇼핑 우선 노출) ── */}
-      <section id="product-list" className="section" style={{ paddingTop: 0, paddingBottom: 64 }}>
+      {/* ── 맞춤 추천 상품 4개 ── */}
+      <section className="section" style={{ paddingTop: 40 }}>
         <div className="wrap">
-          <div className="section-head" style={{ textAlign: 'left', maxWidth: 'none', marginBottom: 20 }}>
-            <span className="eyebrow">{goal} 기준 영양 강조</span>
-            <h2 className="serif" style={{ fontSize: 26 }}>{shopCategory}{shopSub !== '전체' ? ` · ${shopSub}` : ''}</h2>
+          <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 16, marginBottom: 20, flexWrap: 'wrap' }}>
+            <div className="section-head" style={{ textAlign: 'left', maxWidth: 'none', marginBottom: 0 }}>
+              <span className="eyebrow">Recommended for you</span>
+              <h2 className="serif" style={{ fontSize: 26 }}>{goal}에 맞춘 추천 상품</h2>
+            </div>
+            <button type="button" className="more-link" onClick={() => goToProducts({ recommend: true })}>
+              제품 더보기 <Icon name="chevron-right" size={15} />
+            </button>
           </div>
-
-          {searchMode === 'ai' && !aiSearch && !aiLoading && !aiError && (
-            <div className="ai-hint">
-              <span className="ai-hint-label"><Icon name="sparkles" size={14} /> AI 자연어 검색 예시</span>
-              {AI_EXAMPLES.map((ex) => (
-                <button key={ex} type="button" className="chip" onClick={() => runAiSearch(ex)}>{ex}</button>
-              ))}
-            </div>
-          )}
-
-          {searchMode === 'ai' && aiLoading && (
-            <div className="ai-result-summary" role="status">
-              <div className="ai-result-head"><h3>검색 조건을 정리하고 있어요.</h3></div>
-              <p className="ai-result-count">잠시만 기다려 주세요.</p>
-            </div>
-          )}
-
-          {searchMode === 'ai' && aiError && (
-            <div className="ai-result-summary" role="alert">
-              <div className="ai-result-head"><h3>AI 검색을 완료하지 못했어요.</h3></div>
-              <p className="ai-result-count">{aiError}</p>
-              <div className="ai-error-actions">
-                <button className="btn btn-soft btn-sm" onClick={() => runAiSearch()}>다시 시도</button>
-                <button className="f-reset" onClick={clearAiSearch}>일반 검색으로 전환</button>
-              </div>
-            </div>
-          )}
-
-          {searchMode === 'ai' && aiSearch && (
-            <div className="ai-result-summary">
-              <div className="ai-result-head">
-                <div>
-                  <span className="eyebrow">AI Search Result</span>
-                  <h3>AI가 이해한 검색 조건</h3>
-                </div>
-                <button type="button" className="f-reset" onClick={clearAiSearch}>전체 상품 보기</button>
-              </div>
-              <p className="ai-query">“{aiSearch.query}”</p>
-              <div className="ai-condition-tags">
-                {aiSearch.conditions.map((condition) => <span key={condition}>{condition}</span>)}
-              </div>
-              <p className="ai-fallback">수치 기준은 의료 기준이 아닌 CareMarket 내부 검색 기준입니다.</p>
-              {aiSearch.filters.excluded_allergens.length > 0 && <p className="ai-fallback">등록된 성분 정보 기준으로 제외하며, 알레르기 안전을 보장하지 않습니다.</p>}
-              {!productsLoading && !productsError && <p className="ai-result-count">조건에 맞는 상품 <b>{aiProducts.length}</b>개를 찾았습니다.</p>}
-            </div>
-          )}
-
-          <div className="filterbar" style={{ marginBottom: 26 }}>
-            <div className="f-tags">
-              <span className="f-label"><Icon name="sliders" size={15} /> 보조 조건</span>
-              {SUB_FILTERS.map((f) => (
-                <button key={f.id} className={`chip${subFilters.includes(f.tag) ? ' on' : ''}`} onClick={() => toggleSub(f.tag)} title={f.hint}>
-                  {subFilters.includes(f.tag) && <Icon name="check" size={13} strokeWidth={2.6} />}
-                  {f.label}
-                </button>
-              ))}
-              {subFilters.length > 0 && (
-                <button className="f-reset" onClick={() => setSubFilters([])}>초기화</button>
-              )}
-            </div>
-            <div className="f-sort">
-              <span>총 <b>{aiProducts.length}</b>개</span>
-              <span className="divider-v" />
-              <select value={sortBy} onChange={(e) => setSortBy(e.target.value)}>
-                <option value="recommend">{searchMode === 'ai' ? '관련도순' : '맞춤 추천순'}</option>
-                <option value="review">리뷰 많은순</option>
-                <option value="lowPrice">낮은 가격순</option>
-                <option value="highPrice">높은 가격순</option>
-                {searchMode === 'ai' && <>
-                  <option value="protein">단백질 높은순</option>
-                  <option value="sugar">당류 낮은순</option>
-                  <option value="sodium">나트륨 낮은순</option>
-                </>}
-              </select>
-            </div>
-          </div>
-
           {productsLoading ? (
-            <div className="empty" aria-live="polite">
-              <Icon name="package" size={44} />
-              <h3>상품을 불러오고 있습니다.</h3>
-              <p>최신 상품과 영양정보를 확인하는 중입니다.</p>
-            </div>
-          ) : productsError ? (
-            <div className="empty" role="alert">
-              <Icon name="alert-circle" size={44} />
-              <h3>상품을 불러오지 못했습니다.</h3>
-              <p>잠시 후 다시 시도해 주세요.</p>
-              <button className="btn btn-primary" onClick={reloadProducts}>다시 불러오기</button>
-            </div>
-          ) : searchMode === 'ai' && (aiLoading || aiError) ? null : aiProducts.length === 0 ? (
-            <div className="empty">
-              <Icon name="alert-circle" size={44} />
-              <h3>선택하신 조건에 맞는 상품이 없습니다.</h3>
-              <p>저당·저염·고단백 등 보조 조건을 조정하거나 검색어를 초기화해 보세요.</p>
-              <button className="btn btn-primary" onClick={() => { setSubFilters([]); setSearch(''); clearAiSearch() }}>조건 전체 초기화</button>
-            </div>
+            <div className="empty" aria-live="polite"><Icon name="package" size={40} /><h3>추천 상품을 불러오고 있습니다.</h3></div>
           ) : (
             <div className="product-grid">
-              {aiProducts.map((p) => <ProductCard key={p.id} product={p} />)}
+              {recommended.map((p) => <ProductCard key={p.id} product={p} />)}
             </div>
           )}
+        </div>
+      </section>
+
+      {/* ── Wellness Journal (Newsletter) ── */}
+      <section className="section" style={{ paddingTop: 0 }}>
+        <div className="wrap">
+          <div className="journal">
+            <div className="journal-copy">
+              <span className="journal-kicker">CareMarket Wellness Journal</span>
+              <h3 className="journal-title serif">매주 만나는 웰니스 큐레이션</h3>
+              <p className="journal-desc">건강한 식단 이야기와 영양 팁, CareMarket의 새로운 웰빙 셀렉션을 가장 먼저 만나보세요.</p>
+            </div>
+            <div className="journal-form">
+              <input
+                type="email"
+                placeholder="이메일을 입력해주세요"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && subscribeNewsletter()}
+                aria-label="구독 이메일"
+              />
+              <button className="btn journal-cta" onClick={subscribeNewsletter}>구독하기 <Icon name="chevron-right" size={15} /></button>
+            </div>
+          </div>
         </div>
       </section>
 
@@ -423,7 +324,51 @@ export default function Home() {
         </div>
       </section>
 
-      {/* ── 가치 배너 ── */}
+      {/* ── 전체상품 큐레이션 8개 (프리뷰) ── */}
+      <section id="product-list" className="section" style={{ paddingTop: 0 }}>
+        <div className="wrap">
+          <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 16, marginBottom: 16, flexWrap: 'wrap' }}>
+            <div className="section-head" style={{ textAlign: 'left', maxWidth: 'none', marginBottom: 0 }}>
+              <span className="eyebrow">Shop the catalog</span>
+              <h2 className="serif" style={{ fontSize: 26 }}>전체상품 큐레이션</h2>
+            </div>
+            <button type="button" className="more-link" onClick={() => goToProducts()}>
+              전체상품 100개 보기 <Icon name="chevron-right" size={15} />
+            </button>
+          </div>
+
+          <div className="filterbar" style={{ marginBottom: 22 }}>
+            <div className="f-tags">
+              <span className="f-label"><Icon name="sliders" size={15} /> 보조 조건</span>
+              {SUB_FILTERS.map((f) => (
+                <button key={f.id} className={`chip${subFilters.includes(f.tag) ? ' on' : ''}`} onClick={() => toggleSub(f.tag)} title={f.hint}>
+                  {subFilters.includes(f.tag) && <Icon name="check" size={13} strokeWidth={2.6} />}
+                  {f.label}
+                </button>
+              ))}
+              {subFilters.length > 0 && (
+                <button className="f-reset" onClick={() => setSubFilters([])}>초기화</button>
+              )}
+            </div>
+          </div>
+
+          {productsLoading ? (
+            <div className="empty" aria-live="polite"><Icon name="package" size={40} /><h3>상품을 불러오고 있습니다.</h3></div>
+          ) : previewAll.length === 0 ? (
+            <div className="empty">
+              <Icon name="alert-circle" size={40} />
+              <h3>선택하신 조건에 맞는 상품이 없습니다.</h3>
+              <button className="btn btn-primary" onClick={() => setSubFilters([])}>보조 조건 초기화</button>
+            </div>
+          ) : (
+            <div className="product-grid">
+              {previewAll.map((p) => <ProductCard key={p.id} product={p} />)}
+            </div>
+          )}
+        </div>
+      </section>
+
+      {/* ── 가치 배너 (Trust) ── */}
       <section className="section" style={{ paddingTop: 0 }}>
         <div className="wrap">
           <div className="values">
@@ -439,6 +384,7 @@ export default function Home() {
           </div>
         </div>
       </section>
+
     </div>
   )
 }
