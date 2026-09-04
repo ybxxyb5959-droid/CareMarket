@@ -7,8 +7,9 @@ const SUMMARY_ORDER = ['sodium', 'sugar', 'protein', 'calories']
 
 export default function Cart() {
   const {
-    cart, setQty, removeFromCart, openProduct, navigate,
-    cartTotal, deliveryFee, checkout, showToast, goal,
+    cart, changeCartQty, removeFromCart, openProduct, navigate,
+    cartTotal, deliveryFee, checkout, goal,
+    cartLoading, cartPending, cartError, reloadCart,
   } = useStore()
 
   const goalKeys = GOAL_NUTRIENTS[goal] || []
@@ -32,10 +33,12 @@ export default function Cart() {
           <span style={{ fontSize: 13, color: 'var(--muted)' }}>총 {cart.length}개 식품</span>
         </div>
 
+        {cartError && <div className="cart-status" role="alert">{cartError} <button className="btn btn-soft btn-sm" onClick={reloadCart}>다시 불러오기</button></div>}
+        {cartLoading && <p className="cart-status" role="status">장바구니를 불러오고 있습니다.</p>}
         {cart.length === 0 ? (
           <div className="empty">
             <Icon name="cart" size={44} />
-            <h3>장바구니에 담긴 상품이 없습니다.</h3>
+            <h3>{cartLoading ? '잠시만 기다려 주세요.' : cartError ? '장바구니를 확인할 수 없습니다.' : '장바구니에 담긴 상품이 없습니다.'}</h3>
             <p>나에게 맞는 웰빙 식단을 둘러보세요.</p>
             <button className="btn btn-primary" onClick={() => navigate('main')}>식품 둘러보기</button>
           </div>
@@ -57,11 +60,11 @@ export default function Cart() {
                   </div>
                   <div className="ci-ctrl">
                     <div className="qty-stepper">
-                      <button onClick={() => setQty(product.id, quantity - 1)}><Icon name="minus" size={14} /></button>
+                      <button aria-label="수량 감소" disabled={quantity <= 1} onClick={() => changeCartQty(product.id, -1)}><Icon name="minus" size={14} /></button>
                       <span>{quantity}</span>
-                      <button onClick={() => setQty(product.id, quantity + 1)}><Icon name="plus" size={14} /></button>
+                      <button aria-label="수량 증가" onClick={() => changeCartQty(product.id, 1)}><Icon name="plus" size={14} /></button>
                     </div>
-                    <button className="del" onClick={() => { removeFromCart(product.id); showToast('상품을 삭제했습니다.') }} aria-label="삭제">
+                    <button className="del" onClick={() => removeFromCart(product.id)} aria-label="삭제">
                       <Icon name="trash" size={17} />
                     </button>
                   </div>
@@ -108,7 +111,7 @@ export default function Cart() {
                 <span className="lbl">총 결제금액</span>
                 <span className="val">{won(cartTotal + deliveryFee)}</span>
               </div>
-              <button className="btn btn-primary btn-lg btn-block" style={{ marginTop: 18 }} onClick={checkout}>
+              <button className="btn btn-primary btn-lg btn-block" style={{ marginTop: 18 }} disabled={cartLoading || cartPending > 0 || Boolean(cartError)} onClick={checkout}>
                 <Icon name="credit-card" size={17} /> 주문서 작성 및 결제
               </button>
               <p style={{ fontSize: 11.5, color: 'var(--faint)', textAlign: 'center', marginTop: 12 }}>

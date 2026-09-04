@@ -42,7 +42,7 @@ values
     false,
     array['국내산 닭가슴살 99%', '천일염']::text[],
     true,
-    'https://images.unsplash.com/photo-1604503468506-a8da13d82791?w=600&auto=format&fit=crop&q=80'
+    'https://images.unsplash.com/photo-1532550907401-a500c9a57435?w=600&auto=format&fit=crop&q=80'
   ),
   (
     '그릴드 훈제 닭가슴살 슬라이스 칠리페퍼 120g',
@@ -126,7 +126,7 @@ values
     false,
     array['국내산 닭가슴살 99.5%']::text[],
     true,
-    'https://images.unsplash.com/photo-1566478989037-eec170784d0b?w=600&auto=format&fit=crop&q=80'
+    'https://images.unsplash.com/photo-1532550907401-a500c9a57435?w=600&auto=format&fit=crop&q=80'
   ),
   (
     '블랙페퍼 안심 스테이크 130g',
@@ -168,7 +168,7 @@ values
     false,
     array['분리대두단백 45%', '비트즙', '코코넛오일']::text[],
     true,
-    'https://images.unsplash.com/photo-1520072959219-c595dc870360?w=600&auto=format&fit=crop&q=80'
+    'https://thumb.wikimedia.org/wikipedia/commons/thumb/7/7b/Beyond_Meat_Beast_Burger_1.jpg/960px-Beyond_Meat_Beast_Burger_1.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail'
   ),
   (
     '저염 닭가슴살 만두 메밀피 168g',
@@ -210,7 +210,7 @@ values
     false,
     array['러시아산 대구살 99%', '정제소금']::text[],
     true,
-    'https://images.unsplash.com/photo-1519708227418-c8fd9a32b7a2?w=600&auto=format&fit=crop&q=80'
+    'https://thumb.wikimedia.org/wikipedia/commons/thumb/3/37/Frozen_cod_fillet_%2820240124%29.jpg/960px-Frozen_cod_fillet_%2820240124%29.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail'
   ),
   (
     '부드러운 소고기 우둔살 슬라이스 100g',
@@ -252,7 +252,7 @@ values
     false,
     array['현미 35%', '알곤약 35%', '닭가슴살 20%', '계란후라이']::text[],
     true,
-    'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=600&auto=format&fit=crop&q=80'
+    'https://thumb.wikimedia.org/wikipedia/commons/thumb/8/8b/Home-cooked_Hainanese_chicken_rice.jpg/960px-Home-cooked_Hainanese_chicken_rice.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail'
   ),
   (
     '퀴노아 렌틸콩 샐러드 보울 & 발사믹 210g',
@@ -294,7 +294,7 @@ values
     false,
     array['소우둔살 30%', '단호박 25%', '귀리밥 30%', '아스파라거스']::text[],
     true,
-    'https://images.unsplash.com/photo-1547496502-affa22d38842?w=600&auto=format&fit=crop&q=80'
+    'https://images.unsplash.com/photo-1544025162-d76694265947?w=600&auto=format&fit=crop&q=80'
   ),
   (
     '컬리플라워 라이스 두부 버섯 덮밥 230g',
@@ -315,7 +315,7 @@ values
     false,
     array['컬리플라워 50%', '국산콩두부 25%', '표고버섯 15%']::text[],
     true,
-    'https://images.unsplash.com/photo-1540420773420-3366772f4999?w=600&auto=format&fit=crop&q=80'
+    'https://thumb.wikimedia.org/wikipedia/commons/thumb/f/f4/Tofu_%26_Mushroom_Curry_Don_%28V%29_-_Sunoso_2023-11-28.jpg/960px-Tofu_%26_Mushroom_Curry_Don_%28V%29_-_Sunoso_2023-11-28.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail'
   ),
   (
     '단호박 닭가슴살 영양솥밥 브리또 140g',
@@ -357,7 +357,7 @@ values
     false,
     array['닭안심육수 60%', '해초곤약면 30%', '대파']::text[],
     true,
-    'https://images.unsplash.com/photo-1569718212165-3a8278d5f624?w=600&auto=format&fit=crop&q=80'
+    'https://thumb.wikimedia.org/wikipedia/commons/thumb/9/90/Chicken_with_Noodles_Soup_-_Noodles_Soup_2023-10-24.jpg/960px-Chicken_with_Noodles_Soup_-_Noodles_Soup_2023-10-24.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail'
   ),
   (
     '수비드 연어 스테이크 & 보리 리조또 260g',
@@ -378,7 +378,7 @@ values
     false,
     array['노르웨이산 연어 35%', '찰보리 30%', '탈지우유']::text[],
     true,
-    'https://images.unsplash.com/photo-1467003909585-2f8a72700288?w=600&auto=format&fit=crop&q=80'
+    'https://images.unsplash.com/photo-1519708227418-c8fd9a32b7a2?w=600&auto=format&fit=crop&q=80'
   ),
   (
     '단백질 듬뿍 오트밀 닭가슴살 영양죽 280g',
@@ -399,7 +399,7 @@ values
     false,
     array['오트밀귀리 40%', '닭가슴살 35%', '참기름']::text[],
     true,
-    'https://images.unsplash.com/photo-1589301760014-d929f3979dbc?w=600&auto=format&fit=crop&q=80'
+    'https://upload.wikimedia.org/wikipedia/commons/7/72/Oat_porridge_in_Ghana.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail_unscaled'
   ),
   (
     '지중해식 구운 병아리콩 & 가지 그라탕 220g',
@@ -420,7 +420,7 @@ values
     false,
     array['병아리콩 40%', '구운가지 30%', '토마토퓨레']::text[],
     true,
-    'https://images.unsplash.com/photo-1543339308-43e59d6b73a6?w=600&auto=format&fit=crop&q=80'
+    'https://thumb.wikimedia.org/wikipedia/commons/thumb/b/b8/Vegetarian_Moussaka_and_Spinach_%26_Button_Mushrooms_With_Pesto_Dressing_-_Foodilic_2024-08-12.jpg/960px-Vegetarian_Moussaka_and_Spinach_%26_Button_Mushrooms_With_Pesto_Dressing_-_Foodilic_2024-08-12.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail'
   ),
   (
     '고구마 닭가슴살 소시지 플래터 도시락 270g',
@@ -441,7 +441,7 @@ values
     false,
     array['호박고구마 45%', '닭가슴살소시지 35%', '브로콜리']::text[],
     true,
-    'https://images.unsplash.com/photo-1505253716362-afaea1d3d1af?w=600&auto=format&fit=crop&q=80'
+    'https://thumb.wikimedia.org/wikipedia/commons/thumb/8/86/Sweet_Potato_Sauteed_With_Honey.jpg/960px-Sweet_Potato_Sauteed_With_Honey.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail'
   ),
   (
     '제로슈가 크런치 카카오 프로틴바 50g',
@@ -462,7 +462,7 @@ values
     false,
     array['분리유청단백 WPI', '알룰로스', '카카오매스', '대두단백너겟']::text[],
     true,
-    'https://images.unsplash.com/photo-1622484216850-25255476a6cf?w=600&auto=format&fit=crop&q=80'
+    'https://thumb.wikimedia.org/wikipedia/commons/thumb/c/c3/Three_protein_bars%2C_two_cut_in_half.jpg/960px-Three_protein_bars%2C_two_cut_in_half.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail'
   ),
   (
     '고소한 피넛버터 오트 프로틴 쿠키 60g',
@@ -504,7 +504,7 @@ values
     false,
     array['병아리콩 88%', '바베큐맛시즈닝', '해바라기유']::text[],
     true,
-    'https://images.unsplash.com/photo-1515543237350-b3eea1ec8082?w=600&auto=format&fit=crop&q=80'
+    'https://upload.wikimedia.org/wikipedia/commons/4/40/Leblebi.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail_unscaled'
   ),
   (
     '제주 말차 화이트 청크 프로틴바 50g',
@@ -525,7 +525,7 @@ values
     true,
     array['유청단백질', '유기농제주말차 6%', '무설탕화이트초콜릿칩']::text[],
     true,
-    'https://images.unsplash.com/photo-1541781774459-bb2af2f05b55?w=600&auto=format&fit=crop&q=80'
+    'https://thumb.wikimedia.org/wikipedia/commons/thumb/4/4e/White_Matcha_Bar_.jpg/960px-White_Matcha_Bar_.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail'
   ),
   (
     '프로틴 현미 곤약 팝칩 치즈맛 35g',
@@ -567,7 +567,7 @@ values
     true,
     array['분리유청단백', '에스프레소농축액', '과라나추출분말']::text[],
     true,
-    'https://images.unsplash.com/photo-1576618148400-f54bed99fcfd?w=600&auto=format&fit=crop&q=80'
+    'https://thumb.wikimedia.org/wikipedia/commons/thumb/5/55/Three_protein_bars.jpg/960px-Three_protein_bars.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail'
   ),
   (
     '비건 글루텐프리 블랙빈 브라우니 60g',
@@ -588,7 +588,7 @@ values
     false,
     array['국산검은콩가루 40%', '카카오분말 25%', '대추야자시럽']::text[],
     true,
-    'https://images.unsplash.com/photo-1589218436045-ee320057f443?w=600&auto=format&fit=crop&q=80'
+    'https://thumb.wikimedia.org/wikipedia/commons/thumb/4/48/Chocolate_Brownie_Decorated.jpg/960px-Chocolate_Brownie_Decorated.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail'
   ),
   (
     '프로틴 베이크드 베이글 칩 허니버터맛 45g',
@@ -609,7 +609,7 @@ values
     false,
     array['통밀베이글 75%', '유청단백너겟', '허니버터시즈닝']::text[],
     true,
-    'https://images.unsplash.com/photo-1555507036-ab1f4038808a?w=600&auto=format&fit=crop&q=80'
+    'https://thumb.wikimedia.org/wikipedia/commons/thumb/0/05/NY-Deli-Bagel-Chips.jpg/960px-NY-Deli-Bagel-Chips.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail'
   ),
   (
     '제로 알룰로스 단백질 젤리 청포도맛 50g',
@@ -651,7 +651,7 @@ values
     false,
     array['산양유단백분말 25%', '밀가루', '식물성유지', '코코아분말']::text[],
     true,
-    'https://images.unsplash.com/photo-1509440159596-0249088772ff?w=600&auto=format&fit=crop&q=80'
+    'https://thumb.wikimedia.org/wikipedia/commons/thumb/2/2b/Milk_flavored_peanut_wafer_biscuits.jpg/960px-Milk_flavored_peanut_wafer_biscuits.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail'
   ),
   (
     '무가당 고단백 수제 그래놀라 오리지널 400g',
@@ -672,7 +672,7 @@ values
     false,
     array['유기농귀리 50%', '아몬드 20%', '호박씨 15%', '자일리톨']::text[],
     true,
-    'https://images.unsplash.com/photo-1517093708149-14a00445d4c2?w=600&auto=format&fit=crop&q=80'
+    'https://upload.wikimedia.org/wikipedia/commons/d/dd/Granola_Honey_and_Vanilla_Top.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail_unscaled'
   ),
   (
     '카카오 닙스 고단백 롤드오트 그래놀라 350g',
@@ -693,7 +693,7 @@ values
     false,
     array['압착귀리 45%', '완두단백크리스피 25%', '카카오닙스 15%']::text[],
     true,
-    'https://images.unsplash.com/photo-1541832676-9b763b0239ab?w=600&auto=format&fit=crop&q=80'
+    'https://upload.wikimedia.org/wikipedia/commons/d/dd/Granola_Honey_and_Vanilla_Top.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail_unscaled'
   ),
   (
     '저당 베리베리 프로틴 시리얼 300g',
@@ -735,7 +735,7 @@ values
     false,
     array['유기농통귀리 60%', '피칸 15%', '메이플시럽', '시나몬파우더']::text[],
     true,
-    'https://images.unsplash.com/photo-1590080875515-8a3a8dc5735e?w=600&auto=format&fit=crop&q=80'
+    'https://upload.wikimedia.org/wikipedia/commons/d/dd/Granola_Honey_and_Vanilla_Top.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail_unscaled'
   ),
   (
     '하이프로틴 흑임자 서리태 그래놀라 350g',
@@ -756,7 +756,7 @@ values
     false,
     array['압착귀리 40%', '볶은서리태 25%', '흑임자페이스트 15%']::text[],
     true,
-    'https://images.unsplash.com/photo-1509440159596-0249088772ff?w=600&auto=format&fit=crop&q=80'
+    'https://upload.wikimedia.org/wikipedia/commons/d/dd/Granola_Honey_and_Vanilla_Top.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail_unscaled'
   ),
   (
     '글루텐프리 퀴노아 라이스 크런치 280g',
@@ -777,7 +777,7 @@ values
     false,
     array['발아현미 70%', '퀴노아퍼프 25%', '천일염']::text[],
     true,
-    'https://images.unsplash.com/photo-1586201375761-83865001e31c?w=600&auto=format&fit=crop&q=80'
+    'https://upload.wikimedia.org/wikipedia/commons/3/39/Puffed_Rice_Sugar_Coated.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail_unscaled'
   ),
   (
     '식단관리 저칼로리 곤약 그래놀라 300g',
@@ -798,7 +798,7 @@ values
     false,
     array['귀리 45%', '건조곤약플레이크 30%', '치커리뿌리추출식이섬유']::text[],
     true,
-    'https://images.unsplash.com/photo-1544816155-12df9643f363?w=600&auto=format&fit=crop&q=80'
+    'https://upload.wikimedia.org/wikipedia/commons/d/dd/Granola_Honey_and_Vanilla_Top.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail_unscaled'
   ),
   (
     '프로틴 맥스 소이볼 그래놀라 400g',
@@ -819,7 +819,7 @@ values
     false,
     array['분리대두단백볼 40%', '통귀리 35%', '해바라기씨 15%']::text[],
     true,
-    'https://images.unsplash.com/photo-1517093708149-14a00445d4c2?w=600&auto=format&fit=crop&q=80'
+    'https://upload.wikimedia.org/wikipedia/commons/d/dd/Granola_Honey_and_Vanilla_Top.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail_unscaled'
   ),
   (
     '고구마 말랭이 듬뿍 옐로우 그래놀라 350g',
@@ -840,7 +840,7 @@ values
     false,
     array['귀리 45%', '건조호박고구마큐브 25%', '호박씨 15%']::text[],
     true,
-    'https://images.unsplash.com/photo-1541832676-9b763b0239ab?w=600&auto=format&fit=crop&q=80'
+    'https://upload.wikimedia.org/wikipedia/commons/d/dd/Granola_Honey_and_Vanilla_Top.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail_unscaled'
   ),
   (
     '그린 애플 & 치아씨드 로우 그래놀라 320g',
@@ -924,7 +924,7 @@ values
     false,
     array['귀리추출액 85%', '유채유', '제이인산칼륨']::text[],
     true,
-    'https://images.unsplash.com/photo-1568651316499-19ec6eb91ef1?w=600&auto=format&fit=crop&q=80'
+    'https://thumb.wikimedia.org/wikipedia/commons/thumb/8/82/Oatmilk_1.jpg/960px-Oatmilk_1.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail'
   ),
   (
     '락토프리 저지방 프로틴 우유 250ml',
@@ -966,7 +966,7 @@ values
     false,
     array['국산산양원유 99.9%', '복합생유산균']::text[],
     true,
-    'https://images.unsplash.com/photo-1571212515416-fef01fc43637?w=600&auto=format&fit=crop&q=80'
+    'https://upload.wikimedia.org/wikipedia/commons/8/83/Kefir_in_a_glass.JPG?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail_unscaled'
   ),
   (
     '국산 서리태 검은콩 두유 무가당 190ml x 16팩',
@@ -987,7 +987,7 @@ values
     false,
     array['국산서리태콩추출액 99.5%', '천일염']::text[],
     true,
-    'https://images.unsplash.com/photo-1600880292203-757bb62b4baf?w=600&auto=format&fit=crop&q=80'
+    'https://images.unsplash.com/photo-1550583724-b2692b85b150?w=600&auto=format&fit=crop&q=80'
   ),
   (
     '코코넛 워터 베이스 무가당 코코넛 밀크 330ml',
@@ -1008,7 +1008,7 @@ values
     false,
     array['천연코코넛워터 70%', '코코넛밀크 30%']::text[],
     true,
-    'https://images.unsplash.com/photo-1544816155-12df9643f363?w=600&auto=format&fit=crop&q=80'
+    'https://thumb.wikimedia.org/wikipedia/commons/thumb/0/0f/Coconut_Milk.JPG/960px-Coconut_Milk.JPG?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail'
   ),
   (
     '저칼로리 코티지 치즈 200g',
@@ -1029,7 +1029,7 @@ values
     false,
     array['국산원유 98%', '구연산', '정제염']::text[],
     true,
-    'https://images.unsplash.com/photo-1559561853-08451507cbe7?w=600&auto=format&fit=crop&q=80'
+    'https://thumb.wikimedia.org/wikipedia/commons/thumb/1/13/CottageCheeseGermany.jpg/960px-CottageCheeseGermany.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail'
   ),
   (
     '유기농 골든 플랙씨드 아마씨유 250ml',
@@ -1050,7 +1050,7 @@ values
     false,
     array['유기농골든아마씨유 100%']::text[],
     true,
-    'https://images.unsplash.com/photo-1474979266404-7eaacbcd87c5?w=600&auto=format&fit=crop&q=80'
+    'https://images.unsplash.com/photo-1652282556241-0ce13285d00f?w=600&auto=format&fit=crop&q=80'
   ),
   (
     '프로바이오틱스 케피어 발효유 플레인 500ml',
@@ -1071,7 +1071,7 @@ values
     false,
     array['원유 99%', '케피어종균유산균']::text[],
     true,
-    'https://images.unsplash.com/photo-1563636619-e9143da7973b?w=600&auto=format&fit=crop&q=80'
+    'https://upload.wikimedia.org/wikipedia/commons/8/83/Kefir_in_a_glass.JPG?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail_unscaled'
   ),
   (
     '프로틴 맥스 25g WPI 더블초코 250ml',
@@ -1092,7 +1092,7 @@ values
     false,
     array['분리유청단백 WPI', '알룰로스', '네덜란드코코아분말']::text[],
     true,
-    'https://images.unsplash.com/photo-1541658016709-82535e94bc69?w=600&auto=format&fit=crop&q=80'
+    'https://thumb.wikimedia.org/wikipedia/commons/thumb/2/23/Chocolate_milk.JPG/960px-Chocolate_milk.JPG?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail'
   ),
   (
     '콜드브루 프로틴 라떼 에너지 부스트 275ml',
@@ -1134,7 +1134,7 @@ values
     false,
     array['BCAA복합물', '자몽과즙농축액', '탄산수', '수크랄로스']::text[],
     true,
-    'https://images.unsplash.com/photo-1622483767028-3f66f32aef97?w=600&auto=format&fit=crop&q=80'
+    'https://thumb.wikimedia.org/wikipedia/commons/thumb/d/da/Grapefruit_Juice_%282953129458%29.jpg/960px-Grapefruit_Juice_%282953129458%29.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail'
   ),
   (
     '식물성 완두 프로틴 스무디 바나나베리 250ml',
@@ -1176,7 +1176,7 @@ values
     true,
     array['유기농홍차발효액 90%', '레몬과즙 5%', '생강추출액']::text[],
     true,
-    'https://images.unsplash.com/photo-1556881286-fc6915169721?w=600&auto=format&fit=crop&q=80'
+    'https://upload.wikimedia.org/wikipedia/commons/2/21/Kombucha_cordial.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail_unscaled'
   ),
   (
     'L-카르니틴 버닝 워터 그린애플 500ml',
@@ -1197,7 +1197,7 @@ values
     false,
     array['L-카르니틴타르트레이트', '사과농축액 0.5%', '에리스리톨']::text[],
     true,
-    'https://images.unsplash.com/photo-1548839140-29a749e1bc4e?w=600&auto=format&fit=crop&q=80'
+    'https://thumb.wikimedia.org/wikipedia/commons/thumb/d/df/Apple_juice_3.jpg/960px-Apple_juice_3.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail'
   ),
   (
     '단호박 팥 데일리 호박즙 100ml x 14포',
@@ -1218,7 +1218,7 @@ values
     false,
     array['국내산늙은호박추출액 85%', '국내산팥추출액 15%']::text[],
     true,
-    'https://images.unsplash.com/photo-1506459225024-1428097a7e18?w=600&auto=format&fit=crop&q=80'
+    'https://thumb.wikimedia.org/wikipedia/commons/thumb/2/26/Sliced_pumpkin.jpg/960px-Sliced_pumpkin.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail'
   ),
   (
     '타트체리 멜라토닌 나이트 드링크 100ml',
@@ -1239,7 +1239,7 @@ values
     false,
     array['미국산타트체리농축액 99.5%', '테아닌']::text[],
     true,
-    'https://images.unsplash.com/photo-1527661591475-527312dd65f5?w=600&auto=format&fit=crop&q=80'
+    'https://upload.wikimedia.org/wikipedia/commons/0/01/Cherry_juice.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail_unscaled'
   ),
   (
     '프로틴 맥스 25g WPI 딸기 바닐라 250ml',
@@ -1281,7 +1281,7 @@ values
     true,
     array['과라나추출액', '타우린', '비타민B군 복합체']::text[],
     true,
-    'https://images.unsplash.com/photo-1551024709-8f23befc6f87?w=600&auto=format&fit=crop&q=80'
+    'https://thumb.wikimedia.org/wikipedia/commons/thumb/b/ba/Guarana.jpg/960px-Guarana.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail'
   ),
   (
     '프리미엄 원데이 순수 견과 데일리팩 25g x 14포',
@@ -1302,7 +1302,7 @@ values
     false,
     array['구운아몬드 35%', '호두 25%', '구운피칸 20%', '마카다미아 20%']::text[],
     true,
-    'https://images.unsplash.com/photo-1536591375315-1b836890327b?w=600&auto=format&fit=crop&q=80'
+    'https://thumb.wikimedia.org/wikipedia/commons/thumb/7/77/Mixed_Nuts_%28Alabama_Extension%29.jpg/960px-Mixed_Nuts_%28Alabama_Extension%29.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail'
   ),
   (
     '저온 로스팅 무염 캐슈넛 300g',
@@ -1323,7 +1323,7 @@ values
     false,
     array['인도산 캐슈넛 100%']::text[],
     true,
-    'https://images.unsplash.com/photo-1509358271058-acd22cc93898?w=600&auto=format&fit=crop&q=80'
+    'https://images.unsplash.com/photo-1686721635333-d71af2f1084b?w=600&auto=format&fit=crop&q=80'
   ),
   (
     '껍질째 먹는 캘리포니아 구운 아몬드 450g',
@@ -1365,7 +1365,7 @@ values
     false,
     array['동결건조딸기 50%', '동결건조블루베리 50%']::text[],
     true,
-    'https://images.unsplash.com/photo-1464965911861-746a04b4bca6?w=600&auto=format&fit=crop&q=80'
+    'https://thumb.wikimedia.org/wikipedia/commons/thumb/a/a2/Freeze-dried_strawberries.jpg/960px-Freeze-dried_strawberries.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail'
   ),
   (
     '생생 햄프씨드 껍질 벗긴 대마씨 250g',
@@ -1386,7 +1386,7 @@ values
     false,
     array['캐나다산 햄프씨드 100%']::text[],
     true,
-    'https://images.unsplash.com/photo-1546833999-b9f581a1996d?w=600&auto=format&fit=crop&q=80'
+    'https://thumb.wikimedia.org/wikipedia/commons/thumb/1/16/Shelled_hemp_seeds.jpg/960px-Shelled_hemp_seeds.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail'
   ),
   (
     '지중해 사막의 선물 무첨가 대추야자 데이츠 200g',
@@ -1407,7 +1407,7 @@ values
     false,
     array['건조대추야자 100%']::text[],
     true,
-    'https://images.unsplash.com/photo-1596704017254-9b121068fb31?w=600&auto=format&fit=crop&q=80'
+    'https://images.unsplash.com/photo-1629738601425-494c3d6ba3e2?w=600&auto=format&fit=crop&q=80'
   ),
   (
     '바질페스토 시즈닝 구운 마카다미아 150g',
@@ -1428,7 +1428,7 @@ values
     false,
     array['호주산 마카다미아 94%', '바질페스토분말', '엑스트라버진올리브유']::text[],
     true,
-    'https://images.unsplash.com/photo-1536591375315-1b836890327b?w=600&auto=format&fit=crop&q=80'
+    'https://thumb.wikimedia.org/wikipedia/commons/thumb/a/a3/Macadamia_nut_kernels.jpg/960px-Macadamia_nut_kernels.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail'
   ),
   (
     '볶은 검은콩 서리태 스낵 200g',
@@ -1449,7 +1449,7 @@ values
     false,
     array['국내산서리태 100%']::text[],
     true,
-    'https://images.unsplash.com/photo-1546833999-b9f581a1996d?w=600&auto=format&fit=crop&q=80'
+    'https://thumb.wikimedia.org/wikipedia/commons/thumb/5/55/Black_soybeans.jpg/960px-Black_soybeans.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail'
   ),
   (
     '유기농 무염 볶은 호박씨 250g',
@@ -1470,7 +1470,7 @@ values
     false,
     array['유기농호박씨 100%']::text[],
     true,
-    'https://images.unsplash.com/photo-1509358271058-acd22cc93898?w=600&auto=format&fit=crop&q=80'
+    'https://images.unsplash.com/photo-1545447859-6a9eca16e6ed?w=600&auto=format&fit=crop&q=80'
   ),
   (
     '브라질너트 셀레늄 데일리 보울 180g',
@@ -1491,7 +1491,7 @@ values
     false,
     array['페루산 브라질너트 100%']::text[],
     true,
-    'https://images.unsplash.com/photo-1536591375315-1b836890327b?w=600&auto=format&fit=crop&q=80'
+    'https://thumb.wikimedia.org/wikipedia/commons/thumb/d/d6/Bertholletia_excelsa_seeds_closeup.jpg/960px-Bertholletia_excelsa_seeds_closeup.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail'
   ),
   (
     '데일리 올인원 활력 멀티비타민 & 미네랄 60정',
@@ -1533,7 +1533,7 @@ values
     false,
     array['정제어유 (EPA 및 DHA 함유유지 1,000mg)', '비타민E']::text[],
     true,
-    'https://images.unsplash.com/photo-1550572017-edd951aa8f72?w=600&auto=format&fit=crop&q=80'
+    'https://thumb.wikimedia.org/wikipedia/commons/thumb/b/b0/Omega_3_gelcap.jpg/960px-Omega_3_gelcap.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail'
   ),
   (
     '100억 생유산균 신바이오틱스 포스트바이오틱스 30포',
@@ -1554,7 +1554,7 @@ values
     false,
     array['17종 혼합유산균 (보장균수 100억)', '프락토올리고당']::text[],
     true,
-    'https://images.unsplash.com/photo-1577401239170-897942555fb3?w=600&auto=format&fit=crop&q=80'
+    'https://images.unsplash.com/photo-1593095948071-474c5cc2989d?w=600&auto=format&fit=crop&q=80'
   ),
   (
     '간 편한 밀크씨슬 실리마린 & 비타민B 60정',
@@ -1617,7 +1617,7 @@ values
     false,
     array['스위스산 비타민D3오일 4000IU', '메나퀴논-7 (비타민K2)', 'MCT오일']::text[],
     true,
-    'https://images.unsplash.com/photo-1550572017-edd951aa8f72?w=600&auto=format&fit=crop&q=80'
+    'https://thumb.wikimedia.org/wikipedia/commons/thumb/9/98/Algae_omega-3_270mg_capsules_-_vegan.jpg/960px-Algae_omega-3_270mg_capsules_-_vegan.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail'
   ),
   (
     '루테인 지아잔틴 아스타잔틴 아이케어 30캡슐',
@@ -1638,7 +1638,7 @@ values
     false,
     array['루테인지아잔틴복합추출물 20mg', '헤마토코쿠스추출물 (아스타잔틴 4mg)']::text[],
     true,
-    'https://images.unsplash.com/photo-1584017911766-d451b3d0e843?w=600&auto=format&fit=crop&q=80'
+    'https://thumb.wikimedia.org/wikipedia/commons/thumb/9/98/Algae_omega-3_270mg_capsules_-_vegan.jpg/960px-Algae_omega-3_270mg_capsules_-_vegan.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail'
   ),
   (
     '저분자 피쉬 콜라겐 펩타이드 3270mg 30포',
@@ -1659,7 +1659,7 @@ values
     false,
     array['어린콜라겐펩타이드 3,270mg', '히알루론산', '엘라스틴', '복숭아과즙분말']::text[],
     true,
-    'https://images.unsplash.com/photo-1577401239170-897942555fb3?w=600&auto=format&fit=crop&q=80'
+    'https://images.unsplash.com/photo-1593095948071-474c5cc2989d?w=600&auto=format&fit=crop&q=80'
   ),
   (
     '옥타코사놀 아르기닌 맥스 활력환 30포',
@@ -1680,7 +1680,7 @@ values
     false,
     array['L-아르기닌', '옥타코사놀함유유지', '마카추출분말', '아연']::text[],
     true,
-    'https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?w=600&auto=format&fit=crop&q=80'
+    'https://images.unsplash.com/photo-1593095948071-474c5cc2989d?w=600&auto=format&fit=crop&q=80'
   ),
   (
     '이뮨 아연 비타민C 츄어블 90정',
@@ -1722,7 +1722,7 @@ values
     false,
     array['알룰로스', '홍고추퓨레 20%', '양조식초', '천일염']::text[],
     true,
-    'https://images.unsplash.com/photo-1472476443507-c7a5948772fc?w=600&auto=format&fit=crop&q=80'
+    'https://thumb.wikimedia.org/wikipedia/commons/thumb/7/75/Sweet_Chili_Sauce_%28cropped%29.jpg/960px-Sweet_Chili_Sauce_%28cropped%29.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail'
   ),
   (
     '저염 무설탕 알룰로스 진양조간장 500ml',
@@ -1743,7 +1743,7 @@ values
     false,
     array['국산대두 50%', '국산소맥 30%', '알룰로스', '천일염']::text[],
     true,
-    'https://images.unsplash.com/photo-1589301760014-d929f3979dbc?w=600&auto=format&fit=crop&q=80'
+    'https://images.unsplash.com/photo-1638324396179-61035bc1e645?w=600&auto=format&fit=crop&q=80'
   ),
   (
     '제로 알룰로스 불닭 스파이시 소스 280g',
@@ -1764,7 +1764,7 @@ values
     false,
     array['하바네로고추분말', '알룰로스', '치킨추출농축액', '파프리카추출색소']::text[],
     true,
-    'https://images.unsplash.com/photo-1526318897912-328339143386?w=600&auto=format&fit=crop&q=80'
+    'https://thumb.wikimedia.org/wikipedia/commons/thumb/7/75/Sweet_Chili_Sauce_%28cropped%29.jpg/960px-Sweet_Chili_Sauce_%28cropped%29.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail'
   ),
   (
     '올리브유로 만든 제로 저당 마요네즈 240g',
@@ -1785,7 +1785,7 @@ values
     false,
     array['엑스트라버진올리브유 70%', '국산난황 15%', '식초', '레몬즙']::text[],
     true,
-    'https://images.unsplash.com/photo-1540420773420-3366772f4999?w=600&auto=format&fit=crop&q=80'
+    'https://images.unsplash.com/photo-1562114808-b4b33cf60f4f?w=600&auto=format&fit=crop&q=80'
   ),
   (
     '무설탕 저칼로리 토마토 케첩 320g',
@@ -1806,7 +1806,7 @@ values
     false,
     array['토마토페이스트 75%', '발효식초', '알룰로스', '천일염']::text[],
     true,
-    'https://images.unsplash.com/photo-1526318897912-328339143386?w=600&auto=format&fit=crop&q=80'
+    'https://images.unsplash.com/photo-1472476443507-c7a5948772fc?w=600&auto=format&fit=crop&q=80'
   ),
   (
     '핑크 히말라야 락솔트 그라인더 200g',
@@ -1827,7 +1827,7 @@ values
     false,
     array['히말라야암염 100%']::text[],
     true,
-    'https://images.unsplash.com/photo-1518110925495-5fe2fda0442c?w=600&auto=format&fit=crop&q=80'
+    'https://thumb.wikimedia.org/wikipedia/commons/thumb/4/46/Himalayan_salt_%28coarse%29.jpg/960px-Himalayan_salt_%28coarse%29.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail'
   ),
   (
     '천연 효모 추출 비건 감칠맛 채수 파우더 120g',
@@ -1848,7 +1848,7 @@ values
     false,
     array['표고버섯분말 35%', '무추출분말 25%', '효모추출물 25%']::text[],
     true,
-    'https://images.unsplash.com/photo-1518110925495-5fe2fda0442c?w=600&auto=format&fit=crop&q=80'
+    'https://thumb.wikimedia.org/wikipedia/commons/thumb/0/0d/Mushroom_powder%2C_Boletus_edulis%2C_dried_and_freshly_ground.jpg/960px-Mushroom_powder%2C_Boletus_edulis%2C_dried_and_freshly_ground.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail'
   ),
   (
     '무가당 100% 볶은 땅콩 피넛버터 크런치 340g',
@@ -1869,7 +1869,7 @@ values
     false,
     array['볶은땅콩 100%']::text[],
     true,
-    'https://images.unsplash.com/photo-1568651316499-19ec6eb91ef1?w=600&auto=format&fit=crop&q=80'
+    'https://images.unsplash.com/photo-1564988208558-9270de7c5848?w=600&auto=format&fit=crop&q=80'
   ),
   (
     '제로 알룰로스 머스타드 딥 소스 260g',
@@ -1890,7 +1890,7 @@ values
     false,
     array['홀그레인겨자씨 20%', '양조식초', '알룰로스', '강황']::text[],
     true,
-    'https://images.unsplash.com/photo-1472476443507-c7a5948772fc?w=600&auto=format&fit=crop&q=80'
+    'https://thumb.wikimedia.org/wikipedia/commons/thumb/9/9c/Mustard_sauce_2.jpg/960px-Mustard_sauce_2.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail'
   ),
   (
     '천연 아카시아 생 알룰로스 시럽 480g',
@@ -1911,7 +1911,7 @@ values
     false,
     array['액상알룰로스 99.8%', '천연아카시아향']::text[],
     true,
-    'https://images.unsplash.com/photo-1589301760014-d929f3979dbc?w=600&auto=format&fit=crop&q=80'
+    'https://thumb.wikimedia.org/wikipedia/commons/thumb/c/cc/Sugar_Syrup.jpg/960px-Sugar_Syrup.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail'
   ),
   (
     '유기농 엑스트라버진 냉압착 아보카도 오일 250ml',
@@ -1932,7 +1932,7 @@ values
     false,
     array['엑스트라버진 아보카도오일 100%']::text[],
     true,
-    'https://images.unsplash.com/photo-1474979266404-7eaacbcd87c5?w=600&auto=format&fit=crop&q=80'
+    'https://upload.wikimedia.org/wikipedia/commons/a/aa/AvocadoOil.png?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail_unscaled'
   ),
   (
     '자연 건조 차전자피 식이섬유 100% 200g',
@@ -1953,7 +1953,7 @@ values
     false,
     array['인도산 차전자피 100%']::text[],
     true,
-    'https://images.unsplash.com/photo-1546833999-b9f581a1996d?w=600&auto=format&fit=crop&q=80'
+    'https://thumb.wikimedia.org/wikipedia/commons/thumb/1/16/Culinary_psyllium%2C_Russian_market_13.jpg/960px-Culinary_psyllium%2C_Russian_market_13.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail'
   ),
   (
     '유기농 무가당 카카오 파우더 200g',
@@ -1974,7 +1974,7 @@ values
     false,
     array['유기농카카오원두 100%']::text[],
     true,
-    'https://images.unsplash.com/photo-1541832676-9b763b0239ab?w=600&auto=format&fit=crop&q=80'
+    'https://thumb.wikimedia.org/wikipedia/commons/thumb/d/d4/Cocoa-powder-1883108.jpg/960px-Cocoa-powder-1883108.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail'
   ),
   (
     '천연 순수 아카시아 튜브 벌꿀 300g',
@@ -1995,7 +1995,7 @@ values
     false,
     array['국산천연아카시아벌꿀 100%']::text[],
     true,
-    'https://images.unsplash.com/photo-1587049352846-4a222e784d38?w=600&auto=format&fit=crop&q=80'
+    'https://images.unsplash.com/photo-1668510468038-3607aae3f03c?w=600&auto=format&fit=crop&q=80'
   ),
   (
     '국산 발효 흑마늘 진액 70ml x 15포',
@@ -2016,7 +2016,7 @@ values
     false,
     array['발효흑마늘추출액 95%', '대추농축액']::text[],
     true,
-    'https://images.unsplash.com/photo-1540420773420-3366772f4999?w=600&auto=format&fit=crop&q=80'
+    'https://thumb.wikimedia.org/wikipedia/commons/thumb/7/70/2023_Czarny_czosnek_fermentowany_%281%29.jpg/960px-2023_Czarny_czosnek_fermentowany_%281%29.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail'
   ),
   (
     '콜드프레스 유기농 로우 MCT 오일 C8 99% 500ml',
@@ -2037,7 +2037,7 @@ values
     false,
     array['코코넛유래 중쇄지방산 C8 99%']::text[],
     true,
-    'https://images.unsplash.com/photo-1474979266404-7eaacbcd87c5?w=600&auto=format&fit=crop&q=80'
+    'https://upload.wikimedia.org/wikipedia/commons/f/f3/Coconut_and_oil.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail_unscaled'
   ),
   (
     '제주 유기농 녹차 카테킨 분말 100g',
@@ -2058,7 +2058,7 @@ values
     true,
     array['제주산유기농녹차가루 100%']::text[],
     true,
-    'https://images.unsplash.com/photo-1541781774459-bb2af2f05b55?w=600&auto=format&fit=crop&q=80'
+    'https://thumb.wikimedia.org/wikipedia/commons/thumb/f/f4/Matcha_layout_with_leaf%2C_tea%2C_and_powder.jpg/960px-Matcha_layout_with_leaf%2C_tea%2C_and_powder.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail'
   ),
   (
     '스위트 바질씨드 워터 믹스 150g',
@@ -2079,7 +2079,7 @@ values
     false,
     array['바질씨앗 100%']::text[],
     true,
-    'https://images.unsplash.com/photo-1546833999-b9f581a1996d?w=600&auto=format&fit=crop&q=80'
+    'https://thumb.wikimedia.org/wikipedia/commons/thumb/2/2d/Basil_seeds.jpg/960px-Basil_seeds.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail'
   ),
   (
     '동결건조 맥주효모 분말 250g',
@@ -2100,7 +2100,7 @@ values
     false,
     array['리투아니아산 건조맥주효모 100%']::text[],
     true,
-    'https://images.unsplash.com/photo-1518110925495-5fe2fda0442c?w=600&auto=format&fit=crop&q=80'
+    'https://thumb.wikimedia.org/wikipedia/commons/thumb/b/bb/Bj%C3%A4st.jpg/960px-Bj%C3%A4st.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail'
   ),
   (
     '유기농 야생 빌베리 루테인 파우더 100g',
@@ -2121,7 +2121,7 @@ values
     false,
     array['핀란드산 야생동결건조빌베리 100%']::text[],
     true,
-    'https://images.unsplash.com/photo-1464965911861-746a04b4bca6?w=600&auto=format&fit=crop&q=80'
+    'https://thumb.wikimedia.org/wikipedia/commons/thumb/e/e0/Purple_potato_powder_and_blueberry_powder.jpg/960px-Purple_potato_powder_and_blueberry_powder.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail'
   );
 
 commit;

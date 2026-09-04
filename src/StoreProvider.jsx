@@ -1,8 +1,10 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { StoreContext } from './store'
-import { INITIAL_ORDERS, INITIAL_USER } from './data/mock'
+import { INITIAL_ORDERS } from './data/mock'
 import { supabase } from './lib/supabase'
-import { fetchActiveProducts } from './lib/products'
+import { adaptProductRow, fetchActiveProducts } from './lib/products'
+import { createCartController, EMPTY_CART } from './lib/cart'
+import { AI_SORT_TO_UI, conditionLabels, requestAiConditions } from './lib/ai-search'
 
 const scrollTop = () => window.scrollTo({ top: 0, behavior: 'smooth' })
 
@@ -37,46 +39,13 @@ function toPreferenceState(preferences) {
 }
 
 function toAppUser(authUser) {
+  // 실제 Supabase auth 사용자만 사용한다. (포인트/쿠폰 등 미구현 필드는 신뢰 가능한 기본값)
   return {
-    ...INITIAL_USER,
     name: authUser.user_metadata?.display_name?.trim() || authUser.email?.split('@')[0] || 'CareMarket 회원',
     email: authUser.email || '',
-  }
-}
-
-// Mock AI 자연어 검색: 대표 예시 문장을 조건으로 해석 (추후 Gemini + Supabase로 교체 예정)
-function analyzeMockAiQuery(query) {
-  const normalized = query.replaceAll(' ', '')
-
-  if (
-    (normalized.includes('당류낮') || normalized.includes('저당'))
-    && (normalized.includes('단백질높') || normalized.includes('고단백'))
-    && normalized.includes('간식')
-  ) {
-    return {
-      conditions: ['간식', '당류 ≤ 5g', '단백질 ≥ 15g'],
-      matches: (product) => product.category === '프로틴바·건강간식' && product.nutrition.sugar <= 5 && product.nutrition.protein >= 15,
-    }
-  }
-
-  if (normalized.includes('나트륨낮') || normalized.includes('저염')) {
-    return {
-      conditions: ['식품', '나트륨 ≤ 250mg'],
-      matches: (product) => product.category !== '영양제·비타민' && product.nutrition.sodium <= 250,
-    }
-  }
-
-  if (normalized.includes('카페인없') && normalized.includes('영양제')) {
-    return {
-      conditions: ['영양제', '카페인 제외'],
-      matches: (product) => product.category === '영양제·비타민' && !product.caffeine,
-    }
-  }
-
-  return {
-    conditions: ['입력한 조건'],
-    message: '검색 조건을 임시 분석했습니다.',
-    matches: () => true,
+    tier: 'CareMarket 회원',
+    points: 0,
+    coupons: 0,
   }
 }
 
@@ -95,6 +64,11 @@ export function StoreProvider({ children }) {
   const [searchMode, setSearchMode] = useState('normal')
   const [aiQuery, setAiQuery] = useState('')
   const [aiResult, setAiResult] = useState(null)
+  const [aiLoading, setAiLoading] = useState(false)
+  const [aiError, setAiError] = useState(null)
+  const aiRequest = useRef(null)
+
+  useEffect(() => () => aiRequest.current?.abort(), [])
 
   // 상단 제품 카테고리 브라우징 (목표와 별개 축)
   const [shopCategory, setShopCategory] = useState('전체상품')
@@ -102,28 +76,51 @@ export function StoreProvider({ children }) {
 
   // 커머스 상태
   const [wishlist, setWishlist] = useState([])
-  const [cart, setCart] = useState([])
+  const [cartState, setCartState] = useState(EMPTY_CART)
+  const [loginPromptOpen, setLoginPromptOpen] = useState(false)
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [orders, setOrders] = useState(INITIAL_ORDERS)
   const [products, setProducts] = useState([])
   const [productsLoading, setProductsLoading] = useState(true)
   const [productsError, setProductsError] = useState(null)
   const [productsReloadKey, setProductsReloadKey] = useState(0)
-  const [user, setUser] = useState(INITIAL_USER)
+  const [user, setUser] = useState(null)
   const [isLoggedIn, setIsLoggedIn] = useState(false)
   const [authUserId, setAuthUserId] = useState(null)
   const [settingsLoading, setSettingsLoading] = useState(false)
 
   // 토스트
   const [toast, setToast] = useState(null)
+  const toastTimer = useRef(null)
+  const loggingOut = useRef(false)
 
-  const showToast = (msg) => {
+  const showToast = useCallback((msg) => {
     setToast(msg)
-    window.clearTimeout(showToast._t)
-    showToast._t = window.setTimeout(() => setToast(null), 2800)
-  }
+    window.clearTimeout(toastTimer.current)
+    toastTimer.current = window.setTimeout(() => setToast(null), 2800)
+  }, [])
+  const cartController = useMemo(() => createCartController(supabase, setCartState, showToast), [showToast])
+  const cart = useMemo(() => {
+    if (!authUserId || cartState.ownerId !== authUserId) return []
+    return cartState.rows.filter(row => row.product?.is_active).map(row => ({
+      cartItemId: row.cart_item_id,
+      product: adaptProductRow(row.product),
+      quantity: row.quantity,
+    }))
+  }, [authUserId, cartState.ownerId, cartState.rows])
+  const cartLoading = Boolean(authUserId && (cartState.ownerId !== authUserId || cartState.loading))
+  const cartPending = cartState.ownerId === authUserId ? cartState.pending : 0
+  const cartError = cartState.ownerId === authUserId ? cartState.error : null
 
-  const syncAuthSession = (session) => {
+  const syncAuthSession = useCallback((session) => {
+    if (loggingOut.current && session?.user) return
+    const nextId = session?.user?.id || null
+    if (cartController.getOwner() !== nextId) {
+      cartController.setOwner(nextId)
+      setDrawerOpen(false)
+      setLoginPromptOpen(false)
+      setToast(null)
+    }
     if (session?.user) {
       setUser(toAppUser(session.user))
       setIsLoggedIn(true)
@@ -131,14 +128,14 @@ export function StoreProvider({ children }) {
       return
     }
 
-    setUser(INITIAL_USER)
+    setUser(null)
     setIsLoggedIn(false)
     setAuthUserId(null)
     setSettingsLoading(false)
     setGoal(DEFAULT_GOAL)
     setSubFilters(DEFAULT_SUB_FILTERS)
     setAllergies([])
-  }
+  }, [cartController])
 
   useEffect(() => {
     let mounted = true
@@ -155,25 +152,8 @@ export function StoreProvider({ children }) {
         const productsById = new Map(nextProducts.map((product) => [product.id, product]))
         setProducts(nextProducts)
         setSelectedProduct((current) => productsById.get(current?.id) || nextProducts[0])
-        setWishlist((current) => {
-          const validIds = current.filter((id) => productsById.has(id))
-          return validIds.length ? validIds : nextProducts.slice(0, 2).map((product) => product.id)
-        })
-        setCart((current) => {
-          const validItems = current
-            .map((item) => {
-              const product = productsById.get(item.product.id)
-              return product ? { ...item, product } : null
-            })
-            .filter(Boolean)
-
-          if (validItems.length) return validItems
-
-          return [
-            nextProducts[1] && { product: nextProducts[1], quantity: 2 },
-            nextProducts[3] && { product: nextProducts[3], quantity: 1 },
-          ].filter(Boolean)
-        })
+        // 실제 서비스처럼 빈 장바구니/위시리스트로 시작 (임의 mock 항목 미주입)
+        setWishlist((current) => current.filter((id) => productsById.has(id)))
       } catch (error) {
         if (!mounted) return
         console.error('Supabase products fetch failed:', error)
@@ -194,11 +174,22 @@ export function StoreProvider({ children }) {
   const reloadProducts = () => setProductsReloadKey((key) => key + 1)
 
   useEffect(() => {
+    if (!authUserId) return undefined
+    void cartController.load()
+    const refresh = () => {
+      if (document.visibilityState === 'visible') void cartController.load()
+    }
+    window.addEventListener('focus', refresh)
+    return () => window.removeEventListener('focus', refresh)
+  }, [authUserId, cartController])
+
+  useEffect(() => {
     let mounted = true
+    let authChanged = false
 
     const restoreSession = async () => {
       const { data, error } = await supabase.auth.getSession()
-      if (!mounted) return
+      if (!mounted || authChanged) return
 
       if (error) {
         console.error('Supabase session restore failed:', error.message)
@@ -211,14 +202,17 @@ export function StoreProvider({ children }) {
     restoreSession()
 
     const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
+      authChanged = true
       if (mounted) syncAuthSession(session)
     })
 
     return () => {
       mounted = false
       listener.subscription.unsubscribe()
+      cartController.setOwner(null)
+      window.clearTimeout(toastTimer.current)
     }
-  }, [])
+  }, [cartController, syncAuthSession])
 
   useEffect(() => {
     if (!authUserId) return undefined
@@ -284,20 +278,39 @@ export function StoreProvider({ children }) {
     scrollTop()
   }
 
-  const runAiSearch = (raw) => {
-    const query = (raw ?? aiQuery).trim()
-    if (!query) return
+  const runAiSearch = async (raw) => {
+    const query = typeof (raw ?? aiQuery) === 'string' ? (raw ?? aiQuery).trim() : ''
+    aiRequest.current?.abort()
+    const request = new AbortController()
+    aiRequest.current = request
     setAiQuery(query)
     setSearchMode('ai')
-    setAiResult({ query, ...analyzeMockAiQuery(query) })
+    setAiResult(null)
+    setAiError(null)
+    setAiLoading(true)
     setView('main')
-    scrollTop()
+    window.setTimeout(() => document.getElementById('product-list')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 0)
+    try {
+      const filters = await requestAiConditions(supabase, query, request.signal)
+      if (aiRequest.current !== request || request.signal.aborted) return
+      setAiResult({ query, filters, conditions: conditionLabels(filters) })
+      setSortBy(AI_SORT_TO_UI[filters.sort_by])
+    } catch (error) {
+      if (aiRequest.current === request && !request.signal.aborted) setAiError(error.message)
+    } finally {
+      if (aiRequest.current === request && !request.signal.aborted) setAiLoading(false)
+    }
   }
 
   const clearAiSearch = () => {
+    aiRequest.current?.abort()
+    aiRequest.current = null
+    setAiLoading(false)
+    setAiError(null)
     setAiResult(null)
     setAiQuery('')
     setSearchMode('normal')
+    if (['protein', 'sugar', 'sodium'].includes(sortBy)) setSortBy('recommend')
   }
 
   const toggleWish = (id) => {
@@ -308,26 +321,38 @@ export function StoreProvider({ children }) {
     })
   }
 
-  const addToCart = (product, count = 1) => {
-    setCart((prev) => {
-      const found = prev.find((i) => i.product.id === product.id)
-      if (found) {
-        return prev.map((i) =>
-          i.product.id === product.id ? { ...i, quantity: i.quantity + count } : i,
-        )
-      }
-      return [...prev, { product, quantity: count }]
-    })
-    showToast(`장바구니에 담았습니다 · ${product.name.slice(0, 14)}…`)
-    setDrawerOpen(true)
+  const requireCartLogin = () => {
+    if (!loggingOut.current && authUserId && cartController.getOwner() === authUserId) return true
+    setDrawerOpen(false)
+    setLoginPromptOpen(true)
+    return false
   }
 
-  const setQty = (id, q) =>
-    setCart((prev) =>
-      prev.map((i) => (i.product.id === id ? { ...i, quantity: Math.max(1, q) } : i)),
-    )
+  const addToCart = async (product, count = 1) => {
+    if (!requireCartLogin()) return false
+    const generation = cartController.getGeneration()
+    const saved = await cartController.add(product.id, count)
+    if (saved && generation === cartController.getGeneration()) {
+      showToast(`장바구니에 담았습니다 · ${product.name.slice(0, 14)}…`)
+      setDrawerOpen(true)
+      return true
+    }
+    return false
+  }
 
-  const removeFromCart = (id) => setCart((prev) => prev.filter((i) => i.product.id !== id))
+  const changeCartQty = (id, delta) => requireCartLogin()
+    ? cartController.changeQuantity(id, delta) : Promise.resolve(false)
+
+  const removeFromCart = async (id) => {
+    if (!requireCartLogin()) return false
+    const generation = cartController.getGeneration()
+    const saved = await cartController.remove(id)
+    if (saved && generation === cartController.getGeneration()) {
+      showToast('상품을 삭제했습니다.')
+      return true
+    }
+    return false
+  }
 
   const toggleAllergy = (a) =>
     setAllergies((prev) => (prev.includes(a) ? prev.filter((x) => x !== a) : [...prev, a]))
@@ -340,7 +365,7 @@ export function StoreProvider({ children }) {
   const cartCount = cart.reduce((s, i) => s + i.quantity, 0)
 
   const checkout = () => {
-    if (cart.length === 0) return
+    if (!requireCartLogin() || cart.length === 0 || cartPending || cartLoading) return
     const newOrder = {
       id: `ORD-20260903-${Math.floor(1000 + Math.random() * 9000)}`,
       date: '2026. 09. 03  방금',
@@ -351,10 +376,10 @@ export function StoreProvider({ children }) {
       tracker: '우체국 안심콜드체인 대기',
     }
     setOrders((prev) => [newOrder, ...prev])
-    setCart([])
+    // Mock orders must not delete persistent cart rows without a real order transaction.
     setDrawerOpen(false)
     navigate('orders')
-    showToast('주문이 완료되었습니다! (가상 결제)')
+    showToast('가상 주문이 생성되었습니다. 실제 장바구니는 유지됩니다.')
   }
 
   const updateOrderStatus = (id, status, active) => {
@@ -446,9 +471,30 @@ export function StoreProvider({ children }) {
   }
 
   const logout = async () => {
-    const { error } = await supabase.auth.signOut()
+    if (loggingOut.current) return false
+    loggingOut.current = true
+    cartController.setOwner(null)
+    setDrawerOpen(false)
+    setToast(null)
+    let error
+    try {
+      const result = await supabase.auth.signOut()
+      error = result.error
+    } catch (caught) { error = caught }
+    loggingOut.current = false
 
     if (error) {
+      console.error('Supabase sign out failed:', error)
+      // Re-read the actual session; never restore a captured previous account.
+      try {
+        const { data, error: sessionError } = await supabase.auth.getSession()
+        if (sessionError) throw sessionError
+        syncAuthSession(data.session)
+        void cartController.load()
+      } catch (sessionError) {
+        console.error('Supabase session recovery failed:', sessionError)
+        syncAuthSession(null)
+      }
       showToast(`로그아웃에 실패했습니다. ${error.message}`)
       return false
     }
@@ -467,11 +513,12 @@ export function StoreProvider({ children }) {
       subFilters, setSubFilters, toggleSub,
       allergies, setAllergies, toggleAllergy,
       search, setSearch,
-      searchMode, setSearchMode, aiQuery, setAiQuery, aiResult, runAiSearch, clearAiSearch,
+      searchMode, setSearchMode, aiQuery, setAiQuery, aiResult, aiLoading, aiError, runAiSearch, clearAiSearch,
       shopCategory, setShopCategory, shopSub, setShopSub,
       sortBy, setSortBy,
       wishlist, toggleWish,
-      cart, addToCart, setQty, removeFromCart,
+      cart, addToCart, changeCartQty, removeFromCart, cartLoading, cartPending, cartError,
+      reloadCart: cartController.load, requireCartLogin, loginPromptOpen, setLoginPromptOpen,
       drawerOpen, setDrawerOpen,
       orders, checkout, updateOrderStatus,
       products, setProducts, productsLoading, productsError, reloadProducts,
@@ -480,7 +527,7 @@ export function StoreProvider({ children }) {
       toast, showToast,
     }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [view, selectedProduct, goal, subFilters, allergies, search, searchMode, aiQuery, aiResult, shopCategory, shopSub, sortBy, wishlist, cart, drawerOpen, orders, products, productsLoading, productsError, user, isLoggedIn, authUserId, settingsLoading, toast],
+    [view, selectedProduct, goal, subFilters, allergies, search, searchMode, aiQuery, aiResult, aiLoading, aiError, shopCategory, shopSub, sortBy, wishlist, cart, cartState, loginPromptOpen, drawerOpen, orders, products, productsLoading, productsError, user, isLoggedIn, authUserId, settingsLoading, toast],
   )
 
   return <StoreContext.Provider value={value}>{children}</StoreContext.Provider>

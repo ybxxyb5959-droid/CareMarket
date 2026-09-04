@@ -1,0 +1,4 @@
+project_id = "caremarket"
+
+[functions.ai-search]
+verify_jwt = false

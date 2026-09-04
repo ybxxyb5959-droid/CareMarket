@@ -3,6 +3,8 @@ import { useStore, useAutoSlide } from '../store'
 import { GOALS, HERO_SLIDES, ROUTINE, SUB_FILTERS, VALUES, matchCategory } from '../data/mock'
 import Icon from '../components/Icon'
 import ProductCard from '../components/ProductCard'
+import WellnessTable from '../components/WellnessTable'
+import { AI_SORT_TO_UI, filterAiProducts } from '../lib/ai-search'
 
 function goalScore(product, goal) {
   const nutrition = product.nutrition
@@ -50,10 +52,25 @@ export default function Home() {
   const {
     goal, setGoal, search, setSearch, sortBy, setSortBy,
     subFilters, toggleSub, setSubFilters, allergies,
-    products, productsLoading, productsError, reloadProducts, openProduct, navigate, showToast,
-    searchMode, aiResult: aiSearch, runAiSearch, clearAiSearch,
-    isLoggedIn, logout, shopCategory, shopSub,
+    products, productsLoading, productsError, reloadProducts, openProduct, navigate,
+    searchMode, aiResult: aiSearch, aiLoading, aiError, runAiSearch, clearAiSearch,
+    isLoggedIn, logout, shopCategory, setShopCategory, shopSub, setShopSub,
   } = useStore()
+
+  // Hero 컬렉션 CTA → 실제 상품 필터(collection) 상태 변경 후 상품 목록으로 이동
+  const applyCollection = (col) => {
+    if (!col) return
+    setShopCategory(col.category)
+    setShopSub(col.sub)
+    setSubFilters(col.subFilters || [])
+    window.setTimeout(() => {
+      const el = document.getElementById('product-list')
+      if (el) {
+        const y = el.getBoundingClientRect().top + window.scrollY - 150
+        window.scrollTo({ top: Math.max(0, y), behavior: 'smooth' })
+      }
+    }, 60)
+  }
 
   const [slide, setSlide] = useAutoSlide(HERO_SLIDES.length)
   const [routineIdx, setRoutineIdx] = useState(1)
@@ -62,16 +79,22 @@ export default function Home() {
   const activeGoal = GOALS.find((g) => g.name === focusGoal)
 
   const filtered = useMemo(
-    () => filterAndSort(products, { search, subFilters, allergies, sortBy, goal, shopCategory, shopSub }),
-    [products, search, subFilters, allergies, sortBy, goal, shopCategory, shopSub],
+    () => filterAndSort(products, { search: searchMode === 'ai' ? '' : search, subFilters, allergies, sortBy, goal, shopCategory, shopSub }),
+    [products, search, searchMode, subFilters, allergies, sortBy, goal, shopCategory, shopSub],
   )
 
   const routine = ROUTINE[routineIdx]
   const routineCategories = ['영양제·비타민', '도시락·간편식', '프로틴바·건강간식', '닭가슴살·고단백 식품']
   const routineProduct = products.find((product) => product.category === routineCategories[routineIdx])
   const aiProducts = useMemo(
-    () => (aiSearch ? filtered.filter(aiSearch.matches) : filtered),
-    [aiSearch, filtered],
+    () => {
+      if (searchMode !== 'ai') return filtered
+      if (aiLoading || aiError) return []
+      if (!aiSearch) return filtered
+      const sort = Object.entries(AI_SORT_TO_UI).find(([, ui]) => ui === sortBy)?.[0] || 'review'
+      return filterAiProducts(filtered, aiSearch.filters, sort)
+    },
+    [aiSearch, filtered, searchMode, aiLoading, aiError, sortBy],
   )
 
   return (
@@ -94,12 +117,9 @@ export default function Home() {
             <div className="hero-cta">
               <button
                 className="btn btn-primary btn-lg"
-                onClick={() => { setGoal(hero.goal); showToast(`'${hero.goal}' 컬렉션으로 전환했습니다.`) }}
+                onClick={() => applyCollection(hero.collection)}
               >
                 {hero.btn} <Icon name="arrow-up-right" size={17} />
-              </button>
-              <button className="btn btn-ghost btn-lg" onClick={() => navigate('goalSetup')}>
-                내 체질 조건 맞추기
               </button>
             </div>
             <div className="hero-badge"><Icon name="shield-check" size={15} /> {hero.badge}</div>
@@ -240,6 +260,121 @@ export default function Home() {
         </section>
       )}
 
+      {/* ── 필터 & 상품 목록 (쇼핑 우선 노출) ── */}
+      <section id="product-list" className="section" style={{ paddingTop: 0, paddingBottom: 64 }}>
+        <div className="wrap">
+          <div className="section-head" style={{ textAlign: 'left', maxWidth: 'none', marginBottom: 20 }}>
+            <span className="eyebrow">{goal} 기준 영양 강조</span>
+            <h2 className="serif" style={{ fontSize: 26 }}>{shopCategory}{shopSub !== '전체' ? ` · ${shopSub}` : ''}</h2>
+          </div>
+
+          {searchMode === 'ai' && !aiSearch && !aiLoading && !aiError && (
+            <div className="ai-hint">
+              <span className="ai-hint-label"><Icon name="sparkles" size={14} /> AI 자연어 검색 예시</span>
+              {AI_EXAMPLES.map((ex) => (
+                <button key={ex} type="button" className="chip" onClick={() => runAiSearch(ex)}>{ex}</button>
+              ))}
+            </div>
+          )}
+
+          {searchMode === 'ai' && aiLoading && (
+            <div className="ai-result-summary" role="status">
+              <div className="ai-result-head"><h3>검색 조건을 정리하고 있어요.</h3></div>
+              <p className="ai-result-count">잠시만 기다려 주세요.</p>
+            </div>
+          )}
+
+          {searchMode === 'ai' && aiError && (
+            <div className="ai-result-summary" role="alert">
+              <div className="ai-result-head"><h3>AI 검색을 완료하지 못했어요.</h3></div>
+              <p className="ai-result-count">{aiError}</p>
+              <div className="ai-error-actions">
+                <button className="btn btn-soft btn-sm" onClick={() => runAiSearch()}>다시 시도</button>
+                <button className="f-reset" onClick={clearAiSearch}>일반 검색으로 전환</button>
+              </div>
+            </div>
+          )}
+
+          {searchMode === 'ai' && aiSearch && (
+            <div className="ai-result-summary">
+              <div className="ai-result-head">
+                <div>
+                  <span className="eyebrow">AI Search Result</span>
+                  <h3>AI가 이해한 검색 조건</h3>
+                </div>
+                <button type="button" className="f-reset" onClick={clearAiSearch}>전체 상품 보기</button>
+              </div>
+              <p className="ai-query">“{aiSearch.query}”</p>
+              <div className="ai-condition-tags">
+                {aiSearch.conditions.map((condition) => <span key={condition}>{condition}</span>)}
+              </div>
+              <p className="ai-fallback">수치 기준은 의료 기준이 아닌 CareMarket 내부 검색 기준입니다.</p>
+              {aiSearch.filters.excluded_allergens.length > 0 && <p className="ai-fallback">등록된 성분 정보 기준으로 제외하며, 알레르기 안전을 보장하지 않습니다.</p>}
+              {!productsLoading && !productsError && <p className="ai-result-count">조건에 맞는 상품 <b>{aiProducts.length}</b>개를 찾았습니다.</p>}
+            </div>
+          )}
+
+          <div className="filterbar" style={{ marginBottom: 26 }}>
+            <div className="f-tags">
+              <span className="f-label"><Icon name="sliders" size={15} /> 보조 조건</span>
+              {SUB_FILTERS.map((f) => (
+                <button key={f.id} className={`chip${subFilters.includes(f.tag) ? ' on' : ''}`} onClick={() => toggleSub(f.tag)} title={f.hint}>
+                  {subFilters.includes(f.tag) && <Icon name="check" size={13} strokeWidth={2.6} />}
+                  {f.label}
+                </button>
+              ))}
+              {subFilters.length > 0 && (
+                <button className="f-reset" onClick={() => setSubFilters([])}>초기화</button>
+              )}
+            </div>
+            <div className="f-sort">
+              <span>총 <b>{aiProducts.length}</b>개</span>
+              <span className="divider-v" />
+              <select value={sortBy} onChange={(e) => setSortBy(e.target.value)}>
+                <option value="recommend">{searchMode === 'ai' ? '관련도순' : '맞춤 추천순'}</option>
+                <option value="review">리뷰 많은순</option>
+                <option value="lowPrice">낮은 가격순</option>
+                <option value="highPrice">높은 가격순</option>
+                {searchMode === 'ai' && <>
+                  <option value="protein">단백질 높은순</option>
+                  <option value="sugar">당류 낮은순</option>
+                  <option value="sodium">나트륨 낮은순</option>
+                </>}
+              </select>
+            </div>
+          </div>
+
+          {productsLoading ? (
+            <div className="empty" aria-live="polite">
+              <Icon name="package" size={44} />
+              <h3>상품을 불러오고 있습니다.</h3>
+              <p>최신 상품과 영양정보를 확인하는 중입니다.</p>
+            </div>
+          ) : productsError ? (
+            <div className="empty" role="alert">
+              <Icon name="alert-circle" size={44} />
+              <h3>상품을 불러오지 못했습니다.</h3>
+              <p>잠시 후 다시 시도해 주세요.</p>
+              <button className="btn btn-primary" onClick={reloadProducts}>다시 불러오기</button>
+            </div>
+          ) : searchMode === 'ai' && (aiLoading || aiError) ? null : aiProducts.length === 0 ? (
+            <div className="empty">
+              <Icon name="alert-circle" size={44} />
+              <h3>선택하신 조건에 맞는 상품이 없습니다.</h3>
+              <p>저당·저염·고단백 등 보조 조건을 조정하거나 검색어를 초기화해 보세요.</p>
+              <button className="btn btn-primary" onClick={() => { setSubFilters([]); setSearch(''); clearAiSearch() }}>조건 전체 초기화</button>
+            </div>
+          ) : (
+            <div className="product-grid">
+              {aiProducts.map((p) => <ProductCard key={p.id} product={p} />)}
+            </div>
+          )}
+        </div>
+      </section>
+
+      {/* ── 오늘의 웰빙 테이블 (Shoppable image) ── */}
+      <WellnessTable />
+
       {/* ── 웰빙 루틴 플래너 (중앙부 강조) ── */}
       <section className="section" style={{ paddingTop: 0 }}>
         <div className="wrap">
@@ -302,94 +437,6 @@ export default function Home() {
               </div>
             ))}
           </div>
-        </div>
-      </section>
-
-      {/* ── 필터 & 상품 목록 ── */}
-      <section id="product-list" className="section" style={{ paddingTop: 0, paddingBottom: 64 }}>
-        <div className="wrap">
-          <div className="section-head" style={{ textAlign: 'left', maxWidth: 'none', marginBottom: 20 }}>
-            <span className="eyebrow">{goal} 기준 영양 강조</span>
-            <h2 className="serif" style={{ fontSize: 26 }}>{shopCategory}{shopSub !== '전체' ? ` · ${shopSub}` : ''}</h2>
-          </div>
-
-          {searchMode === 'ai' && !aiSearch && (
-            <div className="ai-hint">
-              <span className="ai-hint-label"><Icon name="sparkles" size={14} /> AI 자연어 검색 예시</span>
-              {AI_EXAMPLES.map((ex) => (
-                <button key={ex} type="button" className="chip" onClick={() => runAiSearch(ex)}>{ex}</button>
-              ))}
-            </div>
-          )}
-
-          {aiSearch && (
-            <div className="ai-result-summary">
-              <div className="ai-result-head">
-                <div>
-                  <span className="eyebrow">AI Search Result</span>
-                  <h3>AI가 이해한 검색 조건</h3>
-                </div>
-                <button type="button" className="f-reset" onClick={clearAiSearch}>전체 상품 보기</button>
-              </div>
-              <p className="ai-query">“{aiSearch.query}”</p>
-              <div className="ai-condition-tags">
-                {aiSearch.conditions.map((condition) => <span key={condition}>{condition}</span>)}
-              </div>
-              {aiSearch.message && <p className="ai-fallback">{aiSearch.message}</p>}
-              <p className="ai-result-count">조건에 맞는 상품 <b>{aiProducts.length}</b>개를 찾았습니다.</p>
-            </div>
-          )}
-
-          <div className="filterbar" style={{ marginBottom: 26 }}>
-            <div className="f-tags">
-              <span className="f-label"><Icon name="sliders" size={15} /> 보조 조건</span>
-              {SUB_FILTERS.map((f) => (
-                <button key={f.id} className={`chip${subFilters.includes(f.tag) ? ' on' : ''}`} onClick={() => toggleSub(f.tag)} title={f.hint}>
-                  {subFilters.includes(f.tag) && <Icon name="check" size={13} strokeWidth={2.6} />}
-                  {f.label}
-                </button>
-              ))}
-              {subFilters.length > 0 && (
-                <button className="f-reset" onClick={() => setSubFilters([])}>초기화</button>
-              )}
-            </div>
-            <div className="f-sort">
-              <span>총 <b>{aiProducts.length}</b>개</span>
-              <span className="divider-v" />
-              <select value={sortBy} onChange={(e) => setSortBy(e.target.value)}>
-                <option value="recommend">맞춤 추천순</option>
-                <option value="review">리뷰 많은순</option>
-                <option value="lowPrice">낮은 가격순</option>
-                <option value="highPrice">높은 가격순</option>
-              </select>
-            </div>
-          </div>
-
-          {productsLoading ? (
-            <div className="empty" aria-live="polite">
-              <Icon name="package" size={44} />
-              <h3>상품을 불러오고 있습니다.</h3>
-              <p>최신 상품과 영양정보를 확인하는 중입니다.</p>
-            </div>
-          ) : productsError ? (
-            <div className="empty" role="alert">
-              <Icon name="alert-circle" size={44} />
-              <h3>상품을 불러오지 못했습니다.</h3>
-              <p>잠시 후 다시 시도해 주세요.</p>
-              <button className="btn btn-primary" onClick={reloadProducts}>다시 불러오기</button>
-            </div>
-          ) : aiProducts.length === 0 ? (
-            <div className="empty">
-              <Icon name="alert-circle" size={44} />
-              <h3>선택하신 조건에 맞는 상품이 없습니다.</h3>
-              <p>저당·저염·고단백 등 보조 조건을 조정하거나 검색어를 초기화해 보세요.</p>
-              <button className="btn btn-primary" onClick={() => { setSubFilters([]); setSearch(''); clearAiSearch() }}>조건 전체 초기화</button>
-            </div>
-          ) : (
-            <div className="product-grid">
-              {aiProducts.map((p) => <ProductCard key={p.id} product={p} />)}
-            </div>
-          )}
         </div>
       </section>
     </div>

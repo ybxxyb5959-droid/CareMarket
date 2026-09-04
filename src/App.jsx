@@ -5,6 +5,7 @@ import Header from './components/Header'
 import Footer from './components/Footer'
 import Toast from './components/Toast'
 import CartDrawer from './components/CartDrawer'
+import CartLoginPrompt from './components/CartLoginPrompt'
 import EventPopup from './components/EventPopup'
 import Home from './pages/Home'
 import GoalSetup from './pages/GoalSetup'
@@ -31,7 +32,7 @@ const PAGES = {
 }
 
 function Shell() {
-  const { view } = useStore()
+  const { view, loginPromptOpen } = useStore()
   const Page = PAGES[view] || Home
   return (
     <div className="app">
@@ -44,6 +45,7 @@ function Shell() {
       <CartDrawer />
       <Toast />
       <EventPopup />
+      {loginPromptOpen && <CartLoginPrompt />}
     </div>
   )
 }

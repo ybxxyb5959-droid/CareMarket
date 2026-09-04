@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useStore } from '../store'
 import { CATEGORIES } from '../data/mock'
 import Icon from './Icon'
+import { QUERY_MAX_LENGTH } from '../../supabase/functions/_shared/ai-search-contract.js'
 
 const AI_SEARCH_EXAMPLES = [
   '카페인 없는 영양제 찾아줘',
@@ -12,13 +13,16 @@ const AI_SEARCH_EXAMPLES = [
 export default function Header() {
   const {
     view, navigate, setView, search, setSearch,
-    searchMode, setSearchMode, aiQuery, setAiQuery, runAiSearch, clearAiSearch,
+    searchMode, setSearchMode, aiQuery, setAiQuery, aiLoading, runAiSearch, clearAiSearch,
     shopCategory, setShopCategory, shopSub, setShopSub,
-    wishlist, cartCount, setDrawerOpen, showToast,
+    wishlist, cartCount, setDrawerOpen, showToast, isLoggedIn, requireCartLogin,
   } = useStore()
   const [aiPlaceholder, setAiPlaceholder] = useState('')
+  const [searchFocused, setSearchFocused] = useState(false)
 
   const isAi = searchMode === 'ai'
+  // 일반 검색: 클릭(focus) 또는 입력 시 왼쪽 돋보기를 숨기고 오른쪽 검색 버튼을 노출
+  const normalActive = !isAi && (searchFocused || Boolean(search))
 
   // 카테고리/하위 선택 → 필터 적용 후 상품 목록으로 스크롤
   const openCategory = (c, sub) => {
@@ -68,9 +72,17 @@ export default function Header() {
     setSearch('')
     if (view !== 'main') navigate('main')
   }
+  const scrollToResults = () => {
+    if (view !== 'main') setView('main')
+    window.setTimeout(() => {
+      const el = document.getElementById('product-list')
+      if (el) window.scrollTo({ top: Math.max(0, el.getBoundingClientRect().top + window.scrollY - 150), behavior: 'smooth' })
+    }, 60)
+  }
   const onSearchSubmit = (e) => {
     e.preventDefault()
-    if (isAi) runAiSearch()
+    if (isAi) { if (!aiLoading) void runAiSearch(); return }
+    scrollToResults()
   }
 
   return (
@@ -96,8 +108,10 @@ export default function Header() {
               </div>
             </div>
 
-            <form className={`search${isAi ? ' ai' : ''}`} onSubmit={onSearchSubmit}>
-              <Icon name={isAi ? 'sparkles' : 'search'} size={17} className={`s-ico${isAi ? ' ai' : ''}`} />
+            <form className={`search${isAi ? ' ai' : ''}${normalActive ? ' focused' : ''}`} onSubmit={onSearchSubmit}>
+              {(isAi || !normalActive) && (
+                <Icon name={isAi ? 'sparkles' : 'search'} size={17} className={`s-ico${isAi ? ' ai' : ''}`} />
+              )}
               {isAi ? (
                 <input
                   type="text"
@@ -106,6 +120,8 @@ export default function Header() {
                   onChange={(e) => setAiQuery(e.target.value)}
                   onFocus={() => view !== 'main' && setView('main')}
                   aria-label="AI 자연어 검색"
+                  maxLength={QUERY_MAX_LENGTH}
+                  aria-busy={aiLoading}
                 />
               ) : (
                 <input
@@ -113,9 +129,22 @@ export default function Header() {
                   placeholder="상품명 또는 카테고리 검색"
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
-                  onFocus={() => view !== 'main' && setView('main')}
+                  onFocus={() => { setSearchFocused(true); if (view !== 'main') setView('main') }}
+                  onBlur={() => setSearchFocused(false)}
                   aria-label="상품명 또는 카테고리 검색"
                 />
+              )}
+              {isAi && (
+                <button type="submit" className="s-ai-submit" disabled={aiLoading}
+                  title={aiLoading ? '검색 조건 해석 중' : 'AI 검색 실행'} aria-label="AI 검색 실행">
+                  <Icon name={aiLoading ? 'clock' : 'search'} size={17} />
+                </button>
+              )}
+              {normalActive && (
+                <button type="submit" className="s-ai-submit" title="검색" aria-label="검색"
+                  onMouseDown={(e) => e.preventDefault()}>
+                  <Icon name="search" size={17} />
+                </button>
               )}
               {isAi
                 ? aiQuery && (
@@ -141,18 +170,26 @@ export default function Header() {
             )}
 
             <div className="header-actions">
-              <button
-                className="icon-btn"
-                onClick={() => showToast(`위시리스트 ${wishlist.length}개 보관 중`)}
-                aria-label="위시리스트"
-                style={wishlist.length ? { color: 'var(--danger)' } : undefined}
-              >
-                <Icon name="heart" size={20} fill={wishlist.length ? 'currentColor' : 'none'} />
-              </button>
-              <button className="icon-btn" onClick={() => navigate('mypage')} aria-label="마이페이지">
-                <Icon name="user" size={20} />
-              </button>
-              <button className="cart-btn" onClick={() => setDrawerOpen(true)}>
+              {isLoggedIn ? (
+                <>
+                  <button
+                    className="icon-btn"
+                    onClick={() => showToast(`위시리스트 ${wishlist.length}개 보관 중`)}
+                    aria-label="위시리스트"
+                    style={wishlist.length ? { color: 'var(--danger)' } : undefined}
+                  >
+                    <Icon name="heart" size={20} fill={wishlist.length ? 'currentColor' : 'none'} />
+                  </button>
+                  <button className="icon-btn" onClick={() => navigate('mypage')} aria-label="마이페이지">
+                    <Icon name="user" size={20} />
+                  </button>
+                </>
+              ) : (
+                <button className="btn btn-soft btn-sm" onClick={() => navigate('login')}>
+                  <Icon name="user" size={15} /> 로그인
+                </button>
+              )}
+              <button className="cart-btn" onClick={() => { if (requireCartLogin()) setDrawerOpen(true) }}>
                 <Icon name="cart" size={17} /> 장바구니
                 <span className="qty">{cartCount}</span>
               </button>

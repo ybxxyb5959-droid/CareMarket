@@ -10,7 +10,7 @@ import { discountRate, won } from '../lib/format'
 export default function ProductDetail() {
   const {
     selectedProduct: p, productsLoading, productsError,
-    goal, subFilters, allergies, wishlist, toggleWish, addToCart, navigate,
+    goal, subFilters, allergies, wishlist, toggleWish, addToCart, navigate, setDrawerOpen,
   } = useStore()
   const [tab, setTab] = useState('nutrition')
   if (!p) {
@@ -106,7 +106,9 @@ export default function ProductDetail() {
             <button className="btn btn-ghost" onClick={() => addToCart(p, 1)}>
               <Icon name="cart" size={17} /> 장바구니 담기
             </button>
-            <button className="btn btn-primary" onClick={() => { addToCart(p, 1); navigate('cart') }}>
+            <button className="btn btn-primary" onClick={async () => {
+              if (await addToCart(p, 1)) { setDrawerOpen(false); navigate('cart') }
+            }}>
               바로 구매하기
             </button>
           </div>
