@@ -3,6 +3,7 @@ import { useStore } from '../store'
 import { supabase } from '../lib/supabase'
 import { fetchMyOrders } from '../lib/orders'
 import Icon from '../components/Icon'
+import ProductImage from '../components/ProductImage'
 import { won } from '../lib/format'
 
 const STATUS_LABELS = {
@@ -69,12 +70,24 @@ export default function Orders() {
             <div className="order-lines">
               {order.items.map((item) => (
                 <div key={`${order.order_id}-${item.product_id}`} className="order-line">
-                  <span className="nm">{item.product?.name || '판매 종료 상품'} <span>({item.quantity}개)</span></span>
+                  <ProductImage src={item.product?.image_url || item.product?.image} alt="" />
+                  <span className="nm">{item.product?.name || '판매 종료 상품'} <span>수량 {item.quantity}개</span></span>
                   <b>{won(item.price_at_order * item.quantity)}</b>
                 </div>
               ))}
             </div>
-            <div className="order-foot"><span /><span className="order-total">결제금액 {won(order.total_price)}</span></div>
+            <div className="order-foot">
+              <details className="order-detail">
+                <summary>주문 상세 <Icon name="chevron-down" size={14} /></summary>
+                <div className="order-detail-body">
+                  <div><span>받는 분</span><strong>{order.recipient_name || '이전 주문 정보 없음'}</strong></div>
+                  <div><span>연락처</span><strong>{order.recipient_phone || '-'}</strong></div>
+                  <div className="order-detail-address"><span>배송지</span><strong>{order.address ? `${order.postal_code ? `(${order.postal_code}) ` : ''}${order.address}${order.address_detail ? ` ${order.address_detail}` : ''}` : '이전 주문 정보 없음'}</strong></div>
+                  <div className="order-detail-address"><span>배송 요청사항</span><strong>{order.delivery_request || '없음'}</strong></div>
+                </div>
+              </details>
+              <span className="order-total">결제금액 {won(order.total_price)}</span>
+            </div>
           </div>
         ))}
       </div>

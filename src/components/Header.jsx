@@ -46,7 +46,7 @@ export default function Header() {
     navigate, search, setSearch,
     searchMode, setSearchMode, aiQuery, setAiQuery, aiLoading, runAiSearch, clearAiSearch,
     shopCategory, setShopCategory, shopSub, setShopSub, setDealsOnly,
-    wishlist, cartCount, setDrawerOpen, showToast, isLoggedIn, requireCartLogin,
+    wishlist, cartCount, setDrawerOpen, isLoggedIn, requireCartLogin,
     products, openProduct, isAdmin,
   } = useStore()
   const [aiPlaceholder, setAiPlaceholder] = useState('')
@@ -295,9 +295,9 @@ export default function Header() {
                     </button>
                   )}
                   <button
-                    className="icon-btn"
-                    onClick={() => showToast(`위시리스트 ${wishlist.length}개 보관 중`)}
-                    aria-label="위시리스트"
+                    className="icon-btn header-wishlist-btn"
+                    onClick={() => navigate('mypage')}
+                    aria-label={`찜한 상품 ${wishlist.length}개`}
                     style={wishlist.length ? { color: 'var(--danger)' } : undefined}
                   >
                     <Icon name="heart" size={20} fill={wishlist.length ? 'currentColor' : 'none'} />

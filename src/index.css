@@ -3633,6 +3633,7 @@ main {
 }
 .order-line b {
   color: var(--ink);
+  white-space: nowrap;
 }
 .order-foot {
   display: flex;
@@ -6408,6 +6409,397 @@ tbody tr:hover {
     min-width: 0;
     padding-inline: 7px;
     font-size: 11.5px;
+  }
+}
+
+/* Shopping account experience (Phase 6) ------------------------------------ */
+.mypage {
+  max-width: 1180px;
+}
+.mypage-login {
+  margin: 0 auto;
+}
+.mypage-login .panel {
+  text-align: center;
+}
+.mypage-login-actions {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  margin-top: 16px;
+}
+.mypage-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  padding-bottom: 28px;
+  border-bottom: 1px solid var(--line);
+}
+.mypage-head .profile-id h1 {
+  margin-top: 4px;
+  color: var(--ink);
+  font-family: var(--serif);
+  font-size: 27px;
+  font-weight: 500;
+  letter-spacing: -.025em;
+}
+.mypage-section {
+  padding-block: 32px;
+  border-bottom: 1px solid var(--line);
+}
+.mypage-section-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 18px;
+}
+.mypage-section-head > div {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  min-width: 0;
+}
+.mypage-section-head h2 {
+  color: var(--ink);
+  font-family: var(--serif);
+  font-size: 22px;
+  font-weight: 500;
+}
+.mypage-section-head small {
+  color: var(--muted);
+  font-size: 12px;
+}
+.section-number {
+  width: 23px;
+  height: 23px;
+  display: grid;
+  flex: 0 0 auto;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--brand);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 800;
+}
+.mypage-recent-orders {
+  border-top: 1px solid var(--line);
+}
+.mypage-recent-orders > button {
+  width: 100%;
+  display: grid;
+  grid-template-columns: minmax(180px, .9fr) minmax(220px, 1.5fr) auto auto;
+  align-items: center;
+  gap: 20px;
+  padding: 17px 6px;
+  border-bottom: 1px solid var(--line-2);
+  color: var(--ink-2);
+  text-align: left;
+}
+.mypage-recent-orders span {
+  min-width: 0;
+}
+.mypage-recent-orders small,
+.mypage-recent-orders strong,
+.mypage-order-summary b {
+  display: block;
+}
+.mypage-recent-orders small {
+  color: var(--muted);
+  font-size: 11px;
+}
+.mypage-recent-orders strong,
+.mypage-order-summary b {
+  margin-top: 4px;
+  overflow: hidden;
+  color: var(--ink);
+  font-size: 13px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.mypage-order-summary small {
+  margin-top: 5px;
+}
+.mypage-empty-row {
+  min-height: 96px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 20px;
+  border: 1px solid var(--line);
+  border-radius: var(--r);
+  background: var(--surface-2);
+}
+.mypage-empty-row > div {
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  color: var(--brand-600);
+}
+.mypage-empty-row strong,
+.mypage-empty-row small {
+  display: block;
+}
+.mypage-empty-row strong {
+  color: var(--ink);
+  font-size: 13.5px;
+}
+.mypage-empty-row small {
+  margin-top: 4px;
+  color: var(--muted);
+  font-size: 11.5px;
+}
+.mypage-profile-grid,
+.mypage-goal-row {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  border-block: 1px solid var(--line);
+}
+.mypage-profile-grid > div,
+.mypage-goal-row > div {
+  min-width: 0;
+  padding: 17px 18px;
+  border-right: 1px solid var(--line);
+}
+.mypage-profile-grid > div:first-child {
+  grid-column: span 2;
+}
+.mypage-profile-grid > div:nth-child(3) {
+  border-left: 1px solid var(--line);
+}
+.mypage-profile-grid > div:last-child,
+.mypage-goal-row > div:last-child {
+  border-right: 0;
+}
+.mypage-profile-grid span,
+.mypage-profile-grid strong,
+.mypage-profile-grid small,
+.mypage-goal-row span,
+.mypage-goal-row strong {
+  display: block;
+}
+.mypage-profile-grid span,
+.mypage-goal-row span {
+  color: var(--muted);
+  font-size: 11.5px;
+}
+.mypage-profile-grid strong,
+.mypage-goal-row strong {
+  margin-top: 5px;
+  overflow-wrap: anywhere;
+  color: var(--ink);
+  font-size: 13.5px;
+}
+.mypage-profile-grid small {
+  margin-top: 4px;
+  color: var(--faint);
+  font-size: 11px;
+}
+.mypage-edit-form {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+.mypage-edit-wide,
+.mypage-edit-actions {
+  grid-column: 1 / -1;
+}
+.mypage-edit-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  padding-top: 4px;
+}
+.order-line {
+  gap: 12px;
+  padding-block: 8px;
+}
+.order-line > img {
+  width: 52px;
+  height: 52px;
+  flex: 0 0 auto;
+  border-radius: var(--r-xs);
+  object-fit: cover;
+  background: var(--surface-3);
+}
+.order-line .nm {
+  flex: 1 1 auto;
+  max-width: none;
+}
+.order-line .nm span {
+  display: block;
+  margin-top: 4px;
+  font-size: 11.5px;
+}
+.order-detail {
+  min-width: 0;
+}
+.order-detail summary {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: var(--brand-600);
+  cursor: pointer;
+  font-size: 12.5px;
+  font-weight: 700;
+  list-style: none;
+}
+.order-detail summary::-webkit-details-marker {
+  display: none;
+}
+.order-detail[open] summary svg {
+  transform: rotate(180deg);
+}
+.order-detail-body {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px 22px;
+  margin-top: 14px;
+  padding: 14px;
+  border: 1px solid var(--line-2);
+  border-radius: var(--r-xs);
+  background: var(--surface-2);
+}
+.order-detail-body span,
+.order-detail-body strong {
+  display: block;
+}
+.order-detail-body span {
+  color: var(--muted);
+  font-size: 10.5px;
+}
+.order-detail-body strong {
+  margin-top: 4px;
+  color: var(--ink-2);
+  font-size: 12px;
+  line-height: 1.5;
+}
+.order-detail-address {
+  grid-column: 1 / -1;
+}
+
+@media (max-width: 900px) {
+  .mypage-recent-orders > button {
+    grid-template-columns: minmax(160px, .8fr) minmax(200px, 1.3fr) auto;
+  }
+  .mypage-recent-orders > button > svg {
+    display: none;
+  }
+  .mypage-wishlist-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 720px) {
+  .mypage-head {
+    align-items: flex-start;
+  }
+  .mypage-head .avatar {
+    width: 48px;
+    height: 48px;
+    border-radius: 14px;
+    font-size: 20px;
+  }
+  .mypage-head .profile-id {
+    gap: 11px;
+  }
+  .mypage-head .profile-id h1 {
+    font-size: 22px;
+  }
+  .mypage-head .btn {
+    padding-inline: 10px;
+  }
+  .mypage-section {
+    padding-block: 25px;
+  }
+  .mypage-section-head h2 {
+    font-size: 19px;
+  }
+  .mypage-recent-orders > button {
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 10px 14px;
+  }
+  .mypage-order-summary {
+    grid-column: 1 / -1;
+    grid-row: 2;
+  }
+  .mypage-recent-orders .status {
+    grid-column: 2;
+    grid-row: 1;
+  }
+  .mypage-empty-row {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+  .mypage-profile-grid,
+  .mypage-goal-row,
+  .mypage-edit-form {
+    grid-template-columns: 1fr;
+  }
+  .mypage-profile-grid > div,
+  .mypage-goal-row > div,
+  .mypage-profile-grid > div:first-child {
+    grid-column: auto;
+    border-right: 0;
+    border-bottom: 1px solid var(--line-2);
+  }
+  .mypage-profile-grid > div:nth-child(3) {
+    border-left: 0;
+  }
+  .mypage-profile-grid > div:last-child,
+  .mypage-goal-row > div:last-child {
+    border-bottom: 0;
+  }
+  .mypage-edit-wide,
+  .mypage-edit-actions {
+    grid-column: auto;
+  }
+  .order-card {
+    padding: 16px;
+  }
+  .order-id {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 3px;
+  }
+  .order-line > img {
+    width: 44px;
+    height: 44px;
+  }
+  .order-foot {
+    align-items: flex-start;
+    flex-direction: column-reverse;
+  }
+  .order-detail,
+  .order-detail-body {
+    width: 100%;
+  }
+  .order-detail-body {
+    grid-template-columns: 1fr;
+  }
+  .order-detail-address {
+    grid-column: auto;
+  }
+}
+
+@media (max-width: 480px) {
+  .mypage-wishlist-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .header-wishlist-btn {
+    display: none;
+  }
+  .header-actions {
+    flex: 0 0 auto;
+    gap: 4px;
+  }
+  .header-actions .cart-btn {
+    min-width: 42px;
+    padding: 10px;
+    gap: 0;
+    font-size: 0;
   }
 }
 

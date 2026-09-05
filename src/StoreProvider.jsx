@@ -4,6 +4,7 @@ import { supabase } from './lib/supabase'
 import { adaptProductRow, fetchActiveProducts } from './lib/products'
 import { calculateCartPricing, createCartController, EMPTY_CART } from './lib/cart'
 import { AI_SORT_TO_UI, conditionLabels, requestAiConditions } from './lib/ai-search'
+import { fetchWishlistIds, saveWishlistItem } from './lib/wishlist'
 
 const scrollTop = () => window.scrollTo({ top: 0, behavior: 'smooth' })
 
@@ -79,6 +80,7 @@ export function StoreProvider({ children }) {
 
   // 커머스 상태
   const [wishlist, setWishlist] = useState([])
+  const wishlistPending = useRef(new Set())
   const [cartState, setCartState] = useState(EMPTY_CART)
   const [loginPromptOpen, setLoginPromptOpen] = useState(false)
   const [drawerOpen, setDrawerOpen] = useState(false)
@@ -126,6 +128,8 @@ export function StoreProvider({ children }) {
     const nextId = session?.user?.id || null
     if (cartController.getOwner() !== nextId) {
       cartController.setOwner(nextId)
+      setWishlist([])
+      wishlistPending.current.clear()
       setDrawerOpen(false)
       setLoginPromptOpen(false)
       setToast(null)
@@ -149,6 +153,21 @@ export function StoreProvider({ children }) {
     setSubFilters(DEFAULT_SUB_FILTERS)
     setAllergies([])
   }, [cartController])
+
+  useEffect(() => {
+    let active = true
+    if (!authUserId) return () => { active = false }
+    fetchWishlistIds(supabase, authUserId)
+      .then((ids) => { if (active) setWishlist(ids) })
+      .catch((error) => {
+        if (!active) return
+        console.error('Supabase wishlist fetch failed:', { code: error?.code || 'WISHLIST_FETCH_FAILED' })
+        showToast('찜한 상품을 불러오지 못했습니다.')
+      })
+    return () => { active = false }
+  // showToast is intentionally excluded: the load is scoped to the authenticated owner.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [authUserId])
 
   useEffect(() => {
     let mounted = true
@@ -376,12 +395,28 @@ export function StoreProvider({ children }) {
     if (['protein', 'sugar', 'sodium'].includes(sortBy)) setSortBy('recommend')
   }
 
-  const toggleWish = (id) => {
-    setWishlist((prev) => {
-      const has = prev.includes(id)
-      showToast(has ? '위시리스트에서 제외했습니다.' : '위시리스트에 저장했습니다.')
-      return has ? prev.filter((x) => x !== id) : [...prev, id]
-    })
+  const toggleWish = async (id) => {
+    if (!authUserId) {
+      showToast('로그인 후 상품을 찜할 수 있습니다.')
+      navigate('login')
+      return false
+    }
+    if (wishlistPending.current.has(id)) return false
+    wishlistPending.current.add(id)
+    const has = wishlist.includes(id)
+    setWishlist((current) => has ? current.filter((item) => item !== id) : [id, ...current])
+    try {
+      await saveWishlistItem(supabase, authUserId, id, !has)
+      showToast(has ? '찜한 상품에서 제외했습니다.' : '찜한 상품에 저장했습니다.')
+      return true
+    } catch (error) {
+      console.error('Supabase wishlist update failed:', { code: error?.code || 'WISHLIST_UPDATE_FAILED' })
+      setWishlist((current) => has ? [id, ...current.filter((item) => item !== id)] : current.filter((item) => item !== id))
+      showToast('찜한 상품을 변경하지 못했습니다.')
+      return false
+    } finally {
+      wishlistPending.current.delete(id)
+    }
   }
 
   const requireCartLogin = () => {
