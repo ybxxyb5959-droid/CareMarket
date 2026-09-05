@@ -2,6 +2,7 @@ import { useStore } from '../store'
 import Icon from '../components/Icon'
 import { won } from '../lib/format'
 import { GOAL_NUTRIENTS, NUTRIENT_META, cartNutritionTotals, fmtNutrient } from '../lib/nutrition'
+import CartAiInsight from '../components/CartAiInsight'
 
 const SUMMARY_ORDER = ['sodium', 'sugar', 'protein', 'calories']
 
@@ -100,6 +101,7 @@ export default function Cart() {
 
                 <p className="ns-note">장바구니 상품과 수량을 기준으로 계산한 단순 합산 정보입니다.</p>
               </div>
+              <CartAiInsight />
             </div>
 
             <div className="summary">

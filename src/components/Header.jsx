@@ -45,9 +45,9 @@ export default function Header() {
   const {
     navigate, search, setSearch,
     searchMode, setSearchMode, aiQuery, setAiQuery, aiLoading, runAiSearch, clearAiSearch,
-    shopCategory, setShopCategory, shopSub, setShopSub,
+    shopCategory, setShopCategory, shopSub, setShopSub, setDealsOnly,
     wishlist, cartCount, setDrawerOpen, showToast, isLoggedIn, requireCartLogin,
-    products, openProduct,
+    products, openProduct, isAdmin,
   } = useStore()
   const [aiPlaceholder, setAiPlaceholder] = useState('')
   const [searchFocused, setSearchFocused] = useState(false)
@@ -70,6 +70,7 @@ export default function Header() {
 
   // 카테고리/하위 선택 → 필터 적용 후 상품 목록으로 스크롤
   const openCategory = (c, sub) => {
+    setDealsOnly(false)
     setShopCategory(c.name)
     setShopSub(sub)
     navigate('products')
@@ -109,6 +110,7 @@ export default function Header() {
     setSearch('')
   }
   const scrollToResults = () => {
+    setDealsOnly(false)
     navigate('products')
   }
   const onSearchSubmit = (e) => {
@@ -145,7 +147,7 @@ export default function Header() {
       <div className="announce">
         <div className="announce-inner">
           <b>ORGANIC &amp; CLEAN</b>
-          <span>자연에서 온 무첨가 웰빙 식단 · 첫 구매 시 웰빙 스타터 30% 바우처 지급</span>
+          <span>자연에서 온 무첨가 할인식단 · 첫 구매 시 웰빙 스타터 30% 바우처 지급</span>
           <span className="link" onClick={() => navigate('goalSetup')}>내 맞춤 루틴 설계 →</span>
         </div>
       </div>
@@ -287,6 +289,11 @@ export default function Header() {
               </button>
               {isLoggedIn ? (
                 <>
+                  {isAdmin && (
+                    <button className="header-admin-btn" onClick={() => navigate('adminProducts')} title="관리자센터">
+                      <Icon name="shield-check" size={15} /> <span>관리자센터</span>
+                    </button>
+                  )}
                   <button
                     className="icon-btn"
                     onClick={() => showToast(`위시리스트 ${wishlist.length}개 보관 중`)}
@@ -347,9 +354,7 @@ export default function Header() {
               ))}
             </div>
             <div className="header-nav-right">
-              <span onClick={() => navigate('orders')} style={{ cursor: 'pointer' }}>콜드체인 배송조회</span>
-              <span className="divider-v" />
-              <span className="safe"><Icon name="shield-check" size={15} /> 안심 클린라벨 100%</span>
+              <span onClick={() => navigate('orders')} style={{ cursor: 'pointer' }}>주문 · 배송 조회</span>
             </div>
           </div>
         </div>

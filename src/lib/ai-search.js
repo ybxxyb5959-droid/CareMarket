@@ -71,7 +71,6 @@ export function filterAiProducts(products, raw, sort = null) {
     protein_desc: (a, b) => b.nutrition.protein - a.nutrition.protein,
     sugar_asc: (a, b) => a.nutrition.sugar - b.nutrition.sugar,
     sodium_asc: (a, b) => a.nutrition.sodium - b.nutrition.sodium,
-    review: (a, b) => b.reviewCount - a.reviewCount,
   }
   const compare = comparisons[sort || c.sort_by] || comparisons.relevance
   return list.sort((a, b) => compare(a, b) || a.id - b.id)

@@ -1,10 +1,12 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useStore, useAutoSlide } from '../store'
-import { GOALS, HERO_SLIDES, ROUTINE, SUB_FILTERS, VALUES } from '../data/mock'
+import { GOALS, HERO_SLIDES, VALUES } from '../data/mock'
 import Icon from '../components/Icon'
 import ProductCard from '../components/ProductCard'
 import WellnessTable from '../components/WellnessTable'
 import { filterAndSort } from '../lib/catalog'
+import { getCountdown, getLocalDateKey, selectDailyDeals } from '../lib/deals'
+import DealProductCard from '../components/DealProductCard'
 
 // 주목표별 강조 안내문
 const GOAL_GUIDE = {
@@ -16,31 +18,41 @@ const GOAL_GUIDE = {
 
 export default function Home() {
   const {
-    goal, setGoal, subFilters, toggleSub, setSubFilters, allergies,
+    goal, setGoal, subFilters, setSubFilters, allergies,
     products, productsLoading, openProduct, navigate,
     isLoggedIn, logout, setShopCategory, setShopSub, setSortBy, showToast,
+    setDealsOnly, setSearch, clearAiSearch,
   } = useStore()
 
   const [slide, setSlide] = useAutoSlide(HERO_SLIDES.length)
-  const [routineIdx, setRoutineIdx] = useState(1)
   const [focusGoal, setFocusGoal] = useState(null) // 비로그인 목표 셀렉터: 포커스된 목표
   const [email, setEmail] = useState('')
+  const [clock, setClock] = useState(() => ({
+    dateKey: getLocalDateKey(),
+    countdown: getCountdown(),
+  }))
   const hero = HERO_SLIDES[slide]
   const activeGoal = GOALS.find((g) => g.name === focusGoal)
 
-  const routine = ROUTINE[routineIdx]
-  const routineCategories = ['영양제·비타민', '도시락·간편식', '프로틴바·건강간식', '닭가슴살·고단백 식품']
-  const routineProduct = products.find((product) => product.category === routineCategories[routineIdx])
-
-  // 맞춤 추천 4개 (목표 기반, 필터 무관) / 전체상품 프리뷰 8개 (보조조건 반영)
+  // 맞춤 추천 4개 (목표 기반, 필터 무관)
   const recommended = useMemo(
     () => filterAndSort(products, { search: '', subFilters: [], allergies, sortBy: 'recommend', goal, shopCategory: '전체상품', shopSub: '전체' }).slice(0, 4),
     [products, allergies, goal],
   )
-  const previewAll = useMemo(
-    () => filterAndSort(products, { search: '', subFilters, allergies, sortBy: 'recommend', goal, shopCategory: '전체상품', shopSub: '전체' }).slice(0, 8),
-    [products, subFilters, allergies, goal],
+
+  const dailyDeals = useMemo(
+    () => selectDailyDeals(products, clock.dateKey),
+    [products, clock.dateKey],
   )
+
+  useEffect(() => {
+    const updateClock = () => {
+      const now = new Date()
+      setClock({ dateKey: getLocalDateKey(now), countdown: getCountdown(now) })
+    }
+    const interval = window.setInterval(updateClock, 1000)
+    return () => window.clearInterval(interval)
+  }, [])
 
   // Hero 컬렉션 CTA → 컬렉션 필터 설정 후 전체상품 페이지로 이동
   const applyCollection = (col) => {
@@ -51,9 +63,20 @@ export default function Home() {
     navigate('products')
   }
   const goToProducts = (opts = {}) => {
+    setDealsOnly(false)
     setShopCategory('전체상품')
     setShopSub('전체')
     if (opts.recommend) setSortBy('recommend')
+    navigate('products')
+  }
+  const goToDeals = () => {
+    clearAiSearch()
+    setSearch('')
+    setSubFilters([])
+    setShopCategory('전체상품')
+    setShopSub('전체')
+    setSortBy('recommend')
+    setDealsOnly(true)
     navigate('products')
   }
   const subscribeNewsletter = () => {
@@ -65,7 +88,7 @@ export default function Home() {
   }
 
   return (
-    <div>
+    <div className="home-page">
       {/* ── 히어로 ── */}
       <section className="hero">
         {HERO_SLIDES.map((s, i) => (
@@ -119,6 +142,32 @@ export default function Home() {
         </div>
       </section>
 
+      {/* ── 오늘의 특가: 실제 할인 상품의 날짜별 큐레이션 ── */}
+      <section className="today-deals" aria-labelledby="today-deals-title">
+        <div className="wrap">
+          <div className="today-deals-head">
+            <div>
+              <span className="eyebrow">TODAY&apos;S DEAL</span>
+              <h2 id="today-deals-title" className="serif">오늘의 특가</h2>
+              <div className="deal-countdown" aria-live="off">
+                <span>오늘의 특가 갱신까지</span>
+                <time>{clock.countdown}</time>
+              </div>
+            </div>
+            <button type="button" className="more-link" onClick={goToDeals}>특가 상품 더보기 →</button>
+          </div>
+          {productsLoading ? (
+            <p className="today-deals-status" aria-live="polite">특가 상품을 불러오고 있습니다.</p>
+          ) : dailyDeals.length ? (
+            <div className="today-deals-grid">
+              {dailyDeals.map((product) => <DealProductCard key={product.id} product={product} />)}
+            </div>
+          ) : (
+            <p className="today-deals-status">현재 판매 중인 할인 상품이 없습니다.</p>
+          )}
+        </div>
+      </section>
+
       {isLoggedIn ? (
         /* ── (로그인) 나의 맞춤 쇼핑 기준 — 카드 없이 텍스트 중심 ── */
         <section style={{ borderBottom: '1px solid var(--line)' }}>
@@ -153,14 +202,14 @@ export default function Home() {
           </div>
         </section>
       ) : (
-        /* ── (비로그인) 당신의 몸이 지금 필요로 하는 처방 — 텍스트 셀렉터 ── */
+        /* ── (비로그인) 지금 나에게 맞는 쇼핑 기준 — 텍스트 셀렉터 ── */
         <section className="section">
           <div className="wrap">
             <div style={{ marginBottom: 30 }}>
               <span className="eyebrow">Personalized Wellness</span>
-              <h2 className="serif" style={{ fontSize: 30, marginTop: 10 }}>당신의 몸이 지금 필요로 하는 처방</h2>
+              <h2 className="serif" style={{ fontSize: 30, marginTop: 10 }}>나에게 맞는 케어</h2>
               <p style={{ color: 'var(--muted)', marginTop: 10, fontSize: 14.5, maxWidth: 560 }}>
-                관심 있는 목표를 선택하면, 나머지는 접히고 그 목표에 맞춰 강조되는 영양 정보를 안내해 드립니다.
+                관심있는 케어를 선택해 보세요.
               </p>
             </div>
 
@@ -210,10 +259,10 @@ export default function Home() {
               <div>
                 <span className="eyebrow">Start your routine</span>
                 <h3 className="serif" style={{ fontSize: 22, marginTop: 6, color: 'var(--ink)' }}>
-                  가입하고 나만의 맞춤 웰빙 마켓을 완성하세요
+                  나만의 맞춤 웰빙 마켓을 완성하세요
                 </h3>
                 <p style={{ fontSize: 13.5, color: 'var(--muted)', marginTop: 6, maxWidth: 540 }}>
-                  선택한 목표와 보조 조건을 저장해 두면, 방문할 때마다 나에게 맞는 영양 정보를 우선으로 보여드립니다.
+                  나에게 맞는 제품을 보여드립니다.
                 </p>
               </div>
               <div style={{ display: 'flex', gap: 10, flexShrink: 0 }}>
@@ -256,7 +305,7 @@ export default function Home() {
             <div className="journal-copy">
               <span className="journal-kicker">CareMarket Wellness Journal</span>
               <h3 className="journal-title serif">매주 만나는 웰니스 큐레이션</h3>
-              <p className="journal-desc">건강한 식단 이야기와 영양 팁, CareMarket의 새로운 웰빙 셀렉션을 가장 먼저 만나보세요.</p>
+              <p className="journal-desc">건강한 식단 이야기와 건강 팁,<br />CareMarket의 새로운 웰빙 셀렉션을 가장 먼저 만나보세요.</p>
             </div>
             <div className="journal-form">
               <input
@@ -275,98 +324,6 @@ export default function Home() {
 
       {/* ── 오늘의 웰빙 테이블 (Shoppable image) ── */}
       <WellnessTable />
-
-      {/* ── 웰빙 루틴 플래너 (중앙부 강조) ── */}
-      <section className="section" style={{ paddingTop: 0 }}>
-        <div className="wrap">
-          <div className="routine">
-            <div className="routine-head">
-              <div>
-                <span className="eyebrow"><Icon name="calendar" size={13} style={{ display: 'inline', verticalAlign: '-2px', marginRight: 5 }} />Well-being Daily Routine</span>
-                <h3>하루를 온전하게 채우는 시간대별 웰빙 식단</h3>
-              </div>
-              <span className="by"><Icon name="award" size={16} style={{ color: 'var(--brand-500)' }} /> 영양사 &amp; 자연식품 큐레이터 추천</span>
-            </div>
-            <div className="routine-body">
-              <div className="routine-tabs no-scrollbar">
-                {ROUTINE.map((r, i) => (
-                  <button key={i} className={`routine-tab${i === routineIdx ? ' on' : ''}`} onClick={() => setRoutineIdx(i)}>
-                    <div className="r-ico"><Icon name={r.icon} size={19} /></div>
-                    <div>
-                      <div className="r-time">{r.time}</div>
-                      <div className="r-title">{r.title}</div>
-                      <div className="r-tag">{r.tag}</div>
-                    </div>
-                  </button>
-                ))}
-              </div>
-              <div className="routine-detail">
-                <span className="rd-time"><Icon name={routine.icon} size={14} /> {routine.time} · {routine.tag}</span>
-                <h4>{routine.title}</h4>
-                <p>{routine.desc}</p>
-                <div className="routine-rec">
-                  <div>
-                    <div className="rr-label">추천 식품</div>
-                    <div className="rr-name">{routineProduct?.name || routine.product}</div>
-                  </div>
-                  <button
-                    className="btn btn-primary btn-sm"
-                    onClick={() => {
-                      if (routineProduct) openProduct(routineProduct); else navigate('main')
-                    }}
-                  >
-                    자세히 보기 <Icon name="chevron-right" size={15} />
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* ── 전체상품 큐레이션 8개 (프리뷰) ── */}
-      <section id="product-list" className="section" style={{ paddingTop: 0 }}>
-        <div className="wrap">
-          <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 16, marginBottom: 16, flexWrap: 'wrap' }}>
-            <div className="section-head" style={{ textAlign: 'left', maxWidth: 'none', marginBottom: 0 }}>
-              <span className="eyebrow">Shop the catalog</span>
-              <h2 className="serif" style={{ fontSize: 26 }}>전체상품 큐레이션</h2>
-            </div>
-            <button type="button" className="more-link" onClick={() => goToProducts()}>
-              전체상품 100개 보기 <Icon name="chevron-right" size={15} />
-            </button>
-          </div>
-
-          <div className="filterbar" style={{ marginBottom: 22 }}>
-            <div className="f-tags">
-              <span className="f-label"><Icon name="sliders" size={15} /> 보조 조건</span>
-              {SUB_FILTERS.map((f) => (
-                <button key={f.id} className={`chip${subFilters.includes(f.tag) ? ' on' : ''}`} onClick={() => toggleSub(f.tag)} title={f.hint}>
-                  {subFilters.includes(f.tag) && <Icon name="check" size={13} strokeWidth={2.6} />}
-                  {f.label}
-                </button>
-              ))}
-              {subFilters.length > 0 && (
-                <button className="f-reset" onClick={() => setSubFilters([])}>초기화</button>
-              )}
-            </div>
-          </div>
-
-          {productsLoading ? (
-            <div className="empty" aria-live="polite"><Icon name="package" size={40} /><h3>상품을 불러오고 있습니다.</h3></div>
-          ) : previewAll.length === 0 ? (
-            <div className="empty">
-              <Icon name="alert-circle" size={40} />
-              <h3>선택하신 조건에 맞는 상품이 없습니다.</h3>
-              <button className="btn btn-primary" onClick={() => setSubFilters([])}>보조 조건 초기화</button>
-            </div>
-          ) : (
-            <div className="product-grid">
-              {previewAll.map((p) => <ProductCard key={p.id} product={p} />)}
-            </div>
-          )}
-        </div>
-      </section>
 
       {/* ── 가치 배너 (Trust) ── */}
       <section className="section" style={{ paddingTop: 0 }}>

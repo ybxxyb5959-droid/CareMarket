@@ -39,12 +39,7 @@ export function adaptProductRow(row) {
     originalPrice: row.original_price == null ? price : asNumber(row.original_price),
     stock: asNumber(row.stock),
     summary: row.summary || '',
-    rating: Number((4.5 + (id % 5) * 0.1).toFixed(1)),
-    reviewCount: 100 + ((id * 137) % 3000),
-    isBest: id % 10 === 1 || id % 10 === 2,
-    isNew: id % 10 === 0,
     origin: mainIngredients.slice(0, 2).join(' · ') || '상품 원재료 정보 참조',
-    cleanScore: '영양정보 공개',
     tags: deriveTags({ protein, sugar, sodium, caffeine, category }),
     image: row.image_url || '',
     nutrition: {

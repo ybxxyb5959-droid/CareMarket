@@ -61,7 +61,7 @@ export const HERO_SLIDES = [
     tag: 'Well-being Selection',
     title: '흙과 자연이 건네는\n온전한 하루의 영양',
     desc: '불필요한 인공 첨가물 없이, 공인된 영양성분만 담았습니다. 자연 친화적 원료로 완성하는 깨끗한 한 끼.',
-    badge: '정기검사 100% 실측 통과',
+    badge: '등록된 영양성분을 확인하세요',
     btn: '저염 클린식 컬렉션',
     collection: { category: '전체상품', sub: '전체', subFilters: ['저염'] },
     image:
@@ -72,7 +72,7 @@ export const HERO_SLIDES = [
     tag: 'Clean Protein Lab',
     title: '속 편한 분리유청,\n당류 0g의 단백질 밸런스',
     desc: '유당 걱정 없는 깨끗한 단백질. 자연 감미료로 건강한 달콤함을 설계했습니다.',
-    badge: '베스트셀러 기획전',
+    badge: '프로틴 상품 모아보기',
     btn: '프로틴 컬렉션 보기',
     collection: { category: '프로틴', sub: '전체', subFilters: [] },
     image:
@@ -95,7 +95,6 @@ export const HERO_SLIDES = [
 // DB category가 완벽히 정규화되지 않아 프론트에서 최소 normalization만 수행한다.
 // (Supabase Schema/seed는 변경하지 않음)
 export const CATEGORIES = [
-  { id: 'best', name: '베스트' }, // isBest 상품
   { id: 'all', name: '전체상품' },
   { id: 'protein', name: '프로틴', group: '프로틴', subs: [
     { name: '프로틴 음료', db: ['음료·프로틴음료', '유제품·대체유'] },
@@ -146,7 +145,6 @@ export function productGroup(product) {
 // 카테고리 + 하위(드롭다운) 매칭 (상품 목록 필터에 사용)
 export function matchCategory(product, catName, subName) {
   if (!catName || catName === '전체상품') return true
-  if (catName === '베스트') return product.isBest
   const cat = CATEGORIES.find((c) => c.name === catName)
   if (!cat || !cat.group) return true
   if (productGroup(product) !== cat.group) return false
@@ -197,10 +195,9 @@ export const ROUTINE = [
 
 // 브랜드 가치 (신뢰 배너)
 export const VALUES = [
-  { icon: 'shield-check', title: '100% 실측 성분 검증', desc: '표시량 오차율 3% 이내 전수검사 통과' },
-  { icon: 'leaf', title: '인공 감미료 ZERO', desc: '아스파탐·수크랄로스 무첨가, 알룰로스 사용' },
-  { icon: 'truck', title: '신선 콜드체인 직송', desc: '냉동·냉장 식단 친환경 물얼음 포장' },
-  { icon: 'shield-alert', title: '안심 알레르기 케어', desc: '14대 유발 원재료 교차오염 차단' },
+  { icon: 'leaf', title: '상품 정보 중심', desc: '원재료와 영양성분을 한곳에서 확인하세요' },
+  { icon: 'sliders', title: '나에게 맞는 조건', desc: '필요한 영양 조건으로 상품을 찾아보세요' },
+  { icon: 'truck', title: '주문 상태 확인', desc: '결제 후 주문내역에서 배송 흐름을 확인하세요' },
 ]
 
 // 상품 목업

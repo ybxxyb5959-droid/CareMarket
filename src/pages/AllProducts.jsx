@@ -1,10 +1,11 @@
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import { useStore } from '../store'
 import { SUB_FILTERS } from '../data/mock'
 import { filterAndSort } from '../lib/catalog'
 import { AI_SORT_TO_UI, filterAiProducts } from '../lib/ai-search'
 import Icon from '../components/Icon'
 import ProductCard from '../components/ProductCard'
+import ProductComparisonModal from '../components/ProductComparisonModal'
 
 const AI_EXAMPLES = ['카페인 없는 영양제 찾아줘', '당류 낮고 단백질 높은 간식 찾아줘', '저염 식품 찾아줘']
 
@@ -14,22 +15,47 @@ export default function AllProducts() {
     subFilters, toggleSub, setSubFilters, allergies,
     products, productsLoading, productsError, reloadProducts, navigate,
     searchMode, aiResult: aiSearch, aiLoading, aiError, runAiSearch, clearAiSearch,
-    shopCategory, shopSub,
+    shopCategory, shopSub, dealsOnly, setDealsOnly,
+    isLoggedIn, showToast,
   } = useStore()
+  const [compareIds, setCompareIds] = useState([])
+  const [compareOpen, setCompareOpen] = useState(false)
 
   const filtered = useMemo(
-    () => filterAndSort(products, { search: searchMode === 'ai' ? '' : search, subFilters, allergies, sortBy, goal, shopCategory, shopSub }),
-    [products, search, searchMode, subFilters, allergies, sortBy, goal, shopCategory, shopSub],
+    () => filterAndSort(products, { search: searchMode === 'ai' ? '' : search, subFilters, allergies, sortBy, goal, shopCategory, shopSub, dealsOnly }),
+    [products, search, searchMode, subFilters, allergies, sortBy, goal, shopCategory, shopSub, dealsOnly],
   )
 
   const aiProducts = useMemo(() => {
     if (searchMode !== 'ai') return filtered
     if (aiLoading || aiError || !aiSearch) return []
-    const sort = Object.entries(AI_SORT_TO_UI).find(([, ui]) => ui === sortBy)?.[0] || 'review'
+    const sort = Object.entries(AI_SORT_TO_UI).find(([, ui]) => ui === sortBy)?.[0] || 'relevance'
     return filterAiProducts(filtered, aiSearch.filters, sort)
   }, [aiSearch, filtered, searchMode, aiLoading, aiError, sortBy])
 
-  const title = searchMode === 'ai' ? 'AI 검색 결과' : `${shopCategory}${shopSub !== '전체' ? ` · ${shopSub}` : ''}`
+  const title = searchMode === 'ai' ? 'AI 검색 결과' : dealsOnly ? '특가 상품' : `${shopCategory}${shopSub !== '전체' ? ` · ${shopSub}` : ''}`
+  const compareProducts = useMemo(
+    () => compareIds.map((id) => products.find((product) => product.id === id)).filter(Boolean),
+    [compareIds, products],
+  )
+  const toggleCompare = (productId) => {
+    setCompareIds((current) => {
+      if (current.includes(productId)) return current.filter((id) => id !== productId)
+      if (current.length >= 3) {
+        showToast('상품은 최대 3개까지 비교할 수 있습니다.')
+        return current
+      }
+      return [...current, productId]
+    })
+  }
+  const openComparison = () => {
+    if (compareProducts.length < 2) return
+    if (!isLoggedIn) {
+      showToast('AI 상품 비교는 로그인 후 이용할 수 있습니다.')
+      return
+    }
+    setCompareOpen(true)
+  }
 
   return (
     <div className="wrap page">
@@ -115,7 +141,6 @@ export default function AllProducts() {
             <span className="divider-v" />
             <select value={sortBy} onChange={(e) => setSortBy(e.target.value)}>
               <option value="recommend">{searchMode === 'ai' ? '관련도순' : '맞춤 추천순'}</option>
-              <option value="review">리뷰 많은순</option>
               <option value="lowPrice">낮은 가격순</option>
               <option value="highPrice">높은 가격순</option>
               {searchMode === 'ai' && <>
@@ -126,6 +151,13 @@ export default function AllProducts() {
             </select>
           </div>
         </div>
+
+        {!productsLoading && !productsError && aiProducts.length > 0 && (
+          <div className="compare-toolbar">
+            <div><Icon name="sparkles" size={15} /><span>비교할 상품을 선택하세요</span><b>{compareIds.length}/3</b></div>
+            <button type="button" className="btn btn-soft btn-sm" disabled={compareProducts.length < 2} onClick={openComparison}>AI로 비교하기</button>
+          </div>
+        )}
 
         {productsLoading ? (
           <div className="empty" aria-live="polite">
@@ -145,14 +177,17 @@ export default function AllProducts() {
             <Icon name="alert-circle" size={44} />
             <h3>선택하신 조건에 맞는 상품이 없습니다.</h3>
             <p>저당·저염·고단백 등 보조 조건을 조정하거나 검색어를 초기화해 보세요.</p>
-            <button className="btn btn-primary" onClick={() => { setSubFilters([]); setSearch(''); clearAiSearch() }}>조건 전체 초기화</button>
+            <button className="btn btn-primary" onClick={() => { setSubFilters([]); setSearch(''); setDealsOnly(false); clearAiSearch() }}>조건 전체 초기화</button>
           </div>
         ) : (
           <div className="product-grid">
-            {aiProducts.map((p) => <ProductCard key={p.id} product={p} />)}
+            {aiProducts.map((p) => (
+              <ProductCard key={p.id} product={p} compareSelected={compareIds.includes(p.id)} onCompareToggle={toggleCompare} />
+            ))}
           </div>
         )}
       </div>
+      {compareOpen && <ProductComparisonModal products={compareProducts} goal={goal} onClose={() => setCompareOpen(false)} />}
     </div>
   )
 }

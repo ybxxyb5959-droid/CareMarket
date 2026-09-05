@@ -4,7 +4,7 @@ import GoalBadge from './GoalBadge'
 import ProductImage from './ProductImage'
 import { discountRate, won } from '../lib/format'
 
-export default function ProductCard({ product }) {
+export default function ProductCard({ product, compareSelected = false, onCompareToggle = null }) {
   const { goal, wishlist, toggleWish, addToCart, openProduct } = useStore()
   const wished = wishlist.includes(product.id)
 
@@ -12,6 +12,17 @@ export default function ProductCard({ product }) {
     <article className="card">
       <div className="card-media" onClick={() => openProduct(product)}>
         <ProductImage src={product.image} alt={product.name} />
+        {onCompareToggle && (
+          <button
+            type="button"
+            className={`card-compare${compareSelected ? ' on' : ''}`}
+            onClick={(event) => { event.stopPropagation(); onCompareToggle(product.id) }}
+            aria-pressed={compareSelected}
+          >
+            <span className="card-compare-box">{compareSelected && <Icon name="check" size={12} strokeWidth={2.8} />}</span>
+            비교
+          </button>
+        )}
         <button
           className="card-wish"
           onClick={(e) => { e.stopPropagation(); toggleWish(product.id) }}

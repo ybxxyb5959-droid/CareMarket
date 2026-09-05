@@ -25,14 +25,14 @@ export default function GoalSetup() {
       <div className="page-narrow" style={{ margin: '0 auto' }}>
         <div className="panel panel-pad-lg">
           <div className="auth-head">
-            <span className="tag tag-soft" style={{ marginBottom: 12 }}>CareMarket Well-being Diagnosis</span>
-            <h2 style={{ marginTop: 8 }}>당신의 몸에 맞는 식단 조건을 설정하세요</h2>
-            <p>설정한 목적에 따라 쇼핑몰 내 모든 식품의 강조 영양 성분과 진열 순서가 바뀝니다.</p>
+            <span className="tag tag-soft" style={{ marginBottom: 12 }}>CareMarket 맞춤 쇼핑 기준</span>
+            <h2 style={{ marginTop: 8 }}>구매 목적과 선택 조건을 설정하세요</h2>
+            <p>설정한 구매 목적에 따라 쇼핑몰 내 식품의 강조 영양 정보와 진열 순서가 맞춰집니다. 주 구매 목적은 필수, 선택 조건은 자유롭게 고르세요.</p>
           </div>
 
           {/* 1단계 — 구입 목적 */}
           <div className="step">
-            <div className="step-label"><span className="step-num">1</span> 핵심 구입 목적 <span style={{ color: 'var(--faint)', fontWeight: 500, fontSize: 13 }}>(1개 필수)</span></div>
+            <div className="step-label"><span className="step-num">1</span> 주 구매 목적 <span style={{ color: 'var(--faint)', fontWeight: 500, fontSize: 13 }}>(필수 · 1개)</span></div>
             <div className="goal-pick-grid">
               {GOALS.map((g) => {
                 const on = goal === g.name
@@ -52,7 +52,7 @@ export default function GoalSetup() {
 
           {/* 2단계 — 보조 조건 */}
           <div className="step">
-            <div className="step-label"><span className="step-num">2</span> 웰빙 보조 조건 <span style={{ color: 'var(--faint)', fontWeight: 500, fontSize: 13 }}>(다중 선택)</span></div>
+            <div className="step-label"><span className="step-num">2</span> 선택 조건 <span style={{ color: 'var(--faint)', fontWeight: 500, fontSize: 13 }}>(선택 · 다중)</span></div>
             <div className="sub-grid">
               {SUB_FILTERS.map((s) => {
                 const on = subFilters.includes(s.tag)

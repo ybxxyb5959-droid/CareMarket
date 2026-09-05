@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useStore } from '../store'
 import Icon from '../components/Icon'
 import CheckoutOrderItems from '../components/checkout/CheckoutOrderItems'
@@ -16,9 +16,22 @@ export default function Checkout() {
 function CheckoutContent() {
   const {
     cart, cartTotal, deliveryFee, cartLoading, cartPending, cartError,
-    user, isLoggedIn, authUserId, navigate, showToast, reloadCart,
+    user, profile, isLoggedIn, authUserId, navigate, showToast, reloadCart,
   } = useStore()
-  const [shipping, setShipping] = useState({ name: user?.name || '', phone: '', address: '', addressDetail: '' })
+  const memberShipping = useMemo(() => ({
+    name: user?.name || '',
+    phone: profile?.phone || '',
+    postalCode: profile?.postalCode || '',
+    address: profile?.address || '',
+    addressDetail: profile?.addressDetail || '',
+  }), [user?.name, profile?.phone, profile?.postalCode, profile?.address, profile?.addressDetail])
+  const [sameAsMember, setSameAsMember] = useState(true)
+  const [shipping, setShipping] = useState(memberShipping)
+
+  // '회원정보와 동일'이 켜져 있으면 회원 정보가 갱신될 때 배송정보도 따라간다.
+  useEffect(() => {
+    if (sameAsMember) setShipping(memberShipping)
+  }, [sameAsMember, memberShipping])
   const [widgets, setWidgets] = useState(null)
   const [submitting, setSubmitting] = useState(false)
   const [serverTotal, setServerTotal] = useState(null)
@@ -26,6 +39,10 @@ function CheckoutContent() {
   const onWidgetsReady = useCallback((next) => setWidgets(next), [])
 
   const updateShipping = (name, value) => setShipping((current) => ({ ...current, [name]: value }))
+  const toggleSameAsMember = (checked) => {
+    setSameAsMember(checked)
+    if (checked) setShipping(memberShipping)
+  }
   const submitCheckout = async (event) => {
     event.preventDefault()
     if (!isLoggedIn || !cart.length || cartLoading || cartPending || cartError || !widgets || submittingRef.current) return
@@ -94,7 +111,7 @@ function CheckoutContent() {
       <form className="checkout-layout" onSubmit={submitCheckout}>
         <div className="checkout-main">
           <CheckoutOrderItems cart={cart} />
-          <CheckoutBuyerInfo user={user} values={shipping} onChange={updateShipping} />
+          <CheckoutBuyerInfo user={user} values={shipping} onChange={updateShipping} sameAsMember={sameAsMember} onSameToggle={toggleSameAsMember} />
           <CheckoutPaymentMethods customerKey={authUserId} amount={cartTotal + deliveryFee} onReady={onWidgetsReady} />
         </div>
         <CheckoutSummary cartTotal={cartTotal} deliveryFee={deliveryFee} totalOverride={serverTotal} disabled={cartLoading || cartPending > 0 || Boolean(cartError) || !widgets || submitting} />

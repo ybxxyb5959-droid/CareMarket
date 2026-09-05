@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { StoreContext } from './store'
-import { INITIAL_ORDERS } from './data/mock'
 import { supabase } from './lib/supabase'
 import { adaptProductRow, fetchActiveProducts } from './lib/products'
 import { createCartController, EMPTY_CART } from './lib/cart'
@@ -10,6 +9,7 @@ const scrollTop = () => window.scrollTo({ top: 0, behavior: 'smooth' })
 
 const DEFAULT_GOAL = '식단 영양 관리'
 const DEFAULT_SUB_FILTERS = []
+const EMPTY_PROFILE = { phone: '', postalCode: '', address: '', addressDetail: '' }
 
 const GOAL_TO_DB = {
   '근육량 증가': 'muscle_gain',
@@ -75,13 +75,13 @@ export function StoreProvider({ children }) {
   // 상단 제품 카테고리 브라우징 (목표와 별개 축)
   const [shopCategory, setShopCategory] = useState('전체상품')
   const [shopSub, setShopSub] = useState('전체')
+  const [dealsOnly, setDealsOnly] = useState(false)
 
   // 커머스 상태
   const [wishlist, setWishlist] = useState([])
   const [cartState, setCartState] = useState(EMPTY_CART)
   const [loginPromptOpen, setLoginPromptOpen] = useState(false)
   const [drawerOpen, setDrawerOpen] = useState(false)
-  const [orders, setOrders] = useState(INITIAL_ORDERS)
   const [products, setProducts] = useState([])
   const [productsLoading, setProductsLoading] = useState(true)
   const [productsError, setProductsError] = useState(null)
@@ -91,6 +91,10 @@ export function StoreProvider({ children }) {
   const [authUserId, setAuthUserId] = useState(null)
   const [authLoading, setAuthLoading] = useState(true)
   const [settingsLoading, setSettingsLoading] = useState(false)
+  const [profileLoading, setProfileLoading] = useState(false)
+  const [isAdmin, setIsAdmin] = useState(false)
+  // 배송 자동입력 등에 쓰는 회원 연락처 정보 (마이그레이션 적용 전에는 빈 값)
+  const [profile, setProfile] = useState(EMPTY_PROFILE)
 
   // 토스트
   const [toast, setToast] = useState(null)
@@ -130,6 +134,7 @@ export function StoreProvider({ children }) {
       setUser(toAppUser(session.user))
       setIsLoggedIn(true)
       setAuthUserId(session.user.id)
+      setProfileLoading(true)
       return
     }
 
@@ -137,6 +142,9 @@ export function StoreProvider({ children }) {
     setIsLoggedIn(false)
     setAuthUserId(null)
     setSettingsLoading(false)
+    setProfileLoading(false)
+    setIsAdmin(false)
+    setProfile(EMPTY_PROFILE)
     setGoal(DEFAULT_GOAL)
     setSubFilters(DEFAULT_SUB_FILTERS)
     setAllergies([])
@@ -227,11 +235,12 @@ export function StoreProvider({ children }) {
 
     const loadWellnessSettings = async () => {
       setSettingsLoading(true)
+      setProfileLoading(true)
 
       const [profileResult, preferencesResult] = await Promise.all([
         supabase
           .from('profiles')
-          .select('display_name, primary_goal')
+          .select('display_name, primary_goal, role')
           .eq('user_id', authUserId)
           .single(),
         supabase
@@ -243,10 +252,27 @@ export function StoreProvider({ children }) {
 
       if (!mounted) return
 
-      if (profileResult.error || preferencesResult.error) {
-        const error = profileResult.error || preferencesResult.error
+      if (profileResult.error) {
+        const error = profileResult.error
         showToast(`맞춤 설정을 불러오지 못했습니다. ${error.message}`)
         setSettingsLoading(false)
+        setProfileLoading(false)
+        setIsAdmin(false)
+        return
+      }
+
+      const isAdminUser = profileResult.data.role === 'admin'
+      setIsAdmin(isAdminUser)
+
+      if (isAdminUser && !window.location.pathname.startsWith('/payment/')) {
+        setView('adminProducts')
+        scrollTop()
+      }
+
+      if (preferencesResult.error) {
+        showToast(`맞춤 설정을 불러오지 못했습니다. ${preferencesResult.error.message}`)
+        setSettingsLoading(false)
+        setProfileLoading(false)
         return
       }
 
@@ -260,8 +286,26 @@ export function StoreProvider({ children }) {
       setSubFilters(loadedPreferences.subFilters)
       setAllergies(loadedPreferences.allergies)
       setSettingsLoading(false)
+      setProfileLoading(false)
 
-      if (!loadedGoal && !window.location.pathname.startsWith('/payment/')) {
+      // 연락처/주소는 마이그레이션 적용 후에만 존재 → 실패해도 앱이 깨지지 않게 best-effort 로드
+      supabase
+        .from('profiles')
+        .select('phone, postal_code, address, address_detail')
+        .eq('user_id', authUserId)
+        .maybeSingle()
+        .then(({ data, error }) => {
+          if (!mounted || error || !data) return
+          setProfile({
+            phone: data.phone || '',
+            postalCode: data.postal_code || '',
+            address: data.address || '',
+            addressDetail: data.address_detail || '',
+          })
+        })
+
+      // 일반 회원에게만 구매목적 설정 화면을 연다.
+      if (!loadedGoal && !isAdminUser && !window.location.pathname.startsWith('/payment/')) {
         setView('goalSetup')
         scrollTop()
       }
@@ -279,6 +323,12 @@ export function StoreProvider({ children }) {
   const navigate = (v) => {
     if (window.location.pathname.startsWith('/payment/')) {
       window.history.replaceState({}, '', '/')
+    }
+    if (['adminProducts', 'adminOrders'].includes(v) && !authLoading && !isAdmin) {
+      showToast('관리자 권한이 필요한 페이지입니다.')
+      setView('main')
+      scrollTop()
+      return
     }
     setView(v)
     scrollTop()
@@ -300,6 +350,7 @@ export function StoreProvider({ children }) {
     setAiResult(null)
     setAiError(null)
     setAiLoading(true)
+    setDealsOnly(false)
     setView('products')
     window.setTimeout(() => document.getElementById('product-list')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 0)
     try {
@@ -382,11 +433,6 @@ export function StoreProvider({ children }) {
     navigate('checkout')
   }
 
-  const updateOrderStatus = (id, status, active) => {
-    setOrders((prev) => prev.map((o) => (o.id === id ? { ...o, status, active } : o)))
-    showToast(`${id} · ${status} 처리되었습니다.`)
-  }
-
   const saveWellnessSettings = async () => {
     if (!authUserId) {
       showToast('로그인 후 맞춤 웰빙 설정을 저장할 수 있습니다.')
@@ -446,19 +492,34 @@ export function StoreProvider({ children }) {
     return true
   }
 
-  const register = async ({ email, password, displayName }) => {
+  const register = async ({
+    email, password, displayName,
+    phone, postalCode, address, addressDetail,
+    termsAgreed, privacyAgreed, marketingAgreed,
+  }) => {
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
       options: {
-        data: { display_name: displayName },
+        data: {
+          display_name: displayName,
+          phone: phone || '',
+          postal_code: postalCode || '',
+          address: address || '',
+          address_detail: addressDetail || '',
+          terms_agreed: Boolean(termsAgreed),
+          privacy_agreed: Boolean(privacyAgreed),
+          marketing_agreed: Boolean(marketingAgreed),
+        },
       },
     })
 
     if (error) {
       console.error('Supabase sign up failed:', error?.message)
       showToast('회원가입에 실패했습니다.', 'auth-error')
-      return false
+      const isDuplicateEmail = error.code === 'user_already_exists'
+        || /already (registered|exists)/i.test(error.message || '')
+      return { ok: false, reason: isDuplicateEmail ? 'duplicate-email' : 'failed' }
     }
 
     if (data.session) {
@@ -470,6 +531,50 @@ export function StoreProvider({ children }) {
       showToast('가입 확인 이메일을 보냈습니다. 인증 후 로그인해 주세요.', 'auth')
     }
 
+    return { ok: true }
+  }
+
+  // 가입 폼 실시간 이메일 중복 확인. 마이그레이션(email_exists RPC) 미적용 시 null 반환 → 라이브 안내 생략.
+  const checkEmailExists = async (email) => {
+    const value = (email || '').trim()
+    if (!value) return null
+    const { data, error } = await supabase.rpc('email_exists', { p_email: value })
+    if (error) return null
+    return Boolean(data)
+  }
+
+  const updateProfile = async ({ displayName, phone, postalCode, address, addressDetail }) => {
+    if (!authUserId) {
+      showToast('로그인 후 회원정보를 수정할 수 있습니다.', 'auth-error')
+      return false
+    }
+    const name = (displayName || '').trim()
+    if (!name) {
+      showToast('이름을 입력해 주세요.')
+      return false
+    }
+
+    const { error } = await supabase.rpc('update_my_profile', {
+      p_display_name: name,
+      p_phone: (phone || '').trim() || null,
+      p_postal_code: (postalCode || '').trim() || null,
+      p_address: (address || '').trim() || null,
+      p_address_detail: (addressDetail || '').trim() || null,
+    })
+
+    if (error) {
+      showToast(`회원정보를 저장하지 못했습니다. ${error.message}`, 'auth-error')
+      return false
+    }
+
+    setUser((current) => (current ? { ...current, name } : current))
+    setProfile({
+      phone: (phone || '').trim(),
+      postalCode: (postalCode || '').trim(),
+      address: (address || '').trim(),
+      addressDetail: (addressDetail || '').trim(),
+    })
+    showToast('회원정보가 저장되었습니다.', 'auth')
     return true
   }
 
@@ -517,20 +622,21 @@ export function StoreProvider({ children }) {
       allergies, setAllergies, toggleAllergy,
       search, setSearch,
       searchMode, setSearchMode, aiQuery, setAiQuery, aiResult, aiLoading, aiError, runAiSearch, clearAiSearch,
-      shopCategory, setShopCategory, shopSub, setShopSub,
+      shopCategory, setShopCategory, shopSub, setShopSub, dealsOnly, setDealsOnly,
       sortBy, setSortBy,
       wishlist, toggleWish,
       cart, addToCart, changeCartQty, removeFromCart, cartLoading, cartPending, cartError,
       reloadCart: cartController.load, requireCartLogin, loginPromptOpen, setLoginPromptOpen,
       drawerOpen, setDrawerOpen,
-      orders, checkout, updateOrderStatus,
+      checkout,
       products, setProducts, productsLoading, productsError, reloadProducts,
-      user, setUser, login, register, logout, isLoggedIn, authUserId, authLoading,
+      user, setUser, login, register, logout, isLoggedIn, authUserId, authLoading, profileLoading, isAdmin,
+      profile, updateProfile, checkEmailExists,
       cartTotal, deliveryFee, cartCount,
       toast, showToast,
     }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [view, selectedProduct, goal, subFilters, allergies, search, searchMode, aiQuery, aiResult, aiLoading, aiError, shopCategory, shopSub, sortBy, wishlist, cart, cartState, loginPromptOpen, drawerOpen, orders, products, productsLoading, productsError, user, isLoggedIn, authUserId, authLoading, settingsLoading, toast],
+    [view, selectedProduct, goal, subFilters, allergies, search, searchMode, aiQuery, aiResult, aiLoading, aiError, shopCategory, shopSub, dealsOnly, sortBy, wishlist, cart, cartState, loginPromptOpen, drawerOpen, products, productsLoading, productsError, user, isLoggedIn, authUserId, authLoading, settingsLoading, profileLoading, isAdmin, profile, toast],
   )
 
   return <StoreContext.Provider value={value}>{children}</StoreContext.Provider>

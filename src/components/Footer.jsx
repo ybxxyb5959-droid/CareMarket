@@ -1,4 +1,12 @@
+import { useStore } from '../store'
+
+const LINKS = [
+  ['철학과 원칙', 'philosophy'], ['이용약관', 'terms'], ['개인정보처리방침', 'privacy'],
+  ['클린라벨 정보 기준', 'cleanLabel'], ['고객센터 안내', 'support'],
+]
+
 export default function Footer() {
+  const { navigate } = useStore()
   return (
     <footer className="footer">
       <div className="wrap">
@@ -7,17 +15,13 @@ export default function Footer() {
             <span className="nm">CareMarket</span>
             <span className="tl">Pure &amp; Clean Nutrition</span>
           </div>
-          <div className="footer-links">
-            <span>철학과 원칙</span>
-            <span>이용약관</span>
-            <span style={{ color: 'var(--ink)', fontWeight: 700 }}>개인정보처리방침</span>
-            <span>클린라벨 인증 기준</span>
-            <span>고객행복센터 1588-0000</span>
-          </div>
+          <nav className="footer-links" aria-label="서비스 안내">
+            {LINKS.map(([label, view]) => <button key={view} onClick={() => navigate(view)}>{label}</button>)}
+          </nav>
         </div>
         <div className="footer-fine">
-          <p>(주) 케어마켓코리아 (CareMarket., Ltd.) • 대표이사: 박용빈 • 사업자등록번호: 214-88-94XXX • 통신판매업신고: 2026-서울성동-10XX호</p>
-          <p>본사: 서울특별시 성동구 연무장길 9-16 B02 • 개인정보보호책임자: 박용빈(ybxxyb5959@gmail.com)</p>
+          <p>CareMarket은 건강식품과 식단 상품을 둘러보고 주문할 수 있는 서비스입니다.</p>
+          <p>상품 정보와 주문 관련 안내는 각 상품 상세 및 주문내역에서 확인할 수 있습니다.</p>
         </div>
       </div>
     </footer>

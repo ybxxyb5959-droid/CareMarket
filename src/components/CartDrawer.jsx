@@ -1,12 +1,42 @@
 import { useStore } from '../store'
 import Icon from './Icon'
 import { won } from '../lib/format'
+import CartAiInsight from './CartAiInsight'
+
+const formatNutrientValue = (value) => {
+  const number = Number(value)
+  if (!Number.isFinite(number)) return null
+  return number.toLocaleString('ko-KR', { maximumFractionDigits: 1 })
+}
+
+function getGoalNutrientLabel(goal, product) {
+  const nutrition = product?.nutrition
+  if (!nutrition) return null
+
+  if (goal === '근육량 증가') {
+    const protein = formatNutrientValue(nutrition.protein)
+    return protein == null ? null : `단백질 ${protein}g`
+  }
+
+  if (goal === '체중 관리') {
+    const calories = formatNutrientValue(nutrition.calories)
+    return calories == null ? null : `${calories}kcal`
+  }
+
+  if (goal === '식단 영양 관리') {
+    const sodium = formatNutrientValue(nutrition.sodium)
+    return sodium == null ? null : `나트륨 ${sodium}mg`
+  }
+
+  // 영양제 탐색은 구조화된 실제 micronutrient 데이터가 있을 때만 표시한다.
+  return null
+}
 
 export default function CartDrawer() {
   const {
     drawerOpen, setDrawerOpen, cart, changeCartQty, removeFromCart,
     cartTotal, deliveryFee, cartCount, checkout, navigate,
-    cartLoading, cartPending, cartError, reloadCart,
+    cartLoading, cartPending, cartError, reloadCart, goal,
   } = useStore()
 
   if (!drawerOpen) return null
@@ -35,24 +65,38 @@ export default function CartDrawer() {
               <p style={{ fontSize: 13 }}>{cartLoading ? '잠시만 기다려 주세요.' : cartError ? '장바구니를 확인할 수 없습니다.' : '담긴 상품이 없습니다.'}</p>
             </div>
           ) : (
-            cart.map(({ product, quantity }) => (
-              <div key={product.id} className="drawer-item">
-                <img src={product.image} alt={product.name} onError={(e) => { e.currentTarget.style.visibility = 'hidden' }} />
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div className="di-brand">{product.brand}</div>
-                  <div className="di-name">{product.name}</div>
-                  <div className="di-price">{won(product.price * quantity)}</div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 8 }}>
-                    <div className="qty-stepper">
-                      <button aria-label="수량 감소" disabled={quantity <= 1} onClick={() => changeCartQty(product.id, -1)}><Icon name="minus" size={13} /></button>
-                      <span>{quantity}</span>
-                      <button aria-label="수량 증가" onClick={() => changeCartQty(product.id, 1)}><Icon name="plus" size={13} /></button>
+            <>
+            {cart.map(({ product, quantity }) => {
+              const nutrientLabel = getGoalNutrientLabel(goal, product)
+
+              return (
+                <div key={product.id} className="drawer-item">
+                  <div className="drawer-item-media">
+                    <img src={product.image} alt={product.name} onError={(e) => { e.currentTarget.style.visibility = 'hidden' }} />
+                    {nutrientLabel && (
+                      <div className="di-nutrient" title="1회 제공량 기준" aria-label={`${nutrientLabel}, 1회 제공량 기준`}>
+                        {nutrientLabel}
+                      </div>
+                    )}
+                  </div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div className="di-brand">{product.brand}</div>
+                    <div className="di-name">{product.name}</div>
+                    <div className="di-price">{won(product.price * quantity)}</div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 8 }}>
+                      <div className="qty-stepper">
+                        <button aria-label="수량 감소" disabled={quantity <= 1} onClick={() => changeCartQty(product.id, -1)}><Icon name="minus" size={13} /></button>
+                        <span>{quantity}</span>
+                        <button aria-label="수량 증가" onClick={() => changeCartQty(product.id, 1)}><Icon name="plus" size={13} /></button>
+                      </div>
+                      <button className="link-del" onClick={() => removeFromCart(product.id)}>삭제</button>
                     </div>
-                    <button className="link-del" onClick={() => removeFromCart(product.id)}>삭제</button>
                   </div>
                 </div>
-              </div>
-            ))
+              )
+            })}
+            <CartAiInsight compact />
+            </>
           )}
         </div>
 

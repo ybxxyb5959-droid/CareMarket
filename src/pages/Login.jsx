@@ -15,31 +15,30 @@ export default function Login() {
   }
 
   return (
-    <div className="wrap page">
-      <div className="page-slim" style={{ margin: '0 auto' }}>
-        <div className="panel">
-          <div className="auth-head">
-            <h2>로그인</h2>
-            <p>CareMarket 맞춤형 웰빙 커머스</p>
+    <div className="auth-page auth-login-page">
+      <div className="auth-container auth-login-container">
+        <div className="auth-head auth-head-lg">
+          <span className="eyebrow">CareMarket</span>
+          <h2>로그인</h2>
+          <p>맞춤형 웰빙 커머스를 더 편리하게 이용해 보세요.</p>
+        </div>
+        <form className="auth-login-form" onSubmit={handleSubmit}>
+          <div className="field">
+            <label>이메일</label>
+            <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} autoComplete="email" required />
           </div>
-          <form onSubmit={handleSubmit}>
-            <div className="field">
-              <label>이메일</label>
-              <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
-            </div>
-            <div className="field">
-              <label>비밀번호</label>
-              <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} required />
-            </div>
-            <button type="submit" className="btn btn-primary btn-lg btn-block" style={{ marginTop: 8 }} disabled={isSubmitting}>
-              {isSubmitting ? '로그인 중...' : '로그인하기'}
-            </button>
-          </form>
-          <div className="auth-foot">
-            <button onClick={() => navigate('register')}>회원가입</button>
-            <span>·</span>
-            <span style={{ cursor: 'default' }}>비밀번호 찾기</span>
+          <div className="field">
+            <label>비밀번호</label>
+            <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} autoComplete="current-password" required />
           </div>
+          <button type="submit" className="btn btn-primary btn-lg auth-login-submit" disabled={isSubmitting}>
+            {isSubmitting ? '로그인 중...' : '로그인하기'}
+          </button>
+        </form>
+        <div className="auth-foot">
+          <button onClick={() => navigate('register')}>회원가입</button>
+          <span>·</span>
+          <span style={{ cursor: 'default' }}>비밀번호 찾기</span>
         </div>
       </div>
     </div>

@@ -10,8 +10,9 @@ export function goalScore(product, goal) {
 }
 
 // 상품 목록 필터 + 정렬 (Home 프리뷰 / 전체상품 페이지 공용)
-export function filterAndSort(products, { search, subFilters, allergies, sortBy, goal, shopCategory, shopSub }) {
+export function filterAndSort(products, { search, subFilters, allergies, sortBy, goal, shopCategory, shopSub, dealsOnly = false }) {
   let list = products.filter((p) => {
+    if (dealsOnly && !(p.isActive && p.stock > 0 && p.originalPrice > p.price)) return false
     if (!matchCategory(p, shopCategory, shopSub)) return false
     if (search) {
       const q = search.toLowerCase()
@@ -29,7 +30,6 @@ export function filterAndSort(products, { search, subFilters, allergies, sortBy,
   })
   if (sortBy === 'lowPrice') list = [...list].sort((a, b) => a.price - b.price)
   else if (sortBy === 'highPrice') list = [...list].sort((a, b) => b.price - a.price)
-  else if (sortBy === 'review') list = [...list].sort((a, b) => b.reviewCount - a.reviewCount)
   else list = [...list].sort((a, b) => goalScore(b, goal) - goalScore(a, goal) || a.id - b.id)
   return list
 }
