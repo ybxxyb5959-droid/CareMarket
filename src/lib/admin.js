@@ -4,6 +4,8 @@ export {
   NEXT_ORDER_STATUS,
   ORDER_STATUS_LABELS,
   PRODUCT_CATEGORIES,
+  isBulkShippableOrder,
+  summarizeAdminOrders,
   toAdminProductForm,
   validateAdminProduct,
 } from './admin-validation'
@@ -51,6 +53,41 @@ export async function updateAdminOrderStatus(orderId, nextStatus) {
     p_order_id: orderId,
     p_new_status: nextStatus,
   })
+  if (error) throw error
+  return data
+}
+
+export async function bulkShipAdminOrders(orderIds) {
+  const uniqueOrderIds = [...new Set(orderIds)]
+  if (uniqueOrderIds.length === 0) return []
+  const { data, error } = await supabase.rpc('admin_bulk_ship_orders', {
+    p_order_ids: uniqueOrderIds,
+  })
+  if (error) throw error
+  return (data || []).map((row) => row.order_id)
+}
+
+export async function fetchAdminPartnerships() {
+  const { data, error } = await supabase
+    .from('partnership_inquiries')
+    .select('id,brand_name,contact_name,email,phone,website,proposal_type,product_category,product_name,brand_description,partnership_reason,privacy_agreed,status,admin_note,created_at,updated_at,reviewed_at,reviewed_by')
+    .order('created_at', { ascending: false })
+  if (error) throw error
+  return data || []
+}
+
+export async function updateAdminPartnership(inquiryId, { status, adminNote, reviewedBy }) {
+  const { data, error } = await supabase
+    .from('partnership_inquiries')
+    .update({
+      status,
+      admin_note: adminNote.trim() || null,
+      reviewed_at: new Date().toISOString(),
+      reviewed_by: reviewedBy,
+    })
+    .eq('id', inquiryId)
+    .select('id,brand_name,contact_name,email,phone,website,proposal_type,product_category,product_name,brand_description,partnership_reason,privacy_agreed,status,admin_note,created_at,updated_at,reviewed_at,reviewed_by')
+    .single()
   if (error) throw error
   return data
 }

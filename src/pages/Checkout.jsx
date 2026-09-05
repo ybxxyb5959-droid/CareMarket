@@ -6,12 +6,36 @@ import CheckoutBuyerInfo from '../components/checkout/CheckoutBuyerInfo'
 import CheckoutPaymentMethods from '../components/checkout/CheckoutPaymentMethods'
 import CheckoutSummary from '../components/checkout/CheckoutSummary'
 import { supabase } from '../lib/supabase'
-import { createCheckoutOrder } from '../lib/payments'
+import {
+  checkoutRequestErrorMessage,
+  createCheckoutOrder,
+  isCheckoutShippingComplete,
+  memberCheckoutShipping,
+  shippingForMemberToggle,
+} from '../lib/payments'
 import { openPostcode } from '../lib/postcode'
 
 export default function Checkout() {
-  const { user, profile } = useStore()
-  return <CheckoutContent key={`${user?.email || 'guest'}:${user?.name || ''}:${profile?.phone || ''}:${profile?.address || ''}`} />
+  const { authUserId, isLoggedIn, profileLoading, profile, user } = useStore()
+  if (isLoggedIn && profileLoading) {
+    return (
+      <div className="wrap page page-narrow">
+        <div className="empty" role="status">
+          <Icon name="user" size={42} />
+          <h3>회원 배송정보를 불러오고 있습니다.</h3>
+        </div>
+      </div>
+    )
+  }
+  const profileKey = [
+    authUserId || 'guest',
+    user?.name || '',
+    profile?.phone || '',
+    profile?.postalCode || '',
+    profile?.address || '',
+    profile?.addressDetail || '',
+  ].join(':')
+  return <CheckoutContent key={profileKey} />
 }
 
 function CheckoutContent() {
@@ -30,46 +54,63 @@ function CheckoutContent() {
     showToast,
     reloadCart,
   } = useStore()
-  const memberShipping = useMemo(() => ({
-    name: user?.name || '',
-    phone: profile?.phone || '',
-    postalCode: profile?.postalCode || '',
-    address: profile?.address || '',
-    addressDetail: profile?.addressDetail || '',
-    deliveryRequest: '',
-  }), [user?.name, profile?.phone, profile?.postalCode, profile?.address, profile?.addressDetail])
-  const [sameAsMember, setSameAsMember] = useState(() => Boolean(memberShipping.phone && memberShipping.address))
+  const memberShipping = useMemo(
+    () => memberCheckoutShipping(user, profile),
+    [user, profile],
+  )
+  const [sameAsMember, setSameAsMember] = useState(true)
   const [shipping, setShipping] = useState(memberShipping)
+  const [buyerInfoOpen, setBuyerInfoOpen] = useState(() => !isCheckoutShippingComplete(memberShipping))
   const [widgets, setWidgets] = useState(null)
   const [submitting, setSubmitting] = useState(false)
   const [serverTotal, setServerTotal] = useState(null)
+  const [paymentError, setPaymentError] = useState('')
   const submittingRef = useRef(false)
   const onWidgetsReady = useCallback((next) => setWidgets(next), [])
 
-  const updateShipping = (name, value) => setShipping((current) => ({ ...current, [name]: value }))
+  const applyShipping = (nextShipping) => {
+    const wasComplete = isCheckoutShippingComplete(shipping)
+    const complete = isCheckoutShippingComplete(nextShipping)
+    setShipping(nextShipping)
+    if (!complete) setBuyerInfoOpen(true)
+    else if (!wasComplete) setBuyerInfoOpen(false)
+  }
+  const updateShipping = (name, value) => applyShipping({ ...shipping, [name]: value })
   const toggleSameAsMember = (checked) => {
     setSameAsMember(checked)
-    if (checked) setShipping((current) => ({ ...memberShipping, deliveryRequest: current.deliveryRequest }))
+    applyShipping(shippingForMemberToggle(shipping, memberShipping, checked))
   }
   const findAddress = async () => {
     try {
       await openPostcode(({ zonecode, address }) => {
-        setShipping((current) => ({ ...current, postalCode: zonecode, address }))
+        applyShipping({ ...shipping, postalCode: zonecode, address })
       })
     } catch {
       showToast('주소 검색을 불러오지 못했습니다. 주소를 직접 입력해 주세요.')
     }
   }
-  const submitCheckout = async (event) => {
-    event.preventDefault()
+  const submitCheckout = async () => {
     if (!isLoggedIn || !cart.length || cartLoading || cartPending || cartError || !widgets || submittingRef.current) return
+    if (!isCheckoutShippingComplete(shipping)) {
+      setBuyerInfoOpen(true)
+      setPaymentError('주문자와 배송 정보를 모두 입력해 주세요.')
+      return
+    }
     submittingRef.current = true
     setSubmitting(true)
+    setPaymentError('')
 
     try {
       const order = await createCheckoutOrder(supabase, shipping)
       setServerTotal(order.total_price)
-      await widgets.setAmount({ currency: 'KRW', value: order.total_price })
+      const displayedTotal = cartTotal + deliveryFee
+      if (order.total_price !== displayedTotal) {
+        await widgets.setAmount({ currency: 'KRW', value: order.total_price })
+        const message = '결제금액이 변경되었습니다. 변경된 금액을 확인한 뒤 다시 결제해 주세요.'
+        setPaymentError(message)
+        showToast(message)
+        return
+      }
       await widgets.requestPayment({
         orderId: order.toss_order_id,
         orderName: order.order_name,
@@ -80,16 +121,17 @@ function CheckoutContent() {
       })
     } catch (error) {
       console.error('Checkout payment request failed:', { code: error?.code || error?.name || 'PAYMENT_REQUEST_FAILED' })
-      showToast('결제를 진행하지 못했습니다. 결제수단·약관과 장바구니 재고를 확인해 주세요.')
+      const message = checkoutRequestErrorMessage(error)
+      setPaymentError(message)
+      showToast(message)
       setServerTotal(null)
-      void reloadCart()
     } finally {
       submittingRef.current = false
       setSubmitting(false)
     }
   }
 
-  if (isLoggedIn && (cartLoading || cartError)) {
+  if (isLoggedIn && cart.length === 0 && (cartLoading || cartError)) {
     return (
       <div className="wrap page page-narrow">
         <div className="empty" role={cartError ? 'alert' : 'status'}>
@@ -125,14 +167,25 @@ function CheckoutContent() {
         <div><h1 className="page-title">주문/결제</h1><p>주문 정보를 확인하고 결제를 진행해 주세요.</p></div>
       </div>
       {cartError && <div className="cart-status" role="alert">{cartError}</div>}
-      <form id="checkout-form" className="checkout-layout" onSubmit={submitCheckout}>
+      {paymentError && <div className="cart-status" role="alert">{paymentError}</div>}
+      <div className="checkout-layout">
         <div className="checkout-main">
           <CheckoutOrderItems cart={cart} />
-          <CheckoutBuyerInfo user={user} values={shipping} onChange={updateShipping} sameAsMember={sameAsMember} onSameToggle={toggleSameAsMember} onAddressSearch={findAddress} />
+          <CheckoutBuyerInfo
+            user={user}
+            values={shipping}
+            onChange={updateShipping}
+            sameAsMember={sameAsMember}
+            onSameToggle={toggleSameAsMember}
+            onAddressSearch={findAddress}
+            expanded={buyerInfoOpen}
+            complete={isCheckoutShippingComplete(shipping)}
+            onExpandedToggle={() => setBuyerInfoOpen((current) => !current)}
+          />
           <CheckoutPaymentMethods customerKey={authUserId} amount={cartTotal + deliveryFee} onReady={onWidgetsReady} />
         </div>
-        <CheckoutSummary cartTotal={cartTotal} deliveryFee={deliveryFee} cartCount={cart.reduce((sum, item) => sum + item.quantity, 0)} totalOverride={serverTotal} disabled={cartLoading || cartPending > 0 || Boolean(cartError) || !widgets || submitting} submitting={submitting} />
-      </form>
+        <CheckoutSummary cartTotal={cartTotal} deliveryFee={deliveryFee} cartCount={cart.reduce((sum, item) => sum + item.quantity, 0)} totalOverride={serverTotal} disabled={cartLoading || cartPending > 0 || Boolean(cartError) || !widgets || submitting} submitting={submitting} onPay={submitCheckout} />
+      </div>
     </div>
   )
 }

@@ -25,9 +25,9 @@ export default function GoalSetup() {
       <div className="page-narrow" style={{ margin: '0 auto' }}>
         <div className="panel panel-pad-lg">
           <div className="auth-head">
-            <span className="tag tag-soft" style={{ marginBottom: 12 }}>CareMarket 맞춤 쇼핑 기준</span>
-            <h2 style={{ marginTop: 8 }}>구매 목적과 선택 조건을 설정하세요</h2>
-            <p>설정한 구매 목적에 따라 쇼핑몰 내 식품의 강조 영양 정보와 진열 순서가 맞춰집니다. 주 구매 목적은 필수, 선택 조건은 자유롭게 고르세요.</p>
+            <span className="tag tag-soft" style={{ marginBottom: 12 }}>CareMarket 맞춤 추천 기준</span>
+            <h2 style={{ marginTop: 8 }}>내 맞춤 추천 기준</h2>
+            <p>여기서 정한 구매 목적과 선택 조건에 따라 맞춤 상품의 추천 순서와 강조 영양 정보가 맞춰집니다. 언제든 바꿀 수 있어요. 주 구매 목적은 필수, 선택 조건은 자유롭게 고르세요.</p>
           </div>
 
           {/* 1단계 — 구입 목적 */}
@@ -90,7 +90,7 @@ export default function GoalSetup() {
               onClick={handleSave}
               disabled={isSaving || settingsLoading}
             >
-              <Icon name="check-circle" size={17} /> 맞춤 웰빙 마켓 입장하기
+              <Icon name="check-circle" size={17} /> 이 조건으로 맞춤 상품 보기
             </button>
           </div>
         </div>

@@ -9,6 +9,7 @@ export default function AdminTopbar() {
         <nav className="admin-topnav" aria-label="관리자 메뉴">
           <button className={view === 'adminProducts' ? 'on' : ''} onClick={() => navigate('adminProducts')}>상품 관리</button>
           <button className={view === 'adminOrders' ? 'on' : ''} onClick={() => navigate('adminOrders')}>주문 · 출고 관리</button>
+          <button className={view === 'adminPartnerships' ? 'on' : ''} onClick={() => navigate('adminPartnerships')}>협업 제안</button>
         </nav>
         <div className="admin-top-actions">
           <button onClick={() => navigate('main')}>스토어 보기</button>

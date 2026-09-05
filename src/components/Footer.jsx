@@ -1,12 +1,36 @@
 import { useStore } from '../store'
 
-const LINKS = [
-  ['철학과 원칙', 'philosophy'], ['이용약관', 'terms'], ['개인정보처리방침', 'privacy'],
-  ['클린라벨 정보 기준', 'cleanLabel'], ['고객센터 안내', 'support'],
+const GROUPS = [
+  { title: 'SHOP', links: [
+    ['전체상품', 'products'], ['베스트', null], ['신상품', null], ['오늘의 웰빙 테이블', 'wellness'],
+  ] },
+  { title: 'ABOUT', links: [
+    ['케어마켓 소개', 'about'], ['철학과 원칙', 'principles'], ['클린라벨 정보 기준', 'cleanLabel'],
+  ] },
+  { title: 'PARTNERS', links: [
+    ['브랜드 입점 · 제휴', 'partners'],
+  ] },
+  { title: 'SUPPORT', links: [
+    ['주문 · 배송 조회', 'orders'], ['고객센터', 'support'], ['FAQ', null],
+  ] },
+  { title: 'POLICY', links: [
+    ['이용약관', 'terms'], ['개인정보처리방침', 'privacy'],
+  ] },
 ]
 
 export default function Footer() {
   const { navigate } = useStore()
+  const openLink = (view) => {
+    if (view === 'wellness') {
+      navigate('main')
+      window.setTimeout(() => {
+        document.querySelector('.wellness-table-section')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+      }, 0)
+      return
+    }
+    navigate(view)
+  }
+
   return (
     <footer className="footer">
       <div className="wrap">
@@ -16,7 +40,18 @@ export default function Footer() {
             <span className="tl">Pure &amp; Clean Nutrition</span>
           </div>
           <nav className="footer-links" aria-label="서비스 안내">
-            {LINKS.map(([label, view]) => <button key={view} onClick={() => navigate(view)}>{label}</button>)}
+            {GROUPS.map((group) => (
+              <section className="footer-group" key={group.title}>
+                <h2>{group.title}</h2>
+                <div>
+                  {group.links.map(([label, view]) => view ? (
+                    <button key={label} type="button" onClick={() => openLink(view)}>{label}</button>
+                  ) : (
+                    <span key={label} className="footer-link-pending" aria-disabled="true" title="준비 중">{label}</span>
+                  ))}
+                </div>
+              </section>
+            ))}
           </nav>
         </div>
         <div className="footer-fine">

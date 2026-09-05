@@ -23,24 +23,33 @@ export const GEMINI_COMPARE_SCHEMA = {
       },
     },
     goal_fit_summary: textField(180),
+    recommendation: {
+      type: 'object',
+      properties: {
+        product_id: { type: 'integer', minimum: 1 },
+        reason: textField(140),
+      },
+      required: ['product_id', 'reason'],
+      additionalProperties: false,
+    },
   },
-  required: ['summary', 'highlights', 'goal_fit_summary'],
+  required: ['summary', 'highlights', 'goal_fit_summary', 'recommendation'],
   additionalProperties: false,
 }
 
 export const GEMINI_CART_SCHEMA = {
   type: 'object',
   properties: {
+    headline: textField(90),
     summary: textField(180),
-    goal_alignment: textField(180),
-    observations: {
+    actions: {
       type: 'array',
       minItems: 1,
-      maxItems: 4,
+      maxItems: 2,
       items: textField(140),
     },
   },
-  required: ['summary', 'goal_alignment', 'observations'],
+  required: ['headline', 'summary', 'actions'],
   additionalProperties: false,
 }
 

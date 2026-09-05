@@ -8,6 +8,7 @@ import CartDrawer from './components/CartDrawer'
 import CartLoginPrompt from './components/CartLoginPrompt'
 import Home from './pages/Home'
 import AllProducts from './pages/AllProducts'
+import CustomShop from './pages/CustomShop'
 import GoalSetup from './pages/GoalSetup'
 import ProductDetail from './pages/ProductDetail'
 import Cart from './pages/Cart'
@@ -20,11 +21,14 @@ import Login from './pages/Login'
 import Register from './pages/Register'
 import AdminProducts from './pages/AdminProducts'
 import AdminOrders from './pages/AdminOrders'
+import AdminPartnerships from './pages/AdminPartnerships'
 import ServiceInfo from './pages/ServiceInfo'
+import PartnerProposal from './pages/PartnerProposal'
 
 const PAGES = {
   main: Home,
   products: AllProducts,
+  custom: CustomShop,
   goalSetup: GoalSetup,
   detail: ProductDetail,
   cart: Cart,
@@ -37,7 +41,11 @@ const PAGES = {
   register: Register,
   adminProducts: AdminProducts,
   adminOrders: AdminOrders,
-  philosophy: ServiceInfo,
+  adminPartnerships: AdminPartnerships,
+  about: ServiceInfo,
+  principles: ServiceInfo,
+  partners: ServiceInfo,
+  partnerProposal: PartnerProposal,
   terms: ServiceInfo,
   privacy: ServiceInfo,
   cleanLabel: ServiceInfo,
@@ -47,7 +55,7 @@ const PAGES = {
 function Shell() {
   const { view, loginPromptOpen } = useStore()
   const Page = PAGES[view] || Home
-  const isAdmin = view === 'adminProducts' || view === 'adminOrders'
+  const isAdmin = ['adminProducts', 'adminOrders', 'adminPartnerships'].includes(view)
   return (
     <div className="app">
       {isAdmin ? <AdminTopbar /> : <Header />}

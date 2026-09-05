@@ -14,6 +14,7 @@ export default function Cart() {
     checkout, goal, cartLoading, cartPending, cartError, reloadCart,
   } = useStore()
   const [optimisticQuantities, setOptimisticQuantities] = useState({})
+  const [productsExpanded, setProductsExpanded] = useState(false)
 
   const displayCart = useMemo(() => cart.map((item) => ({
     ...item,
@@ -31,9 +32,12 @@ export default function Cart() {
   const totals = cartNutritionTotals(displayCart)
   const supplementItems = displayCart.filter((c) => c.product.category === '영양제·비타민')
   const isBusy = cartLoading || cartPending > 0
+  const canCollapseProducts = displayCart.length > 3
+  const visibleProducts = canCollapseProducts && !productsExpanded ? displayCart.slice(0, 3) : displayCart
 
   const productNutri = (product) => {
     if (isSupplement) return product.nutrition.special || `${product.category} 카테고리`
+    if (!goalKeys.length) return '등록된 상품 영양정보 기준'
     return goalKeys
       .map((key) => `${NUTRIENT_META[key].label} ${fmtNutrient(key, product.nutrition[key])}`)
       .join(' · ')
@@ -92,7 +96,8 @@ export default function Cart() {
                   <span>{cart.length}종 · {cartCount}개</span>
                 </div>
 
-                {displayCart.map(({ product, quantity }) => (
+                <div id="cart-product-list">
+                {visibleProducts.map(({ product, quantity }) => (
                   <article key={product.id} className="cart-item">
                     <button type="button" className="ci-image-button" onClick={() => openProduct(product)} aria-label={`${product.name} 상세 보기`}>
                       <img src={product.image} alt="" onError={(event) => { event.currentTarget.style.visibility = 'hidden' }} />
@@ -102,7 +107,7 @@ export default function Cart() {
                       <button type="button" className="ci-name" onClick={() => openProduct(product)}>{product.name}</button>
                       <div className="ci-unit-price"><span>판매가</span><strong>{won(product.price)}</strong></div>
                       <div className="ci-nutri">
-                        <span className="ci-nutri-goal">{goal}</span>
+                        <span className="ci-nutri-goal">{goal || '일반 영양 정보'}</span>
                         <span className="ci-nutri-vals">{productNutri(product)}</span>
                       </div>
                     </div>
@@ -125,6 +130,13 @@ export default function Cart() {
                     </div>
                   </article>
                 ))}
+                </div>
+                {canCollapseProducts && (
+                  <button type="button" className="btn btn-soft btn-sm cart-products-toggle" aria-expanded={productsExpanded} aria-controls="cart-product-list" onClick={() => setProductsExpanded((expanded) => !expanded)}>
+                    {productsExpanded ? '상품 접기' : `나머지 ${displayCart.length - 3}종 더 보기`}
+                    <Icon name={productsExpanded ? 'chevron-up' : 'chevron-down'} size={16} />
+                  </button>
+                )}
               </section>
 
               <aside className="summary cart-order-summary" aria-labelledby="cart-summary-title" aria-live="polite">
@@ -148,17 +160,16 @@ export default function Cart() {
                 <p className="cart-summary-note">결제 단계에서 배송지와 결제수단을 입력합니다.</p>
               </aside>
 
-              <details className="cart-wellness">
-                <summary>
-                  <span><Icon name="leaf" size={17} /> 영양 합산 · AI 분석</span>
-                  <small>장바구니 구성을 건강 관점에서 확인해 보세요</small>
-                  <Icon name="chevron-down" size={17} />
-                </summary>
+              <section className="cart-wellness" aria-labelledby="cart-wellness-title">
+                <div className="cart-wellness-head">
+                  <h2 id="cart-wellness-title"><Icon name="leaf" size={17} /> 장바구니 영양 분석</h2>
+                  <small>등록된 영양정보와 현재 구매 목적을 기준으로 살펴봤어요.</small>
+                </div>
                 <div className="cart-wellness-content">
                   <div className="nutri-summary">
                     <div className="ns-head">
                       <h3>내 장바구니 영양 요약</h3>
-                      <span className="ns-goal">현재 목표 · {goal}</span>
+                      <span className="ns-goal">{goal ? `현재 목표 · ${goal}` : '맞춤 기준 미설정'}</span>
                     </div>
                     <div className="ns-grid">
                       {SUMMARY_ORDER.map((key) => {
@@ -181,11 +192,11 @@ export default function Cart() {
                       </div>
                     )}
 
-                    <p className="ns-note">장바구니 상품과 수량을 기준으로 계산한 단순 합산 정보입니다.</p>
+                    <p className="ns-note">장바구니에 담긴 상품과 수량을 기준으로 단순 합산한 값입니다. 실제 하루 섭취량을 의미하지 않습니다.</p>
                   </div>
-                  <CartAiInsight />
+                  <CartAiInsight cartOverride={displayCart} />
                 </div>
-              </details>
+              </section>
             </div>
 
             <div className="cart-mobile-checkout" aria-label="모바일 주문 요약">

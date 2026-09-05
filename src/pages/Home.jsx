@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useStore, useAutoSlide } from '../store'
-import { CATEGORIES, GOALS, HERO_SLIDES, VALUES } from '../data/mock'
+import { GOALS, HERO_SLIDES, VALUES } from '../data/mock'
 import Icon from '../components/Icon'
 import ProductCard from '../components/ProductCard'
 import WellnessTable from '../components/WellnessTable'
@@ -10,19 +10,10 @@ import DealProductCard from '../components/DealProductCard'
 
 // 주목표별 강조 안내문
 const GOAL_GUIDE = {
-  '근육량 증가': '순수 단백질 함량을 우선 표시합니다.',
-  '체중 관리': '열량과 당류 정보를 우선 표시합니다.',
-  '식단 영양 관리': '나트륨과 당류 정보를 우선 표시합니다.',
-  '영양제 탐색': '핵심 기능성분 함량을 우선 표시합니다.',
-}
-
-const CATEGORY_META = {
-  전체상품: { icon: 'package', description: '전체 상품 보기' },
-  프로틴: { icon: 'dumbbell', description: '단백질 음료와 간식' },
-  간편식: { icon: 'apple', description: '균형 잡힌 한 끼' },
-  건강음료: { icon: 'droplets', description: '저당 음료와 대체유' },
-  건강간식: { icon: 'sun', description: '견과와 건강 스낵' },
-  영양제: { icon: 'pill', description: '일상 영양 케어' },
+  '근육량 증가': '단백질 식품을 우선하고 단백질·당류 정보를 함께 반영합니다.',
+  '체중 관리': '식사·단백질 식품을 우선하고 열량·당류 정보를 함께 반영합니다.',
+  '식단 영양 관리': '식단을 구성할 수 있는 식품을 우선하고 나트륨·당류 정보를 함께 반영합니다.',
+  '영양제 탐색': '영양제·비타민 상품을 우선 표시합니다.',
 }
 
 export default function Home() {
@@ -87,15 +78,6 @@ export default function Home() {
     setDealsOnly(true)
     navigate('products')
   }
-  const goToCategory = (category) => {
-    clearAiSearch()
-    setSearch('')
-    setSubFilters([])
-    setDealsOnly(false)
-    setShopCategory(category)
-    setShopSub('전체')
-    navigate('products')
-  }
 
   return (
     <div className="home-page">
@@ -152,82 +134,9 @@ export default function Home() {
         </div>
       </section>
 
-      <nav className="home-categories" aria-label="상품 카테고리 바로가기">
-        <div className="wrap">
-          <div className="home-category-head">
-            <div>
-              <span className="eyebrow">빠른 상품 찾기</span>
-              <h2>무엇을 찾고 계세요?</h2>
-            </div>
-            <button type="button" className="more-link" onClick={() => goToProducts()}>전체 상품 보기 →</button>
-          </div>
-          <div className="home-category-grid">
-            {CATEGORIES.map((category) => {
-              const meta = CATEGORY_META[category.name]
-              return (
-                <button key={category.id} type="button" onClick={() => goToCategory(category.name)}>
-                  <span className="home-category-icon"><Icon name={meta.icon} size={20} /></span>
-                  <span><strong>{category.name}</strong><small>{meta.description}</small></span>
-                  <Icon name="chevron-right" size={15} />
-                </button>
-              )
-            })}
-          </div>
-        </div>
-      </nav>
-
-      {/* ── 오늘의 특가: 실제 할인 상품의 날짜별 큐레이션 ── */}
-      <section className="today-deals" aria-labelledby="today-deals-title">
-        <div className="wrap">
-          <div className="today-deals-head">
-            <div>
-              <span className="eyebrow">TODAY&apos;S DEAL</span>
-              <h2 id="today-deals-title" className="serif">오늘의 특가</h2>
-              <div className="deal-countdown" aria-live="off">
-                <span>오늘의 특가 갱신까지</span>
-                <time>{clock.countdown}</time>
-              </div>
-            </div>
-            <button type="button" className="more-link" onClick={goToDeals}>특가 상품 더보기 →</button>
-          </div>
-          {productsLoading ? (
-            <p className="today-deals-status" aria-live="polite">특가 상품을 불러오고 있습니다.</p>
-          ) : dailyDeals.length ? (
-            <div className="today-deals-grid">
-              {dailyDeals.map((product) => <DealProductCard key={product.id} product={product} />)}
-            </div>
-          ) : (
-            <p className="today-deals-status">현재 판매 중인 할인 상품이 없습니다.</p>
-          )}
-        </div>
-      </section>
-
-      {/* ── 맞춤 추천 상품: 설명 콘텐츠보다 먼저 구매 진입점을 제공 ── */}
-      <section className="section home-recommended">
-        <div className="wrap">
-          <div className="home-section-heading">
-            <div className="section-head">
-              <span className="eyebrow">맞춤 추천</span>
-              <h2 className="serif">{goal}에 맞춘 추천 상품</h2>
-              <p>{GOAL_GUIDE[goal]}</p>
-            </div>
-            <button type="button" className="more-link" onClick={() => goToProducts({ recommend: true })}>
-              추천 상품 더보기 <Icon name="chevron-right" size={15} />
-            </button>
-          </div>
-          {productsLoading ? (
-            <div className="empty" aria-live="polite"><Icon name="package" size={40} /><h3>추천 상품을 불러오고 있습니다.</h3></div>
-          ) : (
-            <div className="product-grid">
-              {recommended.map((p) => <ProductCard key={p.id} product={p} />)}
-            </div>
-          )}
-        </div>
-      </section>
-
       {isLoggedIn ? (
-        /* ── (로그인) 나의 맞춤 쇼핑 기준 — 카드 없이 텍스트 중심 ── */
-        <section className="home-personalization home-personalization-member">
+        /* ── (로그인) 나의 맞춤 쇼핑 기준 — 히어로 하단 흰 배경 구획 ── */
+        <section className="home-personalization home-personalization-member home-personalization-hero">
           <div className="wrap">
             <div className="home-personalization-row">
               <div>
@@ -259,8 +168,8 @@ export default function Home() {
           </div>
         </section>
       ) : (
-        /* ── (비로그인) 지금 나에게 맞는 쇼핑 기준 — 텍스트 셀렉터 ── */
-        <section className="section home-personalization">
+        /* ── (비로그인) 지금 나에게 맞는 쇼핑 기준 — 히어로 하단 흰 배경 구획 ── */
+        <section className="home-personalization home-personalization-hero home-personalization-guest">
           <div className="wrap">
             <div style={{ marginBottom: 30 }}>
               <span className="eyebrow">맞춤 쇼핑</span>
@@ -332,6 +241,55 @@ export default function Home() {
           </div>
         </section>
       )}
+
+      {/* ── 오늘의 특가: 실제 할인 상품의 날짜별 큐레이션 ── */}
+      <section className="today-deals" aria-labelledby="today-deals-title">
+        <div className="wrap">
+          <div className="today-deals-head">
+            <div>
+              <span className="eyebrow">TODAY&apos;S DEAL</span>
+              <h2 id="today-deals-title" className="serif">오늘의 특가</h2>
+              <div className="deal-countdown" aria-live="off">
+                <span>오늘 특가 남은 시간</span>
+                <time>{clock.countdown}</time>
+              </div>
+            </div>
+            <button type="button" className="more-link" onClick={goToDeals}>특가 상품 더보기 →</button>
+          </div>
+          {productsLoading ? (
+            <p className="today-deals-status" aria-live="polite">특가 상품을 불러오고 있습니다.</p>
+          ) : dailyDeals.length ? (
+            <div className="today-deals-grid">
+              {dailyDeals.map((product) => <DealProductCard key={product.id} product={product} />)}
+            </div>
+          ) : (
+            <p className="today-deals-status">현재 판매 중인 할인 상품이 없습니다.</p>
+          )}
+        </div>
+      </section>
+
+      {/* ── 맞춤 추천 상품: 설명 콘텐츠보다 먼저 구매 진입점을 제공 ── */}
+      <section className="section home-recommended">
+        <div className="wrap">
+          <div className="home-section-heading">
+            <div className="section-head">
+              <span className="eyebrow">맞춤 추천</span>
+              <h2 className="serif">{goal}에 맞춘 추천 상품</h2>
+              <p>{GOAL_GUIDE[goal]}</p>
+            </div>
+            <button type="button" className="more-link" onClick={() => goToProducts({ recommend: true })}>
+              추천 상품 더보기 <Icon name="chevron-right" size={15} />
+            </button>
+          </div>
+          {productsLoading ? (
+            <div className="empty" aria-live="polite"><Icon name="package" size={40} /><h3>추천 상품을 불러오고 있습니다.</h3></div>
+          ) : (
+            <div className="product-grid">
+              {recommended.map((p) => <ProductCard key={p.id} product={p} />)}
+            </div>
+          )}
+        </div>
+      </section>
 
       {/* ── 오늘의 웰빙 테이블 (Shoppable image) ── */}
       <WellnessTable />

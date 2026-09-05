@@ -64,9 +64,7 @@ export default function CartDrawer() {
               <Icon name="leaf" size={38} style={{ margin: '0 auto 12px' }} />
               <p style={{ fontSize: 13 }}>{cartLoading ? '잠시만 기다려 주세요.' : cartError ? '장바구니를 확인할 수 없습니다.' : '담긴 상품이 없습니다.'}</p>
             </div>
-          ) : (
-            <>
-            {cart.map(({ product, quantity }) => {
+          ) : cart.map(({ product, quantity }) => {
               const nutrientLabel = getGoalNutrientLabel(goal, product)
 
               return (
@@ -94,19 +92,20 @@ export default function CartDrawer() {
                   </div>
                 </div>
               )
-            })}
-            <CartAiInsight compact />
-            </>
-          )}
+            })
+          }
         </div>
 
         {cart.length > 0 && (
           <div className="drawer-foot">
-            <div className="sum-row"><span>상품 합계</span><b>{won(cartTotal)}</b></div>
-            <div className="sum-row"><span>신선 배송비 (4만원 이상 무료)</span><b>{deliveryFee === 0 ? '무료' : won(deliveryFee)}</b></div>
-            <div className="sum-total">
-              <span className="lbl">결제 예정</span>
-              <span className="val">{won(cartTotal + deliveryFee)}</span>
+            <CartAiInsight compact />
+            <div className="drawer-pricing">
+              <div className="sum-row"><span>상품 합계</span><b>{won(cartTotal)}</b></div>
+              <div className="sum-row"><span>신선 배송비 (4만원 이상 무료)</span><b>{deliveryFee === 0 ? '무료' : won(deliveryFee)}</b></div>
+              <div className="sum-total">
+                <span className="lbl">결제 예정</span>
+                <span className="val">{won(cartTotal + deliveryFee)}</span>
+              </div>
             </div>
             <div className="drawer-cta">
               <button className="btn btn-ghost" onClick={() => { setDrawerOpen(false); navigate('cart') }}>장바구니 상세</button>

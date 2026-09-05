@@ -1,15 +1,6 @@
-export const PRODUCT_CATEGORIES = [
-  '견과·건과류',
-  '기타 건강식품',
-  '닭가슴살·고단백 식품',
-  '도시락·간편식',
-  '소스·조미료',
-  '시리얼·그래놀라',
-  '영양제·비타민',
-  '유제품·대체유',
-  '음료·프로틴음료',
-  '프로틴바·건강간식',
-]
+import { canonicalProductCategory, PRODUCT_CATEGORIES } from '../data/mock.js'
+
+export { PRODUCT_CATEGORIES }
 
 export const ALLERGEN_OPTIONS = ['우유', '대두', '계란', '견과류', '밀', '갑각류', '복숭아', '쇠고기', '닭고기']
 
@@ -22,6 +13,19 @@ export const ORDER_STATUS_LABELS = {
 }
 
 export const NEXT_ORDER_STATUS = { paid: 'preparing', preparing: 'shipped', shipped: 'delivered' }
+
+export const isBulkShippableOrder = (order) => order?.status === 'preparing'
+
+export function summarizeAdminOrders(orders = []) {
+  return orders.reduce((summary, order) => {
+    summary.total += 1
+    if (order.status === 'preparing') summary.preparing += 1
+    else if (order.status === 'shipped') summary.shipped += 1
+    else if (order.status === 'delivered') summary.delivered += 1
+    else summary.needsReview += 1
+    return summary
+  }, { total: 0, preparing: 0, shipped: 0, delivered: 0, needsReview: 0 })
+}
 
 const numberOrNull = (value) => {
   if (value === '' || value == null) return null
@@ -41,7 +45,7 @@ export function toAdminProductForm(product) {
 export function validateAdminProduct(form) {
   const name = String(form.name || '').trim()
   const brand = String(form.brand || '').trim()
-  const category = String(form.category || '').trim()
+  const category = canonicalProductCategory(form.category)
   const imageUrl = String(form.image_url || '').trim()
   const requiredNumbers = ['price', 'stock', 'calories', 'protein', 'carbs', 'fat', 'sugar', 'sodium']
   const values = Object.fromEntries(requiredNumbers.map((field) => [field, numberOrNull(form[field])]))

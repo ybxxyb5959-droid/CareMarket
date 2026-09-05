@@ -61,6 +61,7 @@ export default function ProductComparisonModal({ products, goal, onClose }) {
   }, [onClose])
 
   const highlights = new Map((insight?.highlights || []).map((item) => [item.product_id, item.reason]))
+  const recommendedProduct = products.find((product) => product.id === insight?.recommendation?.product_id)
 
   return (
     <div className="compare-overlay" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose() }}>
@@ -68,7 +69,7 @@ export default function ProductComparisonModal({ products, goal, onClose }) {
         <header className="compare-head">
           <div>
             <span className="eyebrow"><Icon name="sparkles" size={13} /> Product comparison</span>
-            <h2 id="compare-title" className="serif">AI 상품 비교</h2>
+            <h2 id="compare-title" className="serif">상품 비교</h2>
             <p>실제 상품 정보 · 현재 구매목적 {goal}</p>
           </div>
           <button type="button" className="icon-btn" onClick={onClose} aria-label="비교 닫기"><Icon name="x" /></button>
@@ -94,7 +95,7 @@ export default function ProductComparisonModal({ products, goal, onClose }) {
         </div>
 
         <div className="compare-ai-summary">
-          <div className="compare-ai-title"><Icon name="sparkles" size={15} /><h3>AI 비교 요약</h3></div>
+          <div className="compare-ai-title"><Icon name="sparkles" size={15} /><h3>AI 비교</h3></div>
           {loading && <p className="ai-insight-status" role="status">선택한 상품의 차이를 살펴보고 있습니다.</p>}
           {error && (
             <div className="ai-insight-error" role="alert"><p>{error}</p><button className="btn btn-soft btn-sm" onClick={load}>다시 시도</button></div>
@@ -106,6 +107,13 @@ export default function ProductComparisonModal({ products, goal, onClose }) {
                 {products.map((product) => <li key={product.id}><b>{product.name}</b><span>{highlights.get(product.id)}</span></li>)}
               </ul>
               <p className="compare-goal-fit"><b>구매목적 기준</b> {insight.goal_fit_summary}</p>
+              {recommendedProduct && (
+                <div className="compare-recommendation">
+                  <span><Icon name="award" size={15} /> AI 추천 상품</span>
+                  <b>{recommendedProduct.name}</b>
+                  <p>{insight.recommendation.reason}</p>
+                </div>
+              )}
             </div>
           )}
         </div>

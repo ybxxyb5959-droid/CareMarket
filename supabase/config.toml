@@ -3,6 +3,9 @@ project_id = "caremarket"
 [functions.ai-search]
 verify_jwt = false
 
+[functions.ai-filter-recommendation]
+verify_jwt = false
+
 [functions.confirm-payment]
 verify_jwt = true
 

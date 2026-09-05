@@ -13,7 +13,7 @@ export default function AdminGate({ children }) {
       <div className="wrap page"><div className="empty">
         <Icon name="shield-alert" size={34} />
         <h3>로그인이 필요한 페이지입니다.</h3>
-        <p>관리자 상품 및 주문 관리는 로그인 후 이용할 수 있습니다.</p>
+        <p>관리자 운영 페이지는 로그인 후 이용할 수 있습니다.</p>
         <button className="btn btn-primary" onClick={() => navigate('login')}>로그인하기</button>
       </div></div>
     )

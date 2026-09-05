@@ -6,7 +6,7 @@ const anonKey = Deno.env.get('SUPABASE_ANON_KEY') || ''
 const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || ''
 const productionOrigins = (Deno.env.get('AI_INSIGHTS_ALLOWED_ORIGINS') || Deno.env.get('AI_SEARCH_ALLOWED_ORIGINS') || '')
   .split(',').map((origin) => origin.trim()).filter(Boolean)
-const productColumns = 'product_id,name,category,price,calories,protein,carbs,fat,sugar,sodium,allergens,contains_caffeine'
+const productColumns = 'product_id,name,category,price,serving_size,calories,protein,carbs,fat,sugar,sodium,allergens,contains_caffeine,main_ingredients'
 
 const admin = createClient(supabaseUrl, serviceRoleKey, {
   auth: { persistSession: false, autoRefreshToken: false },

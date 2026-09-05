@@ -92,49 +92,86 @@ export const HERO_SLIDES = [
 ]
 
 // 상단 제품 카테고리 = "상품 종류". (저당/고단백 등 영양 특성은 별도 필터로 분리)
-// DB category가 완벽히 정규화되지 않아 프론트에서 최소 normalization만 수행한다.
-// (Supabase Schema/seed는 변경하지 않음)
+// Supabase category와 관리자 상품 폼이 같은 값을 사용하도록 여기에서 한 번만 관리한다.
+export const PRODUCT_CATEGORY = Object.freeze({
+  NUTS: '견과·건과류',
+  HEALTH_FOOD: '기타 건강식품',
+  HIGH_PROTEIN_FOOD: '닭가슴살·고단백 식품',
+  MEAL: '도시락·간편식',
+  SAUCE: '소스·조미료',
+  CEREAL: '시리얼·그래놀라',
+  SUPPLEMENT: '영양제·비타민',
+  DAIRY_ALTERNATIVE: '유제품·대체유',
+  DRINK: '음료·프로틴음료',
+  PROTEIN_SNACK: '프로틴바·건강간식',
+})
+
+export const PRODUCT_CATEGORIES = Object.freeze(Object.values(PRODUCT_CATEGORY))
+
+// 입력/URL/DB 값의 양끝·중간 공백, 영문 대소문자, Unicode 중점 표기 차이를 흡수한다.
+export function normalizeCategoryName(value) {
+  return String(value || '')
+    .normalize('NFKC')
+    .trim()
+    .toLocaleLowerCase('ko-KR')
+    .replace(/\s+/g, '')
+    .replace(/[ㆍᆞ・]/g, '·')
+}
+
+const PRODUCT_CATEGORY_BY_KEY = new Map(
+  PRODUCT_CATEGORIES.map((category) => [normalizeCategoryName(category), category]),
+)
+
+export function canonicalProductCategory(value) {
+  const raw = String(value || '').normalize('NFKC').trim()
+  return PRODUCT_CATEGORY_BY_KEY.get(normalizeCategoryName(raw)) || raw
+}
+
 export const CATEGORIES = [
   { id: 'all', name: '전체상품' },
   { id: 'protein', name: '프로틴', group: '프로틴', subs: [
-    { name: '프로틴 음료', db: ['음료·프로틴음료', '유제품·대체유'] },
-    { name: '프로틴 바·스낵', db: ['프로틴바·건강간식'] },
+    { name: '프로틴 음료', db: [PRODUCT_CATEGORY.DRINK, PRODUCT_CATEGORY.DAIRY_ALTERNATIVE] },
+    { name: '프로틴 바·스낵', db: [PRODUCT_CATEGORY.PROTEIN_SNACK] },
   ] },
   { id: 'meal', name: '간편식', group: '간편식', subs: [
-    { name: '도시락·볶음밥', db: ['도시락·간편식'] },
-    { name: '닭가슴살·육류', db: ['닭가슴살·고단백 식품'] },
+    { name: '도시락·볶음밥', db: [PRODUCT_CATEGORY.MEAL] },
+    { name: '닭가슴살·육류', db: [PRODUCT_CATEGORY.HIGH_PROTEIN_FOOD] },
   ] },
   { id: 'drink', name: '건강음료', group: '건강음료', subs: [
-    { name: '대체유', db: ['유제품·대체유'] },
-    { name: '기능성·스포츠', db: ['음료·프로틴음료'] },
+    { name: '대체유', db: [PRODUCT_CATEGORY.DAIRY_ALTERNATIVE] },
+    { name: '기능성·스포츠', db: [PRODUCT_CATEGORY.DRINK] },
   ] },
   { id: 'snack', name: '건강간식', group: '건강간식', subs: [
-    { name: '견과·건과류', db: ['견과·건과류'] },
-    { name: '시리얼·그래놀라', db: ['시리얼·그래놀라'] },
-    { name: '프로틴바·스낵', db: ['프로틴바·건강간식'] },
+    { name: '견과·건과류', db: [PRODUCT_CATEGORY.NUTS] },
+    { name: '시리얼·그래놀라', db: [PRODUCT_CATEGORY.CEREAL] },
   ] },
   { id: 'supplement', name: '영양제', group: '영양제', subs: [
     { name: '비타민', kw: ['비타민'] },
     { name: '오메가3', kw: ['오메가'] },
     { name: '유산균', kw: ['유산균', '바이오틱스'] },
   ] },
+  { id: 'sauce', name: PRODUCT_CATEGORY.SAUCE, group: PRODUCT_CATEGORY.SAUCE },
+  { id: 'health-food', name: '건강식품', group: '건강식품' },
 ]
 
 // 실제 "단백질 제품"만 프로틴으로 인정 (고단백 tag 하나만으로 분류하지 않음)
-const PROTEIN_PRODUCT_RE = /(프로틴|단백질|단백 100|WPI|WPC)/
+const PROTEIN_PRODUCT_RE = /(프로틴|단백질|단백\s*100|WPI|WPC)/i
 
 // 상품 → 상품 종류(그룹) 정규화. DB category + 상품명 기반.
 export function productGroup(product) {
-  const c = product.category || ''
+  const c = canonicalProductCategory(product.category)
   const name = product.name || ''
-  if (c === '영양제·비타민') return '영양제'
-  if (c === '소스·조미료') return '소스·조미료'
-  if (c === '도시락·간편식' || c === '닭가슴살·고단백 식품') return '간편식'
-  if (c === '견과·건과류' || c === '시리얼·그래놀라') return '건강간식'
-  // 아래 두 DB 카테고리는 단백질 제품과 일반 웰니스 제품이 섞여 있어 상품명으로 분리
-  if (c === '프로틴바·건강간식') return PROTEIN_PRODUCT_RE.test(name) ? '프로틴' : '건강간식'
-  if (c === '음료·프로틴음료') return PROTEIN_PRODUCT_RE.test(name) ? '프로틴' : '건강음료'
-  if (c === '유제품·대체유') {
+  if (c === PRODUCT_CATEGORY.SUPPLEMENT) return '영양제'
+  if (c === PRODUCT_CATEGORY.SAUCE) return PRODUCT_CATEGORY.SAUCE
+  if (c === PRODUCT_CATEGORY.HEALTH_FOOD) return '건강식품'
+  if (c === PRODUCT_CATEGORY.MEAL || c === PRODUCT_CATEGORY.HIGH_PROTEIN_FOOD) return '간편식'
+  if (c === PRODUCT_CATEGORY.NUTS || c === PRODUCT_CATEGORY.CEREAL) return '건강간식'
+  // 프로틴바·건강간식 DB category는 프로틴 메뉴의 단일 하위 경로에서 모두 노출한다.
+  if (c === PRODUCT_CATEGORY.PROTEIN_SNACK) return '프로틴'
+  // 아래 DB 카테고리는 단백질 제품과 일반 웰니스 제품이 섞여 있어 상품명으로 분리한다.
+  if (c === PRODUCT_CATEGORY.DRINK) return PROTEIN_PRODUCT_RE.test(name) ? '프로틴' : '건강음료'
+  if (c === PRODUCT_CATEGORY.DAIRY_ALTERNATIVE) {
+    if (/(아마씨유|플랙씨드\s*오일|flaxseed\s*oil)/i.test(name)) return '건강식품'
     if (PROTEIN_PRODUCT_RE.test(name)) return '프로틴'
     if (/(요거트|치즈|코티지)/.test(name) && !/(드링크|음료)/.test(name)) return '건강간식'
     return '건강음료'
@@ -144,15 +181,22 @@ export function productGroup(product) {
 
 // 카테고리 + 하위(드롭다운) 매칭 (상품 목록 필터에 사용)
 export function matchCategory(product, catName, subName) {
-  if (!catName || catName === '전체상품') return true
-  const cat = CATEGORIES.find((c) => c.name === catName)
-  if (!cat || !cat.group) return true
+  const categoryKey = normalizeCategoryName(catName)
+  if (!categoryKey || categoryKey === normalizeCategoryName('전체상품')) return true
+  const cat = CATEGORIES.find((item) => normalizeCategoryName(item.name) === categoryKey)
+  if (!cat || !cat.group) return false
   if (productGroup(product) !== cat.group) return false
-  if (cat.subs && subName && subName !== '전체') {
-    const sub = cat.subs.find((s) => s.name === subName)
-    if (!sub) return true
-    if (sub.db) return sub.db.includes(product.category)
-    if (sub.kw) return sub.kw.some((k) => (product.name || '').includes(k))
+  const subKey = normalizeCategoryName(subName)
+  if (cat.subs && subKey && subKey !== normalizeCategoryName('전체')) {
+    const sub = cat.subs.find((item) => normalizeCategoryName(item.name) === subKey)
+    if (!sub) return false
+    if (sub.db) return sub.db.some((category) => (
+      normalizeCategoryName(category) === normalizeCategoryName(product.category)
+    ))
+    if (sub.kw) {
+      const productName = normalizeCategoryName(product.name)
+      return sub.kw.some((keyword) => productName.includes(normalizeCategoryName(keyword)))
+    }
   }
   return true
 }

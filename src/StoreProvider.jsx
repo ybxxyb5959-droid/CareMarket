@@ -103,8 +103,8 @@ export function StoreProvider({ children }) {
   const loggingOut = useRef(false)
 
   // kind: 'default'(우측 하단 · 일반 쇼핑) | 'auth'(상단 중앙 성공) | 'auth-error'(상단 중앙 실패)
-  const showToast = useCallback((msg, kind = 'default') => {
-    setToast({ msg, kind })
+  const showToast = useCallback((msg, kind = 'default', action = null) => {
+    setToast({ msg, kind, action })
     window.clearTimeout(toastTimer.current)
     toastTimer.current = window.setTimeout(() => setToast(null), kind.startsWith('auth') ? 3200 : 2800)
   }, [])
@@ -128,6 +128,7 @@ export function StoreProvider({ children }) {
     if (cartController.getOwner() !== nextId) {
       cartController.setOwner(nextId)
       setWishlist([])
+      setProfile(EMPTY_PROFILE)
       wishlistPending.current.clear()
       setDrawerOpen(false)
       setLoginPromptOpen(false)
@@ -286,7 +287,13 @@ export function StoreProvider({ children }) {
       setIsAdmin(isAdminUser)
 
       if (isAdminUser && !window.location.pathname.startsWith('/payment/')) {
-        setView('adminProducts')
+        const currentRoute = parseAppLocation(window.location)
+        const adminView = ['adminProducts', 'adminOrders', 'adminPartnerships'].includes(currentRoute.view)
+          ? currentRoute.view
+          : 'adminProducts'
+        const adminUrl = viewUrl(adminView)
+        window.history.replaceState({ ...window.history.state, view: adminView, scrollY: 0 }, '', adminUrl)
+        setView(adminView)
         scrollTop()
       }
 
@@ -309,7 +316,8 @@ export function StoreProvider({ children }) {
       setSettingsLoading(false)
       setProfileLoading(false)
 
-      // 연락처/주소는 마이그레이션 적용 후에만 존재 → 실패해도 앱이 깨지지 않게 best-effort 로드
+      // 연락처 컬럼은 별도 마이그레이션으로 추가된다. 해당 마이그레이션이 아직
+      // 적용되지 않은 환경에서도 role 조회와 관리자 권한 판별은 정상 동작해야 한다.
       supabase
         .from('profiles')
         .select('phone, postal_code, address, address_detail')
@@ -325,9 +333,10 @@ export function StoreProvider({ children }) {
           })
         })
 
-      // 일반 회원에게만 구매목적 설정 화면을 연다.
+      // 조건 미설정 회원은 설정을 강제하지 않고 맞춤 상품 화면으로 안내한다.
+      // (맞춤 상품 화면에서 '추천 조건 설정하기'로 자연스럽게 설정 화면으로 이동)
       if (!loadedGoal && !isAdminUser && !window.location.pathname.startsWith('/payment/')) {
-        setView('goalSetup')
+        setView('custom')
         scrollTop()
       }
     }
@@ -346,7 +355,7 @@ export function StoreProvider({ children }) {
   }
   const catalogStateUrl = () => catalogUrl({ search, searchMode, aiQuery, shopCategory, shopSub, dealsOnly, sortBy })
   const navigate = (v) => {
-    if (['adminProducts', 'adminOrders'].includes(v) && !authLoading && !isAdmin) {
+    if (['adminProducts', 'adminOrders', 'adminPartnerships'].includes(v) && !authLoading && !isAdmin) {
       showToast('관리자 권한이 필요한 페이지입니다.')
       setView('main')
       window.history.pushState({ view: 'main', scrollY: 0 }, '', '/')
@@ -432,7 +441,7 @@ export function StoreProvider({ children }) {
     }
   }
 
-  const clearAiSearch = () => {
+  const resetAiSearchState = () => {
     aiRequest.current?.abort()
     aiRequest.current = null
     setAiLoading(false)
@@ -440,7 +449,37 @@ export function StoreProvider({ children }) {
     setAiResult(null)
     setAiQuery('')
     setSearchMode('normal')
+  }
+
+  const clearAiSearch = () => {
+    resetAiSearchState()
     if (['protein', 'sugar', 'sodium'].includes(sortBy)) setSortBy('recommend')
+  }
+
+  const navigateToCatalog = (category = '전체상품', sub = '전체') => {
+    resetAiSearchState()
+    setSearch('')
+    setSubFilters([])
+    setShopCategory(category)
+    setShopSub(sub)
+    setDealsOnly(false)
+    setSortBy('recommend')
+
+    rememberScroll()
+    const nextUrl = catalogUrl({
+      search: '',
+      searchMode: 'normal',
+      aiQuery: '',
+      shopCategory: category,
+      shopSub: sub,
+      dealsOnly: false,
+      sortBy: 'recommend',
+    })
+    if (`${window.location.pathname}${window.location.search}` !== nextUrl) {
+      window.history.pushState({ view: 'products', scrollY: 0 }, '', nextUrl)
+    }
+    setView('products')
+    scrollTop()
   }
 
   const toggleWish = async (id) => {
@@ -479,8 +518,14 @@ export function StoreProvider({ children }) {
     const generation = cartController.getGeneration()
     const saved = await cartController.add(product.id, count)
     if (saved && generation === cartController.getGeneration()) {
-      showToast(`장바구니에 담았습니다 · ${product.name.slice(0, 14)}…`)
-      setDrawerOpen(true)
+      showToast('장바구니에 담았어요.', 'default', {
+        label: '장바구니 보기',
+        onClick: () => {
+          window.clearTimeout(toastTimer.current)
+          setToast(null)
+          setDrawerOpen(true)
+        },
+      })
       return true
     }
     return false
@@ -553,7 +598,8 @@ export function StoreProvider({ children }) {
       return false
     }
 
-    navigate('main')
+    // 저장 후 홈이 아닌 맞춤 상품 화면으로 돌려보내 변경된 조건의 결과를 바로 확인하게 한다.
+    navigate('custom')
     showToast('맞춤 웰빙 설정이 반영되었습니다.')
     return true
   }
@@ -697,7 +743,7 @@ export function StoreProvider({ children }) {
 
   const value = useMemo(
     () => ({
-      view, navigate, setView,
+      view, navigate, navigateToCatalog, setView,
       selectedProduct, openProduct, setSelectedProduct,
       goal, setGoal, saveWellnessSettings, settingsLoading,
       subFilters, setSubFilters, toggleSub,

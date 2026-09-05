@@ -30,7 +30,7 @@ export default function GoalBadge({ goal, product }) {
     default:
       return (
         <div className="goal-badge gb-diet">
-          <span className="gb-label"><Icon name="leaf" size={15} /> 저염 나트륨</span>
+          <span className="gb-label"><Icon name="leaf" size={15} /> 나트륨 · 당류</span>
           <span className="gb-value">{n.sodium}mg <small>({dailyPct(n.sodium, 2000)}%)</small></span>
         </div>
       )

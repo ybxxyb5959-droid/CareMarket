@@ -3,16 +3,24 @@ import {
   GEMINI_COMPARE_SCHEMA,
   validateInsightInput,
 } from '../_shared/ai-insights-contract.js'
+import {
+  analyzeCartNutrition,
+  cartAnalysisBasis,
+  cartAnalysisForGemini,
+  composeCartInsight,
+} from '../_shared/cart-nutrition-analysis.js'
 
 export const GEMINI_MODEL = 'gemini-3.5-flash-lite'
 const MAX_BODY_BYTES = 4096
 const MAX_CART_ITEMS = 50
 const FORBIDDEN_LANGUAGE = /(질병|질환|진단|처방|치료|완치|예방|효능|의학적|의료적)/
-const SYSTEM_PROMPT = `너는 CareMarket의 상품 비교 도우미다.
+const FORBIDDEN_CART_LANGUAGE = /(권장\s*섭취량|과다|부족|위험|초과|불균형|반드시|하루\s*섭취)/
+const SYSTEM_PROMPT = `너는 CareMarket의 상품 비교 및 장바구니 영양 구성 분석 도우미다.
 제공된 상품 데이터만 사용한다.
 없는 사실이나 수치를 만들지 않는다.
 질병 진단·치료·효능을 언급하지 않는다.
 사용자의 구매 목적은 쇼핑 기준일 뿐 의료정보로 해석하지 않는다.
+점수, 등급, 최적도 같은 근거 없는 평가 수치를 만들지 않는다.
 답변은 짧고 중립적인 한국어로 작성한다.
 JSON 스키마의 설명 문장에는 숫자나 수치 단위를 쓰지 않는다.`
 
@@ -43,7 +51,9 @@ function productForPrompt(row) {
     fat: safeNumber(row.fat),
     sugar: safeNumber(row.sugar),
     sodium: safeNumber(row.sodium),
+    serving_size: row.serving_size ? String(row.serving_size).slice(0, 80) : null,
     allergens: safeStrings(row.allergens),
+    main_ingredients: safeStrings(row.main_ingredients),
     contains_caffeine: row.contains_caffeine === true,
   }
 }
@@ -110,7 +120,12 @@ function validateCompareOutput(value, productIds) {
     || !validNarrative(value.summary, 180)
     || !validNarrative(value.goal_fit_summary, 180)
     || !Array.isArray(value.highlights)
-    || value.highlights.length !== productIds.length) throw new InsightError('INVALID_RESPONSE', 502)
+    || value.highlights.length !== productIds.length
+    || !value.recommendation
+    || typeof value.recommendation !== 'object'
+    || Array.isArray(value.recommendation)
+    || !productIds.includes(value.recommendation.product_id)
+    || !validNarrative(value.recommendation.reason, 140)) throw new InsightError('INVALID_RESPONSE', 502)
 
   const ids = new Set()
   for (const highlight of value.highlights) {
@@ -124,29 +139,40 @@ function validateCompareOutput(value, productIds) {
     summary: value.summary.trim(),
     highlights: value.highlights.map(({ product_id, reason }) => ({ product_id, reason: reason.trim() })),
     goal_fit_summary: value.goal_fit_summary.trim(),
+    recommendation: {
+      product_id: value.recommendation.product_id,
+      reason: value.recommendation.reason.trim(),
+    },
   }
 }
 
 function validateCartOutput(value) {
   if (!value || typeof value !== 'object' || Array.isArray(value)
+    || !validNarrative(value.headline, 90)
+    || FORBIDDEN_CART_LANGUAGE.test(value.headline)
     || !validNarrative(value.summary, 180)
-    || !validNarrative(value.goal_alignment, 180)
-    || !Array.isArray(value.observations)
-    || value.observations.length < 1
-    || value.observations.length > 4
-    || !value.observations.every((item) => validNarrative(item, 140))) throw new InsightError('INVALID_RESPONSE', 502)
+    || FORBIDDEN_CART_LANGUAGE.test(value.summary)
+    || !Array.isArray(value.actions)
+    || value.actions.length < 1
+    || value.actions.length > 2
+    || !value.actions.every((item) => validNarrative(item, 140) && !FORBIDDEN_CART_LANGUAGE.test(item))) throw new InsightError('INVALID_RESPONSE', 502)
   return {
+    headline: value.headline.trim(),
     summary: value.summary.trim(),
-    goal_alignment: value.goal_alignment.trim(),
-    observations: value.observations.map((item) => item.trim()),
+    actions: value.actions.map((item) => item.trim()),
   }
 }
 
 async function callGemini({ apiKey, input, mode, fetchImpl, timeoutMs }) {
   const schema = mode === 'compare' ? GEMINI_COMPARE_SCHEMA : GEMINI_CART_SCHEMA
   const instruction = mode === 'compare'
-    ? '선택된 각 상품을 빠짐없이 해석하되 숫자는 되풀이하지 말고 상대적 특징만 설명해라.'
-    : '현재 장바구니의 구성, 구매목적과의 관련 특징, 카테고리 구성과 중복 유형만 설명해라.'
+    ? '선택된 각 상품을 빠짐없이 해석하되 숫자는 되풀이하지 말고 상대적 특징만 설명해라. 비교 상품 중 현재 구매 목적에 가장 잘 맞는 상품 한 가지만 recommendation으로 선택하고, 제공된 상품 정보에 근거해 이유를 설명해라. 구매 목적이 없으면 영양 구성과 가격을 함께 고려해 한 가지를 선택해라.'
+    : `입력은 이미 코드가 수량까지 반영해 판정한 장바구니 분석 결과다.
+analysis의 dominant, good, needs_attention, needs_balance, composition_signals, balance_items, confirmed_facts를 변경하거나 새로 판정하지 말고 쉽게 문장화해라.
+제안은 allowed_action_directions 범위 안에서만 하고, 특정 상품이나 상품 ID를 만들지 마라.
+single_product가 true여도 repeated_protein_product 신호가 있으면 한 종류의 단백질 식품에 구성이 집중된 점과 상품 다양성을 설명해라. 이 신호가 없으면 해당 상품의 특징만 보수적으로 설명해라.
+vary_fiber_food_groups 방향이 있으면 식이섬유를 보완할 수 있는 식품군이라는 구성 관점으로 설명하고 채소·통곡물·견과류 계열 상품을 제안해라. 식이섬유 수치나 결핍 판정을 만들지 마라.
+권장섭취량, 과다, 부족, 위험, 초과, 의무적 표현을 쓰지 마라.`
   let response
   try {
     response = await fetchImpl(`https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`, {
@@ -211,10 +237,10 @@ export function createAiInsightsHandler({
 
       const checked = validateInsightInput(await readJson(request))
       if (checked.error) throw new InsightError(checked.error, 400)
-      const apiKey = getApiKey()
-      if (!apiKey) throw new InsightError('NOT_CONFIGURED', 503)
 
       let input
+      let basis = null
+      let cartAnalysis = null
       if (checked.mode === 'compare') {
         const [profile, rows] = await Promise.all([getProfile(user.id), getProducts(checked.productIds)])
         const products = (rows || []).map(productForPrompt)
@@ -227,19 +253,36 @@ export function createAiInsightsHandler({
         const rows = snapshot?.items || []
         if (!rows.length) throw new InsightError('EMPTY_CART', 400)
         if (rows.length > MAX_CART_ITEMS) throw new InsightError('CART_TOO_LARGE', 400)
-        input = {
-          mode: checked.mode,
-          primary_goal: snapshot.profile?.primary_goal || null,
-          user_preferences: snapshot.preferences || null,
-          cart_items: rows.map((row) => ({ quantity: safeNumber(row.quantity), product: productForPrompt(row.product || {}) })),
+        const selectedConditions = ['low_sugar', 'low_sodium', 'high_protein', 'exclude_caffeine']
+          .filter((key) => snapshot?.preferences?.[key] === true)
+        const context = {
+          primaryGoal: snapshot?.profile?.primary_goal || null,
+          selectedConditions,
+          excludedAllergens: snapshot?.preferences?.excluded_allergens,
         }
+        basis = cartAnalysisBasis(context)
+        cartAnalysis = analyzeCartNutrition(rows, context)
+        input = cartAnalysisForGemini(cartAnalysis, basis)
       }
 
-      const output = await callGemini({ apiKey, input, mode: checked.mode, fetchImpl, timeoutMs })
-      const insight = checked.mode === 'compare'
-        ? validateCompareOutput(output, checked.productIds)
-        : validateCartOutput(output)
-      return reply(200, { insight })
+      const apiKey = getApiKey()
+      if (!apiKey) {
+        if (cartAnalysis) return reply(200, { insight: composeCartInsight(cartAnalysis, basis) })
+        throw new InsightError('NOT_CONFIGURED', 503)
+      }
+
+      try {
+        const output = await callGemini({ apiKey, input, mode: checked.mode, fetchImpl, timeoutMs })
+        if (checked.mode === 'compare') {
+          return reply(200, { insight: validateCompareOutput(output, checked.productIds) })
+        }
+        return reply(200, { insight: composeCartInsight(cartAnalysis, basis, validateCartOutput(output), true) })
+      } catch (error) {
+        if (!cartAnalysis) throw error
+        const safe = error instanceof InsightError ? error : new InsightError('INTERNAL_ERROR', 500)
+        logger.error('ai-insights Gemini explanation failed; deterministic fallback returned', { code: safe.code, status: safe.status })
+        return reply(200, { insight: composeCartInsight(cartAnalysis, basis) })
+      }
     } catch (error) {
       const safe = error instanceof InsightError ? error : new InsightError('INTERNAL_ERROR', 500)
       logger.error('ai-insights request failed', { code: safe.code, status: safe.status })

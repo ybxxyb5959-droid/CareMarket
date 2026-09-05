@@ -1,7 +1,7 @@
 import Icon from '../Icon'
 import { won } from '../../lib/format'
 
-export default function CheckoutSummary({ cartTotal, deliveryFee, cartCount, totalOverride = null, disabled, submitting }) {
+export default function CheckoutSummary({ cartTotal, deliveryFee, cartCount, totalOverride = null, disabled, submitting, onPay }) {
   const total = totalOverride ?? cartTotal + deliveryFee
   return (
     <>
@@ -20,7 +20,7 @@ export default function CheckoutSummary({ cartTotal, deliveryFee, cartCount, tot
           <span className="lbl">최종 결제금액</span>
           <span className="val">{won(total)}</span>
         </div>
-        <button type="submit" className="btn btn-primary btn-lg btn-block checkout-pay-button" disabled={disabled}>
+        <button type="button" className="btn btn-primary btn-lg btn-block checkout-pay-button" disabled={disabled} onClick={onPay}>
           <Icon name="credit-card" size={17} /> {submitting ? '결제 준비 중…' : `${won(total)} 결제하기`}
         </button>
         <div className="checkout-summary-notes">
@@ -30,7 +30,7 @@ export default function CheckoutSummary({ cartTotal, deliveryFee, cartCount, tot
       </aside>
       <div className="checkout-mobile-pay" aria-label="모바일 결제 요약">
         <div><span>최종 결제금액</span><strong>{won(total)}</strong></div>
-        <button type="submit" form="checkout-form" className="btn btn-primary" disabled={disabled}>
+        <button type="button" className="btn btn-primary" disabled={disabled} onClick={onPay}>
           {submitting ? '준비 중…' : '결제하기'}
         </button>
       </div>

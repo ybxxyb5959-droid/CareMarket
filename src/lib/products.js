@@ -1,4 +1,5 @@
 import { supabase } from './supabase'
+import { canonicalProductCategory, PRODUCT_CATEGORY } from '../data/mock.js'
 
 const asNumber = (value) => {
   const number = Number(value)
@@ -11,10 +12,11 @@ const asTextArray = (value) => (
 
 function deriveTags({ protein, sugar, sodium, caffeine, category }) {
   const tags = []
+  const hasComparableFoodNutrition = canonicalProductCategory(category) !== PRODUCT_CATEGORY.SUPPLEMENT
 
-  if (protein >= 15) tags.push('고단백')
-  if (sugar <= 5) tags.push('저당')
-  if (sodium <= 250) tags.push('저염')
+  if (hasComparableFoodNutrition && protein >= 15) tags.push('고단백')
+  if (hasComparableFoodNutrition && sugar <= 5) tags.push('저당')
+  if (hasComparableFoodNutrition && sodium <= 250) tags.push('저염')
   if (!caffeine && /(영양제|음료)/.test(category) && tags.length < 3) tags.push('카페인 제외')
 
   return tags.slice(0, 3)

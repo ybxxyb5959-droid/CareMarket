@@ -1,8 +1,9 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useStore } from '../store'
 import { SUB_FILTERS } from '../data/mock'
 import { filterAndSort } from '../lib/catalog'
 import { AI_SORT_TO_UI, filterAiProducts } from '../lib/ai-search'
+import { availableFilterIds } from '../../supabase/functions/_shared/ai-filter-recommendation-contract.js'
 import Icon from '../components/Icon'
 import ProductCard from '../components/ProductCard'
 import ProductComparisonModal from '../components/ProductComparisonModal'
@@ -20,6 +21,18 @@ export default function AllProducts() {
   } = useStore()
   const [compareIds, setCompareIds] = useState([])
   const [compareOpen, setCompareOpen] = useState(false)
+  const availableIds = useMemo(() => availableFilterIds(shopCategory), [shopCategory])
+  const availableFilters = useMemo(
+    () => availableIds.map(id => SUB_FILTERS.find(filter => filter.id === id)).filter(Boolean),
+    [availableIds],
+  )
+  const availableTags = useMemo(() => availableFilters.map(filter => filter.tag), [availableFilters])
+  useEffect(() => {
+    setSubFilters((current) => {
+      const next = current.filter(tag => availableTags.includes(tag))
+      return next.length === current.length ? current : next
+    })
+  }, [availableTags, setSubFilters])
 
   const filtered = useMemo(
     () => filterAndSort(products, { search: searchMode === 'ai' ? '' : search, subFilters, allergies, sortBy, goal, shopCategory, shopSub, dealsOnly }),
@@ -51,7 +64,7 @@ export default function AllProducts() {
   const openComparison = () => {
     if (compareProducts.length < 2) return
     if (!isLoggedIn) {
-      showToast('AI 상품 비교는 로그인 후 이용할 수 있습니다.')
+      showToast('상품 비교는 로그인 후 이용할 수 있습니다.')
       return
     }
     setCompareOpen(true)
@@ -124,17 +137,19 @@ export default function AllProducts() {
         )}
 
         <div className="filterbar" style={{ marginBottom: 26 }}>
-          <div className="f-tags">
-            <span className="f-label"><Icon name="sliders" size={15} /> 보조 조건</span>
-            {SUB_FILTERS.map((f) => (
-              <button key={f.id} className={`chip${subFilters.includes(f.tag) ? ' on' : ''}`} onClick={() => toggleSub(f.tag)} title={f.hint}>
-                {subFilters.includes(f.tag) && <Icon name="check" size={13} strokeWidth={2.6} />}
-                {f.label}
-              </button>
-            ))}
-            {subFilters.length > 0 && (
-              <button className="f-reset" onClick={() => setSubFilters([])}>초기화</button>
-            )}
+          <div className="filterbar-main">
+            <div className="f-tags">
+              <span className="f-label"><Icon name="sliders" size={15} /> 빠른 조건</span>
+              {availableFilters.map((f) => (
+                <button key={f.id} className={`chip${subFilters.includes(f.tag) ? ' on' : ''}`} onClick={() => toggleSub(f.tag)} title={f.hint}>
+                  {subFilters.includes(f.tag) && <Icon name="check" size={13} strokeWidth={2.6} />}
+                  {f.label}
+                </button>
+              ))}
+              {subFilters.length > 0 && (
+                <button className="f-reset" onClick={() => setSubFilters([])}>초기화</button>
+              )}
+            </div>
           </div>
           <div className="f-sort">
             <span>총 <b>{aiProducts.length}</b>개</span>
@@ -154,8 +169,8 @@ export default function AllProducts() {
 
         {!productsLoading && !productsError && aiProducts.length > 0 && (
           <div className="compare-toolbar">
-            <div><Icon name="sparkles" size={15} /><span>비교할 상품을 선택하세요</span><b>{compareIds.length}/3</b></div>
-            <button type="button" className="btn btn-soft btn-sm" disabled={compareProducts.length < 2} onClick={openComparison}>AI로 비교하기</button>
+            <div><Icon name="cart" size={15} /><span>비교할 상품을 선택하세요</span><b>{compareIds.length}/3</b></div>
+            <button type="button" className="btn btn-soft btn-sm" disabled={compareProducts.length < 2} onClick={openComparison}>비교하기</button>
           </div>
         )}
 

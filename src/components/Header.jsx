@@ -41,11 +41,65 @@ function buildSuggestions(products, vocab, query) {
   return { terms, items }
 }
 
+function CompanyMenu({ navigate }) {
+  const [open, setOpen] = useState(false)
+  const menuRef = useRef(null)
+
+  useEffect(() => {
+    const closeOnOutsideClick = (event) => {
+      if (!menuRef.current?.contains(event.target)) setOpen(false)
+    }
+    const closeOnEscape = (event) => {
+      if (event.key === 'Escape') setOpen(false)
+    }
+
+    document.addEventListener('pointerdown', closeOnOutsideClick)
+    document.addEventListener('keydown', closeOnEscape)
+    return () => {
+      document.removeEventListener('pointerdown', closeOnOutsideClick)
+      document.removeEventListener('keydown', closeOnEscape)
+    }
+  }, [])
+
+  const openView = (view) => {
+    setOpen(false)
+    navigate(view)
+  }
+
+  return (
+    <div
+      className={`company-menu${open ? ' open' : ''}`}
+      ref={menuRef}
+      onMouseEnter={() => setOpen(true)}
+      onMouseLeave={() => setOpen(false)}
+    >
+      <button
+        type="button"
+        className="company-menu-trigger"
+        aria-haspopup="menu"
+        aria-expanded={open}
+        onClick={() => setOpen((current) => !current)}
+      >
+        CareMarket <Icon name="chevron-down" size={13} />
+      </button>
+      <div className="company-dropdown" role="menu" aria-label="CareMarket 안내">
+        <strong>CareMarket</strong>
+        <button type="button" role="menuitem" onClick={() => openView('about')}>케어마켓 소개</button>
+        <button type="button" role="menuitem" onClick={() => openView('principles')}>철학과 원칙</button>
+        <div className="company-dropdown-divider" />
+        <button type="button" className="company-menu-item partner" role="menuitem" onClick={() => openView('partners')}>
+          브랜드 입점 · 제휴 <Icon name="chevron-right" size={13} />
+        </button>
+      </div>
+    </div>
+  )
+}
+
 export default function Header() {
   const {
-    navigate, search, setSearch,
+    navigate, navigateToCatalog, search, setSearch,
     searchMode, setSearchMode, aiQuery, setAiQuery, aiLoading, runAiSearch, clearAiSearch,
-    shopCategory, setShopCategory, shopSub, setShopSub, setDealsOnly,
+    shopCategory, shopSub, setDealsOnly,
     wishlist, cartCount, setDrawerOpen, isLoggedIn, requireCartLogin,
     products, openProduct, isAdmin,
   } = useStore()
@@ -70,10 +124,11 @@ export default function Header() {
 
   // 카테고리/하위 선택 → 필터 적용 후 상품 목록으로 스크롤
   const openCategory = (c, sub) => {
-    setDealsOnly(false)
-    setShopCategory(c.name)
-    setShopSub(sub)
-    navigate('products')
+    setSearchInput(null)
+    setSugOpen(false)
+    setHi(-1)
+    setMobileSearchOpen(false)
+    navigateToCatalog(c.name, sub)
   }
 
   useEffect(() => {
@@ -148,7 +203,7 @@ export default function Header() {
         <div className="announce-inner">
           <b>ORGANIC &amp; CLEAN</b>
           <span>자연에서 온 무첨가 할인식단 · 40,000원 이상 무료배송</span>
-          <span className="link" onClick={() => navigate('goalSetup')}>내 맞춤 루틴 설계 →</span>
+          <span className="link" onClick={() => navigate('custom')}>내 맞춤 상품 보기 →</span>
         </div>
       </div>
 
@@ -290,8 +345,13 @@ export default function Header() {
               {isLoggedIn ? (
                 <>
                   {isAdmin && (
-                    <button className="header-admin-btn" onClick={() => navigate('adminProducts')} title="관리자센터">
-                      <Icon name="shield-check" size={15} /> <span>관리자센터</span>
+                    <button
+                      type="button"
+                      className="header-admin-btn"
+                      onClick={() => navigate('adminProducts')}
+                      title="관리자 화면으로 전환"
+                    >
+                      <Icon name="shield-check" size={15} /> <span>관리자 화면</span>
                     </button>
                   )}
                   <button
@@ -354,7 +414,8 @@ export default function Header() {
               ))}
             </div>
             <div className="header-nav-right">
-              <span onClick={() => navigate('orders')} style={{ cursor: 'pointer' }}>주문 · 배송 조회</span>
+              <CompanyMenu navigate={navigate} />
+              <button type="button" className="order-lookup-link" onClick={() => navigate('orders')}>주문 · 배송 조회</button>
             </div>
           </div>
         </div>
