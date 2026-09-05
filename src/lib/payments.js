@@ -1,5 +1,32 @@
-export async function createCheckoutOrder(client) {
-  const { data, error } = await client.rpc('create_checkout_order')
+export function normalizeCheckoutShipping(values = {}) {
+  const shipping = {
+    recipientName: String(values.recipientName || values.name || '').trim(),
+    recipientPhone: String(values.recipientPhone || values.phone || '').trim(),
+    postalCode: String(values.postalCode || '').trim(),
+    address: String(values.address || '').trim(),
+    addressDetail: String(values.addressDetail || '').trim(),
+    deliveryRequest: String(values.deliveryRequest || '').trim(),
+  }
+
+  if (!shipping.recipientName || shipping.recipientName.length > 100) throw new Error('INVALID_RECIPIENT_NAME')
+  if (shipping.recipientPhone.length < 5 || shipping.recipientPhone.length > 30) throw new Error('INVALID_RECIPIENT_PHONE')
+  if (shipping.postalCode.length > 20) throw new Error('INVALID_POSTAL_CODE')
+  if (!shipping.address || shipping.address.length > 300) throw new Error('INVALID_ADDRESS')
+  if (shipping.addressDetail.length > 200) throw new Error('INVALID_ADDRESS_DETAIL')
+  if (shipping.deliveryRequest.length > 200) throw new Error('INVALID_DELIVERY_REQUEST')
+  return shipping
+}
+
+export async function createCheckoutOrder(client, values) {
+  const shipping = normalizeCheckoutShipping(values)
+  const { data, error } = await client.rpc('create_checkout_order', {
+    p_recipient_name: shipping.recipientName,
+    p_recipient_phone: shipping.recipientPhone,
+    p_postal_code: shipping.postalCode || null,
+    p_address: shipping.address,
+    p_address_detail: shipping.addressDetail || null,
+    p_delivery_request: shipping.deliveryRequest || null,
+  })
   if (error) throw error
   if (!data?.order_id || !data?.toss_order_id || !data?.order_name
     || !Number.isSafeInteger(data.total_price) || data.total_price <= 0) {
