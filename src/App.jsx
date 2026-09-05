@@ -6,7 +6,6 @@ import AdminTopbar from './components/AdminTopbar'
 import Toast from './components/Toast'
 import CartDrawer from './components/CartDrawer'
 import CartLoginPrompt from './components/CartLoginPrompt'
-import EventPopup from './components/EventPopup'
 import Home from './pages/Home'
 import AllProducts from './pages/AllProducts'
 import GoalSetup from './pages/GoalSetup'
@@ -60,7 +59,6 @@ function Shell() {
       {!isAdmin && <Footer />}
       <CartDrawer />
       <Toast />
-      <EventPopup />
       {loginPromptOpen && <CartLoginPrompt />}
     </div>
   )

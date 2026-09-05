@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useStore, useAutoSlide } from '../store'
-import { GOALS, HERO_SLIDES, VALUES } from '../data/mock'
+import { CATEGORIES, GOALS, HERO_SLIDES, VALUES } from '../data/mock'
 import Icon from '../components/Icon'
 import ProductCard from '../components/ProductCard'
 import WellnessTable from '../components/WellnessTable'
@@ -16,17 +16,25 @@ const GOAL_GUIDE = {
   '영양제 탐색': '핵심 기능성분 함량을 우선 표시합니다.',
 }
 
+const CATEGORY_META = {
+  전체상품: { icon: 'package', description: '전체 상품 보기' },
+  프로틴: { icon: 'dumbbell', description: '단백질 음료와 간식' },
+  간편식: { icon: 'apple', description: '균형 잡힌 한 끼' },
+  건강음료: { icon: 'droplets', description: '저당 음료와 대체유' },
+  건강간식: { icon: 'sun', description: '견과와 건강 스낵' },
+  영양제: { icon: 'pill', description: '일상 영양 케어' },
+}
+
 export default function Home() {
   const {
     goal, setGoal, subFilters, setSubFilters, allergies,
     products, productsLoading, openProduct, navigate,
-    isLoggedIn, logout, setShopCategory, setShopSub, setSortBy, showToast,
+    isLoggedIn, logout, setShopCategory, setShopSub, setSortBy,
     setDealsOnly, setSearch, clearAiSearch,
   } = useStore()
 
   const [slide, setSlide] = useAutoSlide(HERO_SLIDES.length)
   const [focusGoal, setFocusGoal] = useState(null) // 비로그인 목표 셀렉터: 포커스된 목표
-  const [email, setEmail] = useState('')
   const [clock, setClock] = useState(() => ({
     dateKey: getLocalDateKey(),
     countdown: getCountdown(),
@@ -79,12 +87,14 @@ export default function Home() {
     setDealsOnly(true)
     navigate('products')
   }
-  const subscribeNewsletter = () => {
-    const v = email.trim()
-    if (!v) { showToast('이메일을 입력해주세요.'); return }
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v)) { showToast('올바른 이메일 주소를 입력해주세요.'); return }
-    setEmail('')
-    showToast('구독 신청이 접수되었습니다.')
+  const goToCategory = (category) => {
+    clearAiSearch()
+    setSearch('')
+    setSubFilters([])
+    setDealsOnly(false)
+    setShopCategory(category)
+    setShopSub('전체')
+    navigate('products')
   }
 
   return (
@@ -117,12 +127,12 @@ export default function Home() {
 
           <div className="hero-cards">
             {products.slice(1, 3).map((p) => (
-              <div key={p.id} className="hero-card" onClick={() => openProduct(p)}>
+              <button key={p.id} type="button" className="hero-card" onClick={() => openProduct(p)}>
                 <div className="thumb" style={{ backgroundImage: `url(${p.image})` }} />
                 <div className="oc">{p.origin}</div>
                 <div className="nm">{p.name}</div>
                 <div className="pr">{p.price.toLocaleString('ko-KR')}원</div>
-              </div>
+              </button>
             ))}
           </div>
         </div>
@@ -141,6 +151,30 @@ export default function Home() {
           </div>
         </div>
       </section>
+
+      <nav className="home-categories" aria-label="상품 카테고리 바로가기">
+        <div className="wrap">
+          <div className="home-category-head">
+            <div>
+              <span className="eyebrow">빠른 상품 찾기</span>
+              <h2>무엇을 찾고 계세요?</h2>
+            </div>
+            <button type="button" className="more-link" onClick={() => goToProducts()}>전체 상품 보기 →</button>
+          </div>
+          <div className="home-category-grid">
+            {CATEGORIES.map((category) => {
+              const meta = CATEGORY_META[category.name]
+              return (
+                <button key={category.id} type="button" onClick={() => goToCategory(category.name)}>
+                  <span className="home-category-icon"><Icon name={meta.icon} size={20} /></span>
+                  <span><strong>{category.name}</strong><small>{meta.description}</small></span>
+                  <Icon name="chevron-right" size={15} />
+                </button>
+              )
+            })}
+          </div>
+        </div>
+      </nav>
 
       {/* ── 오늘의 특가: 실제 할인 상품의 날짜별 큐레이션 ── */}
       <section className="today-deals" aria-labelledby="today-deals-title">
@@ -168,11 +202,34 @@ export default function Home() {
         </div>
       </section>
 
+      {/* ── 맞춤 추천 상품: 설명 콘텐츠보다 먼저 구매 진입점을 제공 ── */}
+      <section className="section home-recommended">
+        <div className="wrap">
+          <div className="home-section-heading">
+            <div className="section-head">
+              <span className="eyebrow">맞춤 추천</span>
+              <h2 className="serif">{goal}에 맞춘 추천 상품</h2>
+              <p>{GOAL_GUIDE[goal]}</p>
+            </div>
+            <button type="button" className="more-link" onClick={() => goToProducts({ recommend: true })}>
+              추천 상품 더보기 <Icon name="chevron-right" size={15} />
+            </button>
+          </div>
+          {productsLoading ? (
+            <div className="empty" aria-live="polite"><Icon name="package" size={40} /><h3>추천 상품을 불러오고 있습니다.</h3></div>
+          ) : (
+            <div className="product-grid">
+              {recommended.map((p) => <ProductCard key={p.id} product={p} />)}
+            </div>
+          )}
+        </div>
+      </section>
+
       {isLoggedIn ? (
         /* ── (로그인) 나의 맞춤 쇼핑 기준 — 카드 없이 텍스트 중심 ── */
-        <section style={{ borderBottom: '1px solid var(--line)' }}>
-          <div className="wrap" style={{ paddingBlock: 30 }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 20, flexWrap: 'wrap' }}>
+        <section className="home-personalization home-personalization-member">
+          <div className="wrap">
+            <div className="home-personalization-row">
               <div>
                 <span className="eyebrow">나의 맞춤 쇼핑 기준</span>
                 <div style={{ display: 'flex', alignItems: 'baseline', gap: 12, marginTop: 10, flexWrap: 'wrap' }}>
@@ -203,10 +260,10 @@ export default function Home() {
         </section>
       ) : (
         /* ── (비로그인) 지금 나에게 맞는 쇼핑 기준 — 텍스트 셀렉터 ── */
-        <section className="section">
+        <section className="section home-personalization">
           <div className="wrap">
             <div style={{ marginBottom: 30 }}>
-              <span className="eyebrow">Personalized Wellness</span>
+              <span className="eyebrow">맞춤 쇼핑</span>
               <h2 className="serif" style={{ fontSize: 30, marginTop: 10 }}>나에게 맞는 케어</h2>
               <p style={{ color: 'var(--muted)', marginTop: 10, fontSize: 14.5, maxWidth: 560 }}>
                 관심있는 케어를 선택해 보세요.
@@ -257,7 +314,7 @@ export default function Home() {
               }}
             >
               <div>
-                <span className="eyebrow">Start your routine</span>
+                <span className="eyebrow">회원 맞춤 혜택</span>
                 <h3 className="serif" style={{ fontSize: 22, marginTop: 6, color: 'var(--ink)' }}>
                   나만의 맞춤 웰빙 마켓을 완성하세요
                 </h3>
@@ -275,52 +332,6 @@ export default function Home() {
           </div>
         </section>
       )}
-
-      {/* ── 맞춤 추천 상품 4개 ── */}
-      <section className="section" style={{ paddingTop: 40 }}>
-        <div className="wrap">
-          <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 16, marginBottom: 20, flexWrap: 'wrap' }}>
-            <div className="section-head" style={{ textAlign: 'left', maxWidth: 'none', marginBottom: 0 }}>
-              <span className="eyebrow">Recommended for you</span>
-              <h2 className="serif" style={{ fontSize: 26 }}>{goal}에 맞춘 추천 상품</h2>
-            </div>
-            <button type="button" className="more-link" onClick={() => goToProducts({ recommend: true })}>
-              제품 더보기 <Icon name="chevron-right" size={15} />
-            </button>
-          </div>
-          {productsLoading ? (
-            <div className="empty" aria-live="polite"><Icon name="package" size={40} /><h3>추천 상품을 불러오고 있습니다.</h3></div>
-          ) : (
-            <div className="product-grid">
-              {recommended.map((p) => <ProductCard key={p.id} product={p} />)}
-            </div>
-          )}
-        </div>
-      </section>
-
-      {/* ── Wellness Journal (Newsletter) ── */}
-      <section className="section" style={{ paddingTop: 0 }}>
-        <div className="wrap">
-          <div className="journal">
-            <div className="journal-copy">
-              <span className="journal-kicker">CareMarket Wellness Journal</span>
-              <h3 className="journal-title serif">매주 만나는 웰니스 큐레이션</h3>
-              <p className="journal-desc">건강한 식단 이야기와 건강 팁,<br />CareMarket의 새로운 웰빙 셀렉션을 가장 먼저 만나보세요.</p>
-            </div>
-            <div className="journal-form">
-              <input
-                type="email"
-                placeholder="이메일을 입력해주세요"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && subscribeNewsletter()}
-                aria-label="구독 이메일"
-              />
-              <button className="btn journal-cta" onClick={subscribeNewsletter}>구독하기 <Icon name="chevron-right" size={15} /></button>
-            </div>
-          </div>
-        </div>
-      </section>
 
       {/* ── 오늘의 웰빙 테이블 (Shoppable image) ── */}
       <WellnessTable />

@@ -147,7 +147,7 @@ export default function Header() {
       <div className="announce">
         <div className="announce-inner">
           <b>ORGANIC &amp; CLEAN</b>
-          <span>자연에서 온 무첨가 할인식단 · 첫 구매 시 웰빙 스타터 30% 바우처 지급</span>
+          <span>자연에서 온 무첨가 할인식단 · 40,000원 이상 무료배송</span>
           <span className="link" onClick={() => navigate('goalSetup')}>내 맞춤 루틴 설계 →</span>
         </div>
       </div>
