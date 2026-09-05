@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { StoreContext } from './store'
 import { supabase } from './lib/supabase'
 import { adaptProductRow, fetchActiveProducts } from './lib/products'
-import { createCartController, EMPTY_CART } from './lib/cart'
+import { calculateCartPricing, createCartController, EMPTY_CART } from './lib/cart'
 import { AI_SORT_TO_UI, conditionLabels, requestAiConditions } from './lib/ai-search'
 
 const scrollTop = () => window.scrollTo({ top: 0, behavior: 'smooth' })
@@ -423,8 +423,7 @@ export function StoreProvider({ children }) {
   const toggleSub = (tag) =>
     setSubFilters((prev) => (prev.includes(tag) ? prev.filter((x) => x !== tag) : [...prev, tag]))
 
-  const cartTotal = cart.reduce((s, i) => s + i.product.price * i.quantity, 0)
-  const deliveryFee = cartTotal >= 40000 || cartTotal === 0 ? 0 : 3000
+  const { productTotal: cartTotal, deliveryFee } = calculateCartPricing(cart)
   const cartCount = cart.reduce((s, i) => s + i.quantity, 0)
 
   const checkout = () => {

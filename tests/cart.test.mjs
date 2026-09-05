@@ -1,12 +1,35 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { createCartController } from '../src/lib/cart.js'
+import { calculateCartPricing, createCartController } from '../src/lib/cart.js'
 
 const deferred = () => {
   let resolve
   const promise = new Promise(r => { resolve = r })
   return { promise, resolve }
 }
+
+test('cart pricing applies the shared 3,000 won / 40,000 won delivery policy', () => {
+  const item = (price, quantity) => ({ product: { price }, quantity })
+
+  assert.deepEqual(calculateCartPricing([]), {
+    productTotal: 0,
+    deliveryFee: 0,
+    paymentTotal: 0,
+    freeDeliveryRemaining: 40000,
+  })
+  assert.deepEqual(calculateCartPricing([item(19900, 2)]), {
+    productTotal: 39800,
+    deliveryFee: 3000,
+    paymentTotal: 42800,
+    freeDeliveryRemaining: 200,
+  })
+  assert.deepEqual(calculateCartPricing([item(20000, 2)]), {
+    productTotal: 40000,
+    deliveryFee: 0,
+    paymentTotal: 40000,
+    freeDeliveryRemaining: 0,
+  })
+})
 
 function fixture() {
   const rows = []

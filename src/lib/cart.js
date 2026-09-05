@@ -1,4 +1,20 @@
 export const EMPTY_CART = { ownerId: null, rows: [], loading: false, pending: 0, error: null }
+export const CART_DELIVERY_FEE = 3000
+export const CART_FREE_DELIVERY_THRESHOLD = 40000
+
+export function calculateCartPricing(cart) {
+  const productTotal = cart.reduce((sum, item) => sum + item.product.price * item.quantity, 0)
+  const deliveryFee = productTotal === 0 || productTotal >= CART_FREE_DELIVERY_THRESHOLD
+    ? 0
+    : CART_DELIVERY_FEE
+
+  return {
+    productTotal,
+    deliveryFee,
+    paymentTotal: productTotal + deliveryFee,
+    freeDeliveryRemaining: Math.max(0, CART_FREE_DELIVERY_THRESHOLD - productTotal),
+  }
+}
 
 // Each account has a separate request generation and write queue. Old responses
 // cannot publish into a new account, even after A -> logout -> A.
