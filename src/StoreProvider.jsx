@@ -5,6 +5,7 @@ import { adaptProductRow, fetchActiveProducts } from './lib/products'
 import { calculateCartPricing, createCartController, EMPTY_CART } from './lib/cart'
 import { AI_SORT_TO_UI, conditionLabels, requestAiConditions } from './lib/ai-search'
 import { fetchWishlistIds, saveWishlistItem } from './lib/wishlist'
+import { catalogUrl, parseAppLocation, productUrl, viewUrl } from './lib/navigation'
 
 const scrollTop = () => window.scrollTo({ top: 0, behavior: 'smooth' })
 
@@ -50,22 +51,20 @@ function toAppUser(authUser) {
 }
 
 export function StoreProvider({ children }) {
-  const [view, setView] = useState(() => ({
-    '/payment/success': 'paymentSuccess',
-    '/payment/fail': 'paymentFail',
-  })[window.location.pathname] || 'main')
+  const initialRoute = useMemo(() => parseAppLocation(window.location), [])
+  const [view, setView] = useState(initialRoute.view)
   const [selectedProduct, setSelectedProduct] = useState(null)
 
   // 맞춤 조건
   const [goal, setGoal] = useState(DEFAULT_GOAL)
   const [subFilters, setSubFilters] = useState(DEFAULT_SUB_FILTERS)
   const [allergies, setAllergies] = useState([])
-  const [search, setSearch] = useState('')
-  const [sortBy, setSortBy] = useState('recommend')
+  const [search, setSearch] = useState(initialRoute.search || '')
+  const [sortBy, setSortBy] = useState(initialRoute.sortBy || 'recommend')
 
   // 검색 모드: 'normal'(상품명/카테고리) | 'ai'(자연어 조건). 사용자가 직접 전환
-  const [searchMode, setSearchMode] = useState('normal')
-  const [aiQuery, setAiQuery] = useState('')
+  const [searchMode, setSearchMode] = useState(initialRoute.searchMode || 'normal')
+  const [aiQuery, setAiQuery] = useState(initialRoute.aiQuery || '')
   const [aiResult, setAiResult] = useState(null)
   const [aiLoading, setAiLoading] = useState(false)
   const [aiError, setAiError] = useState(null)
@@ -74,9 +73,9 @@ export function StoreProvider({ children }) {
   useEffect(() => () => aiRequest.current?.abort(), [])
 
   // 상단 제품 카테고리 브라우징 (목표와 별개 축)
-  const [shopCategory, setShopCategory] = useState('전체상품')
-  const [shopSub, setShopSub] = useState('전체')
-  const [dealsOnly, setDealsOnly] = useState(false)
+  const [shopCategory, setShopCategory] = useState(initialRoute.shopCategory || '전체상품')
+  const [shopSub, setShopSub] = useState(initialRoute.shopSub || '전체')
+  const [dealsOnly, setDealsOnly] = useState(Boolean(initialRoute.dealsOnly))
 
   // 커머스 상태
   const [wishlist, setWishlist] = useState([])
@@ -182,8 +181,11 @@ export function StoreProvider({ children }) {
         if (!mounted) return
 
         const productsById = new Map(nextProducts.map((product) => [product.id, product]))
+        const routeProductId = parseAppLocation(window.location).productId
         setProducts(nextProducts)
-        setSelectedProduct((current) => productsById.get(current?.id) || nextProducts[0])
+        setSelectedProduct((current) => routeProductId
+          ? (productsById.get(routeProductId) || null)
+          : (productsById.get(current?.id) || nextProducts[0]))
         // 실제 서비스처럼 빈 장바구니/위시리스트로 시작 (임의 mock 항목 미주입)
         setWishlist((current) => current.filter((id) => productsById.has(id)))
       } catch (error) {
@@ -339,25 +341,71 @@ export function StoreProvider({ children }) {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [authUserId])
 
+  const rememberScroll = () => {
+    window.history.replaceState({ ...window.history.state, view, scrollY: window.scrollY }, '', window.location.href)
+  }
+  const catalogStateUrl = () => catalogUrl({ search, searchMode, aiQuery, shopCategory, shopSub, dealsOnly, sortBy })
   const navigate = (v) => {
-    if (window.location.pathname.startsWith('/payment/')) {
-      window.history.replaceState({}, '', '/')
-    }
     if (['adminProducts', 'adminOrders'].includes(v) && !authLoading && !isAdmin) {
       showToast('관리자 권한이 필요한 페이지입니다.')
       setView('main')
+      window.history.pushState({ view: 'main', scrollY: 0 }, '', '/')
       scrollTop()
       return
+    }
+    rememberScroll()
+    const nextUrl = v === 'products' ? catalogStateUrl() : viewUrl(v)
+    if (`${window.location.pathname}${window.location.search}` !== nextUrl) {
+      window.history.pushState({ view: v, scrollY: 0 }, '', nextUrl)
     }
     setView(v)
     scrollTop()
   }
 
   const openProduct = (product) => {
+    rememberScroll()
+    window.history.pushState({ view: 'detail', productId: product.id, scrollY: 0 }, '', productUrl(product.id))
     setSelectedProduct(product)
     setView('detail')
     scrollTop()
   }
+
+  useEffect(() => {
+    if (view !== 'products') return
+    const nextUrl = catalogStateUrl()
+    if (`${window.location.pathname}${window.location.search}` !== nextUrl) {
+      window.history.replaceState({ ...window.history.state, view: 'products' }, '', nextUrl)
+    }
+  // Catalog state is intentionally mirrored to the current history entry.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [view, search, searchMode, aiQuery, shopCategory, shopSub, dealsOnly, sortBy])
+
+  useEffect(() => {
+    const previousRestoration = window.history.scrollRestoration
+    window.history.scrollRestoration = 'manual'
+    window.history.replaceState({ ...window.history.state, view, scrollY: window.history.state?.scrollY ?? window.scrollY }, '', window.location.href)
+    const onPopState = (event) => {
+      const route = parseAppLocation(window.location)
+      setView(route.view)
+      if (route.view === 'detail') {
+        setSelectedProduct(products.find((product) => product.id === route.productId) || null)
+      } else if (route.view === 'products') {
+        setSearch(route.search || '')
+        setSearchMode(route.searchMode || 'normal')
+        setAiQuery(route.aiQuery || '')
+        setShopCategory(route.shopCategory || '전체상품')
+        setShopSub(route.shopSub || '전체')
+        setDealsOnly(Boolean(route.dealsOnly))
+        setSortBy(route.sortBy || 'recommend')
+      }
+      window.requestAnimationFrame(() => window.scrollTo({ top: event.state?.scrollY || 0, behavior: 'auto' }))
+    }
+    window.addEventListener('popstate', onPopState)
+    return () => {
+      window.removeEventListener('popstate', onPopState)
+      window.history.scrollRestoration = previousRestoration
+    }
+  }, [products, view])
 
   const runAiSearch = async (raw) => {
     const query = typeof (raw ?? aiQuery) === 'string' ? (raw ?? aiQuery).trim() : ''
@@ -370,7 +418,7 @@ export function StoreProvider({ children }) {
     setAiError(null)
     setAiLoading(true)
     setDealsOnly(false)
-    setView('products')
+    navigate('products')
     window.setTimeout(() => document.getElementById('product-list')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 0)
     try {
       const filters = await requestAiConditions(supabase, query, request.signal)

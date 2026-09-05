@@ -24,7 +24,7 @@ export default function ProductDetail() {
           <Icon name={productsError ? 'alert-circle' : 'package'} size={44} />
           <h3>{productsLoading ? '상품을 불러오고 있습니다.' : '선택된 상품이 없습니다.'}</h3>
           <p>{productsError ? '상품 조회 상태를 확인한 뒤 다시 시도해 주세요.' : '잠시만 기다려 주세요.'}</p>
-          {!productsLoading && <button className="btn btn-primary" onClick={() => navigate('main')}>상품 목록으로</button>}
+          {!productsLoading && <button className="btn btn-primary" onClick={() => navigate('products')}>상품 목록으로</button>}
         </div>
       </div>
     )
@@ -81,7 +81,7 @@ export default function ProductDetail() {
       <div className="crumbs">
         <span className="c-link" onClick={() => navigate('main')}>홈</span>
         <Icon name="chevron-right" size={13} />
-        <span>{p.category}</span>
+        <span className="c-link" onClick={() => navigate('products')}>상품 목록</span>
         <Icon name="chevron-right" size={13} />
         <span className="cur">{p.name}</span>
       </div>
