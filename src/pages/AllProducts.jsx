@@ -42,6 +42,15 @@ export default function AllProducts() {
           <button className="btn btn-ghost btn-sm" onClick={() => navigate('main')}>← 홈으로</button>
         </div>
 
+        {searchMode === 'normal' && search.trim() && !productsLoading && !productsError && (
+          <div className="search-result-summary" aria-live="polite">
+            <p><strong>‘{search.trim()}’</strong> 검색 결과 <b>{aiProducts.length}개</b></p>
+            <button type="button" onClick={() => setSearch('')} aria-label={`${search.trim()} 검색어 제거`}>
+              <span>{search.trim()}</span><Icon name="x" size={14} />
+            </button>
+          </div>
+        )}
+
         {searchMode === 'ai' && !aiSearch && !aiLoading && !aiError && (
           <div className="ai-hint">
             <span className="ai-hint-label"><Icon name="sparkles" size={14} /> AI 자연어 검색 예시</span>

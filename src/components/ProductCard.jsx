@@ -1,6 +1,5 @@
 import { useStore } from '../store'
 import Icon from './Icon'
-import Stars from './Stars'
 import GoalBadge from './GoalBadge'
 import ProductImage from './ProductImage'
 import { discountRate, won } from '../lib/format'
@@ -13,11 +12,6 @@ export default function ProductCard({ product }) {
     <article className="card">
       <div className="card-media" onClick={() => openProduct(product)}>
         <ProductImage src={product.image} alt={product.name} />
-        <div className="card-badges">
-          {product.isBest && <span className="tag tag-best">BEST</span>}
-          {product.isNew && <span className="tag tag-new">NEW</span>}
-          <span className="tag tag-clean">{product.cleanScore}</span>
-        </div>
         <button
           className="card-wish"
           onClick={(e) => { e.stopPropagation(); toggleWish(product.id) }}
@@ -29,10 +23,7 @@ export default function ProductCard({ product }) {
       </div>
 
       <div className="card-body">
-        <div className="card-top">
-          <span className="card-brand">{product.brand}</span>
-          <Stars rating={product.rating} count={product.reviewCount} />
-        </div>
+        <div className="card-top"><span className="card-brand">{product.brand}</span></div>
 
         <h3 className="card-name" onClick={() => openProduct(product)}>{product.name}</h3>
 
@@ -41,18 +32,20 @@ export default function ProductCard({ product }) {
           <span>{product.origin}</span>
         </span>
 
+        <div className="card-price">
+          <div className="orig">{won(product.originalPrice)}</div>
+          <div className="now">
+            <span className="disc">{discountRate(product.originalPrice, product.price)}%</span>
+            <span className="amt">{won(product.price)}</span>
+          </div>
+        </div>
+
         <GoalBadge goal={goal} product={product} />
 
-        <div className="card-foot">
-          <div className="card-price">
-            <div className="orig">{won(product.originalPrice)}</div>
-            <div className="now">
-              <span className="disc">{discountRate(product.originalPrice, product.price)}%</span>
-              <span className="amt">{won(product.price)}</span>
-            </div>
-          </div>
+        <div className="card-actions">
           <button className="card-add" onClick={() => addToCart(product, 1)} aria-label="장바구니 담기">
             <Icon name="cart" size={18} />
+            <span>담기</span>
           </button>
         </div>
       </div>

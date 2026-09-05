@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useStore } from '../store'
 import { CATEGORIES } from '../data/mock'
 import Icon from './Icon'
@@ -43,7 +43,7 @@ function buildSuggestions(products, vocab, query) {
 
 export default function Header() {
   const {
-    view, navigate, setView, search, setSearch,
+    navigate, search, setSearch,
     searchMode, setSearchMode, aiQuery, setAiQuery, aiLoading, runAiSearch, clearAiSearch,
     shopCategory, setShopCategory, shopSub, setShopSub,
     wishlist, cartCount, setDrawerOpen, showToast, isLoggedIn, requireCartLogin,
@@ -51,18 +51,22 @@ export default function Header() {
   } = useStore()
   const [aiPlaceholder, setAiPlaceholder] = useState('')
   const [searchFocused, setSearchFocused] = useState(false)
+  const [searchInput, setSearchInput] = useState(null)
+  const [mobileSearchOpen, setMobileSearchOpen] = useState(false)
   const [sugOpen, setSugOpen] = useState(false)
   const [hi, setHi] = useState(-1)
+  const searchInputRef = useRef(null)
 
   const isAi = searchMode === 'ai'
   // 일반 검색: 클릭(focus) 또는 입력 시 왼쪽 돋보기를 숨기고 오른쪽 검색 버튼을 노출
-  const normalActive = !isAi && (searchFocused || Boolean(search))
+  const searchDraft = searchInput ?? search
+  const normalActive = !isAi && (searchFocused || Boolean(searchDraft))
 
   // 자동완성 (일반 검색 전용, 실제 상품 데이터 기반)
   const vocab = useMemo(() => buildVocab(products), [products])
-  const suggestions = useMemo(() => buildSuggestions(products, vocab, search), [products, vocab, search])
+  const suggestions = useMemo(() => buildSuggestions(products, vocab, searchDraft), [products, vocab, searchDraft])
   const sugCount = suggestions.terms.length + suggestions.items.length
-  const sugVisible = !isAi && searchFocused && sugOpen && search.trim().length >= 1 && sugCount > 0
+  const sugVisible = !isAi && searchFocused && sugOpen && searchDraft.trim().length >= 1 && sugCount > 0
 
   // 카테고리/하위 선택 → 필터 적용 후 상품 목록으로 스크롤
   const openCategory = (c, sub) => {
@@ -103,19 +107,25 @@ export default function Header() {
   const enterAiMode = () => {
     setSearchMode('ai')
     setSearch('')
-    if (view !== 'main') navigate('main')
   }
   const scrollToResults = () => {
     navigate('products')
   }
   const onSearchSubmit = (e) => {
     e.preventDefault()
-    if (isAi) { if (!aiLoading) void runAiSearch(); return }
+    if (isAi) {
+      if (!aiLoading) void runAiSearch()
+      setMobileSearchOpen(false)
+      return
+    }
+    setSearch(searchDraft.trim())
+    setSearchInput(null)
     setSugOpen(false)
+    setMobileSearchOpen(false)
     scrollToResults()
   }
 
-  const selectTerm = (t) => { setSearch(t); setSugOpen(false); setHi(-1); scrollToResults() }
+  const selectTerm = (t) => { setSearchInput(null); setSearch(t); setSugOpen(false); setHi(-1); setMobileSearchOpen(false); scrollToResults() }
   const selectProduct = (p) => { setSugOpen(false); setHi(-1); openProduct(p) }
   const onSearchKeyDown = (e) => {
     if (e.key === 'Escape') { setSugOpen(false); setHi(-1); return }
@@ -152,7 +162,16 @@ export default function Header() {
               </div>
             </div>
 
-            <form className={`search${isAi ? ' ai' : ''}${normalActive ? ' focused' : ''}`} onSubmit={onSearchSubmit}>
+            <form className={`search${isAi ? ' ai' : ''}${normalActive ? ' focused' : ''}${mobileSearchOpen ? ' mobile-open' : ''}`} onSubmit={onSearchSubmit}>
+              <button
+                type="button"
+                className="mobile-search-mode"
+                onClick={isAi ? clearAiSearch : enterAiMode}
+                aria-label={isAi ? '일반 검색으로 전환' : 'AI 검색으로 전환'}
+                title={isAi ? '일반 검색' : 'AI 검색'}
+              >
+                <Icon name={isAi ? 'chevron-left' : 'sparkles'} size={17} />
+              </button>
               {(isAi || !normalActive) && (
                 <Icon name={isAi ? 'sparkles' : 'search'} size={17} className={`s-ico${isAi ? ' ai' : ''}`} />
               )}
@@ -162,7 +181,7 @@ export default function Header() {
                   placeholder={aiPlaceholder}
                   value={aiQuery}
                   onChange={(e) => setAiQuery(e.target.value)}
-                  onFocus={() => view !== 'main' && setView('main')}
+                  ref={searchInputRef}
                   aria-label="AI 자연어 검색"
                   maxLength={QUERY_MAX_LENGTH}
                   aria-busy={aiLoading}
@@ -171,9 +190,10 @@ export default function Header() {
                 <input
                   type="text"
                   placeholder="상품명 또는 카테고리 검색"
-                  value={search}
-                  onChange={(e) => { setSearch(e.target.value); setSugOpen(e.target.value.trim().length >= 1); setHi(-1) }}
-                  onFocus={() => { setSearchFocused(true); if (search.trim()) setSugOpen(true); if (view !== 'main') setView('main') }}
+                  value={searchDraft}
+                  ref={searchInputRef}
+                  onChange={(e) => { setSearchInput(e.target.value); setSugOpen(e.target.value.trim().length >= 1); setHi(-1) }}
+                  onFocus={() => { setSearchFocused(true); if (searchDraft.trim()) setSugOpen(true) }}
                   onBlur={() => setSearchFocused(false)}
                   onKeyDown={onSearchKeyDown}
                   aria-label="상품명 또는 카테고리 검색"
@@ -200,11 +220,15 @@ export default function Header() {
                       <Icon name="x" size={15} />
                     </button>
                   )
-                : search && (
-                    <button type="button" className="s-clear" onClick={() => setSearch('')} aria-label="검색어 지우기">
+                : searchDraft && (
+                    <button type="button" className="s-clear" onClick={() => setSearchInput('')} aria-label="검색어 지우기">
                       <Icon name="x" size={15} />
                     </button>
                   )}
+
+              <button type="button" className="mobile-search-close" onClick={() => { setMobileSearchOpen(false); setSugOpen(false) }} aria-label="검색 닫기">
+                <Icon name="x" size={19} />
+              </button>
 
               {sugVisible && (
                 <div className="search-sug" role="listbox" onMouseDown={(e) => e.preventDefault()}>
@@ -250,6 +274,17 @@ export default function Header() {
             )}
 
             <div className="header-actions">
+              <button
+                type="button"
+                className="icon-btn mobile-search-trigger"
+                onClick={() => {
+                  setMobileSearchOpen(true)
+                  window.requestAnimationFrame(() => searchInputRef.current?.focus())
+                }}
+                aria-label="검색 열기"
+              >
+                <Icon name="search" size={20} />
+              </button>
               {isLoggedIn ? (
                 <>
                   <button
@@ -265,7 +300,7 @@ export default function Header() {
                   </button>
                 </>
               ) : (
-                <button className="btn btn-soft btn-sm" onClick={() => navigate('login')}>
+                <button className="btn btn-soft btn-sm header-login-btn" onClick={() => navigate('login')}>
                   <Icon name="user" size={15} /> 로그인
                 </button>
               )}
