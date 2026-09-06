@@ -138,7 +138,7 @@ export default function AiFilterRecommendation({
                 <button type="button" className="btn btn-primary btn-sm" onClick={applyRecommendation}>
                   {additionIds.length ? '추천 조건 적용' : '확인'}
                 </button>
-                {additionIds.length > 0 && <button type="button" className="btn btn-ghost btn-sm" onClick={close}>취소</button>}
+                {additionIds.length > 0 && <button type="button" className="btn btn-text btn-sm" onClick={close}>취소</button>}
               </div>
             </div>
           ) : null}

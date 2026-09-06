@@ -299,7 +299,7 @@ function AdminProductsContent() {
   return <>
     <div className="wrap page admin-products-page">
       <div className="page-head admin-products-page-head">
-        <div className="admin-head"><span className="kicker">ADMIN CONSOLE</span><h1>웰빙 식품 데이터베이스 관리</h1><p>판매 상태와 영양 정보를 실제 상품 데이터에서 관리합니다.</p></div>
+        <div className="admin-head"><h1>상품 관리</h1><p>상품 정보 · 가격 · 재고</p></div>
         <button className="btn btn-primary admin-new-product" onClick={() => setEditorProduct(null)}><Icon name="plus" size={17} />신규 상품 등록</button>
       </div>
       <div className="admin-toolbar admin-products-toolbar">

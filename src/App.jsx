@@ -7,6 +7,7 @@ import Toast from './components/Toast'
 import CartDrawer from './components/CartDrawer'
 import CartLoginPrompt from './components/CartLoginPrompt'
 import Home from './pages/Home'
+import Deals from './pages/Deals'
 import AllProducts from './pages/AllProducts'
 import CustomShop from './pages/CustomShop'
 import GoalSetup from './pages/GoalSetup'
@@ -17,16 +18,24 @@ import PaymentSuccess from './pages/PaymentSuccess'
 import PaymentFail from './pages/PaymentFail'
 import Orders from './pages/Orders'
 import MyPage from './pages/MyPage'
+import Wishlist from './pages/Wishlist'
 import Login from './pages/Login'
 import Register from './pages/Register'
 import AdminProducts from './pages/AdminProducts'
+import AdminDashboard from './pages/AdminDashboard'
 import AdminOrders from './pages/AdminOrders'
 import AdminPartnerships from './pages/AdminPartnerships'
+import AdminInquiries from './pages/AdminInquiries'
 import ServiceInfo from './pages/ServiceInfo'
 import PartnerProposal from './pages/PartnerProposal'
+import Support from './pages/Support'
+import SupportInquiry from './pages/SupportInquiry'
+import SupportInquiries from './pages/SupportInquiries'
+import NotFound from './pages/NotFound'
 
 const PAGES = {
   main: Home,
+  deals: Deals,
   products: AllProducts,
   custom: CustomShop,
   goalSetup: GoalSetup,
@@ -37,11 +46,14 @@ const PAGES = {
   paymentFail: PaymentFail,
   orders: Orders,
   mypage: MyPage,
+  wishlist: Wishlist,
   login: Login,
   register: Register,
+  adminDashboard: AdminDashboard,
   adminProducts: AdminProducts,
   adminOrders: AdminOrders,
   adminPartnerships: AdminPartnerships,
+  adminInquiries: AdminInquiries,
   about: ServiceInfo,
   principles: ServiceInfo,
   partners: ServiceInfo,
@@ -49,13 +61,16 @@ const PAGES = {
   terms: ServiceInfo,
   privacy: ServiceInfo,
   cleanLabel: ServiceInfo,
-  support: ServiceInfo,
+  support: Support,
+  supportInquiry: SupportInquiry,
+  supportInquiries: SupportInquiries,
+  notFound: NotFound,
 }
 
 function Shell() {
   const { view, loginPromptOpen } = useStore()
-  const Page = PAGES[view] || Home
-  const isAdmin = ['adminProducts', 'adminOrders', 'adminPartnerships'].includes(view)
+  const Page = PAGES[view] || NotFound
+  const isAdmin = ['adminDashboard', 'adminProducts', 'adminOrders', 'adminPartnerships', 'adminInquiries'].includes(view)
   return (
     <div className="app">
       {isAdmin ? <AdminTopbar /> : <Header />}

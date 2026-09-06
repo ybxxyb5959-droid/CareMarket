@@ -23,6 +23,7 @@ function dateText(value) {
 export default function Orders() {
   const { authUserId, authLoading, navigate } = useStore()
   const [state, setState] = useState({ ownerId: null, rows: [], loading: false, error: null })
+  const [reloadKey, setReloadKey] = useState(0)
   const visible = state.ownerId === authUserId ? state : { rows: [], loading: Boolean(authUserId), error: null }
 
   useEffect(() => {
@@ -41,7 +42,7 @@ export default function Orders() {
     }
     void load()
     return () => { active = false }
-  }, [authUserId])
+  }, [authUserId, reloadKey])
 
   if (authLoading || visible.loading) {
     return <div className="wrap page page-narrow"><div className="empty" role="status"><Icon name="package" size={42} /><h3>주문내역을 불러오고 있습니다.</h3></div></div>
@@ -56,12 +57,14 @@ export default function Orders() {
       <div className="page-mid" style={{ margin: '0 auto' }}>
         <div className="page-head">
           <div><h1 className="page-title">주문 · 배송 내역</h1><p style={{ fontSize: 13, color: 'var(--muted)', marginTop: 4 }}>결제가 완료된 주문을 확인할 수 있습니다.</p></div>
-          <button className="btn btn-ghost btn-sm" onClick={() => navigate('main')}>쇼핑 계속하기 →</button>
+          <button className="btn btn-text btn-sm" onClick={() => navigate('main')}>쇼핑 계속하기 →</button>
         </div>
 
-        {visible.error && <div className="cart-status" role="alert">{visible.error}</div>}
-        {!visible.error && visible.rows.length === 0 && <div className="empty"><Icon name="package" size={42} /><h3>아직 완료된 주문이 없습니다.</h3><button className="btn btn-primary" onClick={() => navigate('main')}>상품 둘러보기</button></div>}
-        {visible.rows.map((order) => (
+        {visible.error ? (
+          <div className="empty" role="alert"><Icon name="alert-circle" size={42} /><h3>주문 내역을 불러오지 못했어요.</h3><p>잠시 후 다시 시도해 주세요.</p><button type="button" className="btn btn-primary" onClick={() => setReloadKey((key) => key + 1)}>다시 시도</button></div>
+        ) : visible.rows.length === 0 ? (
+          <div className="empty"><Icon name="package" size={42} /><h3>아직 주문 내역이 없어요.</h3><p>CareMarket의 상품을 둘러보세요.</p><button className="btn btn-primary" onClick={() => navigate('products')}>상품 둘러보기</button></div>
+        ) : visible.rows.map((order) => (
           <div key={order.order_id} className="order-card">
             <div className="order-top">
               <div className="order-id"><b>{order.toss_order_id || order.order_id}</b><span>· {dateText(order.created_at)}</span></div>

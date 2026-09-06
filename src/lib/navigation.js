@@ -1,5 +1,6 @@
 const VIEW_PATHS = {
   main: '/',
+  deals: '/deals',
   products: '/products',
   custom: '/for-you',
   goalSetup: '/goals',
@@ -7,11 +8,14 @@ const VIEW_PATHS = {
   checkout: '/checkout',
   orders: '/orders',
   mypage: '/mypage',
+  wishlist: '/wishlist',
   login: '/login',
   register: '/register',
+  adminDashboard: '/admin',
   adminProducts: '/admin/products',
   adminOrders: '/admin/orders',
   adminPartnerships: '/admin/partnerships',
+  adminInquiries: '/admin/inquiries',
   about: '/about',
   principles: '/principles',
   partners: '/partners',
@@ -20,6 +24,8 @@ const VIEW_PATHS = {
   privacy: '/privacy',
   cleanLabel: '/clean-label',
   support: '/support',
+  supportInquiry: '/support/inquiry',
+  supportInquiries: '/support/inquiries',
   paymentSuccess: '/payment/success',
   paymentFail: '/payment/fail',
 }
@@ -27,14 +33,19 @@ const VIEW_PATHS = {
 const PATH_VIEWS = Object.fromEntries(Object.entries(VIEW_PATHS).map(([view, path]) => [path, view]))
 
 export function parseAppLocation(location) {
-  const pathname = location?.pathname || '/'
+  const rawPathname = location?.pathname || '/'
+  const pathname = rawPathname === '/' ? '/' : rawPathname.replace(/\/+$/, '') || '/'
   const params = new URLSearchParams(location?.search || '')
-  const detail = pathname.match(/^\/products\/(\d+)\/?$/)
+  const detail = pathname.match(/^\/products\/([^/]+)$/)
   if (detail) {
-    return { view: 'detail', productId: Number(detail[1]) }
+    const numericId = Number(detail[1])
+    return {
+      view: 'detail',
+      productId: Number.isSafeInteger(numericId) && numericId > 0 ? numericId : detail[1],
+    }
   }
   const isSearch = pathname === '/search'
-  const view = isSearch ? 'products' : (PATH_VIEWS[pathname.replace(/\/$/, '') || '/'] || 'main')
+  const view = isSearch ? 'products' : (PATH_VIEWS[pathname] || 'notFound')
   const mode = params.get('mode') === 'ai' ? 'ai' : 'normal'
   const query = params.get('q') || ''
   return {
@@ -66,6 +77,10 @@ export function catalogUrl({ search, searchMode, aiQuery, shopCategory, shopSub,
 
 export function viewUrl(view) {
   return VIEW_PATHS[view] || '/'
+}
+
+export function adminOrdersUrl({ status } = {}) {
+  return status === 'pending' ? '/admin/orders?status=pending' : VIEW_PATHS.adminOrders
 }
 
 export function productUrl(productId) {

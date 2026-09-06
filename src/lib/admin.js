@@ -1,15 +1,19 @@
 import { supabase } from './supabase'
 export {
   ALLERGEN_OPTIONS,
+  FULFILLMENT_ORDER_STATUSES,
   NEXT_ORDER_STATUS,
   ORDER_STATUS_LABELS,
   PRODUCT_CATEGORIES,
+  filterAdminOrders,
   isBulkShippableOrder,
+  isFulfillmentOrder,
   summarizeAdminOrders,
   toAdminProductForm,
   validateAdminProduct,
 } from './admin-validation'
 import { validateAdminProduct } from './admin-validation'
+import { CUSTOMER_INQUIRY_SELECT, validateAdminInquiryAnswer } from './support'
 
 export async function fetchAdminProducts() {
   const { data, error } = await supabase
@@ -90,4 +94,24 @@ export async function updateAdminPartnership(inquiryId, { status, adminNote, rev
     .single()
   if (error) throw error
   return data
+}
+
+export async function fetchAdminCustomerInquiries() {
+  const { data, error } = await supabase
+    .from('customer_inquiries')
+    .select(CUSTOMER_INQUIRY_SELECT)
+    .order('created_at', { ascending: false })
+  if (error) throw error
+  return data || []
+}
+
+export async function answerAdminCustomerInquiry(inquiryId, answer) {
+  const validationError = validateAdminInquiryAnswer(answer)
+  if (validationError) throw new Error(validationError)
+  const { data, error } = await supabase.rpc('admin_answer_customer_inquiry', {
+    p_inquiry_id: inquiryId,
+    p_answer: answer.trim(),
+  })
+  if (error) throw error
+  return Array.isArray(data) ? data[0] : data
 }

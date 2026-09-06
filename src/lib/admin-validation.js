@@ -5,26 +5,33 @@ export { PRODUCT_CATEGORIES }
 export const ALLERGEN_OPTIONS = ['우유', '대두', '계란', '견과류', '밀', '갑각류', '복숭아', '쇠고기', '닭고기']
 
 export const ORDER_STATUS_LABELS = {
-  pending: '미완료',
+  pending: '결제 미완료',
   paid: '결제완료',
   preparing: '상품준비중',
   shipped: '배송중',
   delivered: '배송완료',
 }
 
+export const FULFILLMENT_ORDER_STATUSES = ['paid', 'preparing', 'shipped', 'delivered']
+
 export const NEXT_ORDER_STATUS = { paid: 'preparing', preparing: 'shipped', shipped: 'delivered' }
+
+export const isFulfillmentOrder = (order) => FULFILLMENT_ORDER_STATUSES.includes(order?.status)
 
 export const isBulkShippableOrder = (order) => order?.status === 'preparing'
 
+export function filterAdminOrders(orders = [], filter = 'fulfillment') {
+  if (filter === 'fulfillment') return orders.filter(isFulfillmentOrder)
+  return orders.filter((order) => order.status === filter)
+}
+
 export function summarizeAdminOrders(orders = []) {
   return orders.reduce((summary, order) => {
+    if (!isFulfillmentOrder(order)) return summary
     summary.total += 1
-    if (order.status === 'preparing') summary.preparing += 1
-    else if (order.status === 'shipped') summary.shipped += 1
-    else if (order.status === 'delivered') summary.delivered += 1
-    else summary.needsReview += 1
+    summary[order.status] += 1
     return summary
-  }, { total: 0, preparing: 0, shipped: 0, delivered: 0, needsReview: 0 })
+  }, { total: 0, paid: 0, preparing: 0, shipped: 0, delivered: 0 })
 }
 
 const numberOrNull = (value) => {

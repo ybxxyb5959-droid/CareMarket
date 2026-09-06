@@ -15,7 +15,6 @@ export default function Cart() {
   } = useStore()
   const [optimisticQuantities, setOptimisticQuantities] = useState({})
   const [productsExpanded, setProductsExpanded] = useState(false)
-
   const displayCart = useMemo(() => cart.map((item) => ({
     ...item,
     quantity: optimisticQuantities[item.product.id] ?? item.quantity,
@@ -78,14 +77,25 @@ export default function Cart() {
           <span>총 {cart.length}종 · {cartCount}개</span>
         </div>
 
-        {cartError && <div className="cart-status" role="alert">{cartError} <button className="btn btn-soft btn-sm" onClick={reloadCart}>다시 불러오기</button></div>}
-        {cartLoading && <p className="cart-status" role="status">장바구니를 불러오고 있습니다.</p>}
-        {cart.length === 0 ? (
+        {cartLoading ? (
+          <div className="empty cart-empty" role="status">
+            <Icon name="cart" size={44} />
+            <h3>장바구니를 불러오고 있습니다.</h3>
+            <p>담아둔 상품을 확인하는 중입니다.</p>
+          </div>
+        ) : cartError ? (
+          <div className="empty cart-empty" role="alert">
+            <Icon name="alert-circle" size={44} />
+            <h3>장바구니를 불러오지 못했어요.</h3>
+            <p>잠시 후 다시 시도해 주세요.</p>
+            <button type="button" className="btn btn-primary" onClick={reloadCart}>다시 시도</button>
+          </div>
+        ) : cart.length === 0 ? (
           <div className="empty cart-empty">
             <Icon name="cart" size={44} />
-            <h3>{cartLoading ? '잠시만 기다려 주세요.' : cartError ? '장바구니를 확인할 수 없습니다.' : '장바구니에 담긴 상품이 없습니다.'}</h3>
-            <p>나에게 맞는 웰빙 식품을 둘러보고 장바구니를 채워보세요.</p>
-            <button className="btn btn-primary" onClick={() => navigate('main')}>상품 둘러보기</button>
+            <h3>장바구니가 비어 있어요.</h3>
+            <p>건강한 선택을 담아보세요.</p>
+            <button className="btn btn-primary" onClick={() => navigate('products')}>상품 둘러보기</button>
           </div>
         ) : (
           <>

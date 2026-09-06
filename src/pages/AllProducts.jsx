@@ -78,7 +78,7 @@ export default function AllProducts() {
             <span className="eyebrow">{goal} 기준 영양 강조</span>
             <h1 className="page-title" style={{ marginTop: 6 }}>{title}</h1>
           </div>
-          <button className="btn btn-ghost btn-sm" onClick={() => navigate('main')}>← 홈으로</button>
+          <button className="btn btn-text btn-sm" onClick={() => navigate('main')}>← 홈으로</button>
         </div>
 
         {searchMode === 'normal' && search.trim() && !productsLoading && !productsError && (

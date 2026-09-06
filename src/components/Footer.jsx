@@ -11,7 +11,7 @@ const GROUPS = [
     ['브랜드 입점 · 제휴', 'partners'],
   ] },
   { title: 'SUPPORT', links: [
-    ['주문 · 배송 조회', 'orders'], ['고객센터', 'support'], ['FAQ', null],
+    ['주문 · 배송 조회', 'orders'], ['FAQ', 'support'], ['1:1 문의', 'supportInquiry'],
   ] },
   { title: 'POLICY', links: [
     ['이용약관', 'terms'], ['개인정보처리방침', 'privacy'],

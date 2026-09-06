@@ -1,7 +1,14 @@
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import test from 'node:test'
-import { NEXT_ORDER_STATUS, isBulkShippableOrder, summarizeAdminOrders, validateAdminProduct } from '../src/lib/admin-validation.js'
+import {
+  FULFILLMENT_ORDER_STATUSES,
+  NEXT_ORDER_STATUS,
+  filterAdminOrders,
+  isBulkShippableOrder,
+  summarizeAdminOrders,
+  validateAdminProduct,
+} from '../src/lib/admin-validation.js'
 
 const fulfillmentMigration = readFileSync(new URL('../supabase/migrations/20260905000600_order_fulfillment_bulk.sql', import.meta.url), 'utf8')
 
@@ -51,7 +58,22 @@ test('bulk shipping only accepts preparing orders', () => {
   assert.equal(isBulkShippableOrder({ status: 'delivered' }), false)
 })
 
-test('admin order summary groups non-fulfillment states as needing review', () => {
+test('admin fulfillment filters separate pending orders from the default list', () => {
+  const orders = [
+    { status: 'pending' },
+    { status: 'paid' },
+    { status: 'preparing' },
+    { status: 'preparing' },
+    { status: 'shipped' },
+    { status: 'delivered' },
+  ]
+
+  assert.deepEqual(FULFILLMENT_ORDER_STATUSES, ['paid', 'preparing', 'shipped', 'delivered'])
+  assert.deepEqual(filterAdminOrders(orders).map((order) => order.status), ['paid', 'preparing', 'preparing', 'shipped', 'delivered'])
+  assert.deepEqual(filterAdminOrders(orders, 'pending').map((order) => order.status), ['pending'])
+})
+
+test('admin total excludes pending and counts every fulfillment status', () => {
   assert.deepEqual(summarizeAdminOrders([
     { status: 'pending' },
     { status: 'paid' },
@@ -59,7 +81,7 @@ test('admin order summary groups non-fulfillment states as needing review', () =
     { status: 'preparing' },
     { status: 'shipped' },
     { status: 'delivered' },
-  ]), { total: 6, preparing: 2, shipped: 1, delivered: 1, needsReview: 2 })
+  ]), { total: 5, paid: 1, preparing: 2, shipped: 1, delivered: 1 })
 })
 
 test('payment finalization advances paid orders to preparing without replacing inventory logic', () => {

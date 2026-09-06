@@ -1,12 +1,10 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useMemo, useState } from 'react'
 import { useStore, useAutoSlide } from '../store'
 import { GOALS, HERO_SLIDES, VALUES } from '../data/mock'
 import Icon from '../components/Icon'
 import ProductCard from '../components/ProductCard'
 import WellnessTable from '../components/WellnessTable'
 import { filterAndSort } from '../lib/catalog'
-import { getCountdown, getLocalDateKey, selectDailyDeals } from '../lib/deals'
-import DealProductCard from '../components/DealProductCard'
 
 // 주목표별 강조 안내문
 const GOAL_GUIDE = {
@@ -16,20 +14,20 @@ const GOAL_GUIDE = {
   '영양제 탐색': '영양제·비타민 상품을 우선 표시합니다.',
 }
 
+const LETTER_EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+
 export default function Home() {
   const {
     goal, setGoal, subFilters, setSubFilters, allergies,
-    products, productsLoading, openProduct, navigate,
+    products, productsLoading, productsError, reloadProducts, openProduct, navigate,
     isLoggedIn, logout, setShopCategory, setShopSub, setSortBy,
-    setDealsOnly, setSearch, clearAiSearch,
+    setDealsOnly,
   } = useStore()
 
   const [slide, setSlide] = useAutoSlide(HERO_SLIDES.length)
   const [focusGoal, setFocusGoal] = useState(null) // 비로그인 목표 셀렉터: 포커스된 목표
-  const [clock, setClock] = useState(() => ({
-    dateKey: getLocalDateKey(),
-    countdown: getCountdown(),
-  }))
+  const [letterEmail, setLetterEmail] = useState('')
+  const [letterStatus, setLetterStatus] = useState(null)
   const hero = HERO_SLIDES[slide]
   const activeGoal = GOALS.find((g) => g.name === focusGoal)
 
@@ -38,20 +36,6 @@ export default function Home() {
     () => filterAndSort(products, { search: '', subFilters: [], allergies, sortBy: 'recommend', goal, shopCategory: '전체상품', shopSub: '전체' }).slice(0, 4),
     [products, allergies, goal],
   )
-
-  const dailyDeals = useMemo(
-    () => selectDailyDeals(products, clock.dateKey),
-    [products, clock.dateKey],
-  )
-
-  useEffect(() => {
-    const updateClock = () => {
-      const now = new Date()
-      setClock({ dateKey: getLocalDateKey(now), countdown: getCountdown(now) })
-    }
-    const interval = window.setInterval(updateClock, 1000)
-    return () => window.clearInterval(interval)
-  }, [])
 
   // Hero 컬렉션 CTA → 컬렉션 필터 설정 후 전체상품 페이지로 이동
   const applyCollection = (col) => {
@@ -68,15 +52,21 @@ export default function Home() {
     if (opts.recommend) setSortBy('recommend')
     navigate('products')
   }
-  const goToDeals = () => {
-    clearAiSearch()
-    setSearch('')
-    setSubFilters([])
-    setShopCategory('전체상품')
-    setShopSub('전체')
-    setSortBy('recommend')
-    setDealsOnly(true)
-    navigate('products')
+
+  const handleLetterSubmit = (event) => {
+    event.preventDefault()
+    const value = letterEmail.trim()
+    if (!value) {
+      setLetterStatus({ type: 'error', message: '이메일 주소를 입력해주세요.' })
+      return
+    }
+    if (!LETTER_EMAIL_RE.test(value)) {
+      setLetterStatus({ type: 'error', message: '올바른 이메일 형식으로 입력해주세요.' })
+      return
+    }
+
+    // 뉴스레터 저장 API가 준비되면 이 지점에서 연결한다. 현재는 저장하지 않는다.
+    setLetterStatus({ type: 'info', message: '현재 케어레터 구독 신청 기능을 준비 중입니다.' })
   }
 
   return (
@@ -242,32 +232,6 @@ export default function Home() {
         </section>
       )}
 
-      {/* ── 오늘의 특가: 실제 할인 상품의 날짜별 큐레이션 ── */}
-      <section className="today-deals" aria-labelledby="today-deals-title">
-        <div className="wrap">
-          <div className="today-deals-head">
-            <div>
-              <span className="eyebrow">TODAY&apos;S DEAL</span>
-              <h2 id="today-deals-title" className="serif">오늘의 특가</h2>
-              <div className="deal-countdown" aria-live="off">
-                <span>오늘 특가 남은 시간</span>
-                <time>{clock.countdown}</time>
-              </div>
-            </div>
-            <button type="button" className="more-link" onClick={goToDeals}>특가 상품 더보기 →</button>
-          </div>
-          {productsLoading ? (
-            <p className="today-deals-status" aria-live="polite">특가 상품을 불러오고 있습니다.</p>
-          ) : dailyDeals.length ? (
-            <div className="today-deals-grid">
-              {dailyDeals.map((product) => <DealProductCard key={product.id} product={product} />)}
-            </div>
-          ) : (
-            <p className="today-deals-status">현재 판매 중인 할인 상품이 없습니다.</p>
-          )}
-        </div>
-      </section>
-
       {/* ── 맞춤 추천 상품: 설명 콘텐츠보다 먼저 구매 진입점을 제공 ── */}
       <section className="section home-recommended">
         <div className="wrap">
@@ -283,11 +247,54 @@ export default function Home() {
           </div>
           {productsLoading ? (
             <div className="empty" aria-live="polite"><Icon name="package" size={40} /><h3>추천 상품을 불러오고 있습니다.</h3></div>
-          ) : (
+          ) : productsError ? (
+            <div className="empty home-recommended-error" role="alert">
+              <Icon name="alert-circle" size={40} />
+              <h3>상품을 불러오지 못했어요.</h3>
+              <p>잠시 후 다시 시도해 주세요.</p>
+              <button type="button" className="btn btn-primary" onClick={reloadProducts}>다시 시도</button>
+            </div>
+          ) : recommended.length ? (
             <div className="product-grid">
               {recommended.map((p) => <ProductCard key={p.id} product={p} />)}
             </div>
+          ) : (
+            <div className="empty"><Icon name="package" size={40} /><h3>현재 추천할 수 있는 상품이 없어요.</h3><p>전체 상품에서 다른 건강한 선택을 둘러보세요.</p><button type="button" className="btn btn-primary" onClick={() => goToProducts({ recommend: true })}>전체 상품 보기</button></div>
           )}
+        </div>
+      </section>
+
+      {/* ── CareMarket Letter: 웰니스 큐레이션 이메일 안내 ── */}
+      <section className="home-letter-section" aria-labelledby="home-letter-title">
+        <div className="wrap">
+          <div className="home-letter">
+            <div className="home-letter-copy">
+              <span className="home-letter-label">CAREMARKET LETTER</span>
+              <h2 id="home-letter-title" className="serif">건강한 선택을,<br />가볍게 받아보세요.</h2>
+              <p>새로운 웰니스 상품과 영양 큐레이션,<br className="home-letter-desktop-break" /> CareMarket의 선택 기준을 정기적으로 전해드려요.</p>
+            </div>
+            <form className="home-letter-form" onSubmit={handleLetterSubmit} noValidate>
+              <label className="sr-only" htmlFor="home-letter-email">이메일 주소</label>
+              <div className="home-letter-fields">
+                <input
+                  id="home-letter-email"
+                  type="email"
+                  value={letterEmail}
+                  onChange={(event) => {
+                    setLetterEmail(event.target.value)
+                    if (letterStatus) setLetterStatus(null)
+                  }}
+                  placeholder="이메일 주소를 입력해주세요"
+                  autoComplete="email"
+                  maxLength={254}
+                  aria-invalid={letterStatus?.type === 'error'}
+                  aria-describedby={letterStatus ? 'home-letter-status' : undefined}
+                />
+                <button type="submit" className="home-letter-submit">케어레터 구독하기 <span aria-hidden="true">→</span></button>
+              </div>
+              {letterStatus && <p id="home-letter-status" className={`home-letter-status ${letterStatus.type}`} role={letterStatus.type === 'error' ? 'alert' : 'status'}>{letterStatus.message}</p>}
+            </form>
+          </div>
         </div>
       </section>
 

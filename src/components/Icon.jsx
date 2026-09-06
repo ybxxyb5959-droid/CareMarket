@@ -1,6 +1,7 @@
 // 의존성 없이 필요한 아이콘만 담은 인라인 SVG 세트 (stroke = currentColor)
 const P = {
   leaf: <><path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10Z" /><path d="M2 21c0-3 1.85-5.36 5.08-6" /></>,
+  sprout: <><path d="M7 20h10" /><path d="M12 20v-7" /><path d="M12 13c-3.8 0-6-2.2-6-5.8 3.8 0 6 2.2 6 5.8Z" /><path d="M12 13c0-4.4 2.6-7 6.8-7-0.1 4.2-2.6 7-6.8 7Z" /></>,
   search: <><circle cx="11" cy="11" r="7" /><path d="m21 21-4.3-4.3" /></>,
   x: <><path d="M18 6 6 18" /><path d="m6 6 12 12" /></>,
   heart: <path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z" />,
@@ -36,6 +37,7 @@ const P = {
   sliders: <><path d="M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3M1 14h6M9 8h6M17 16h6" /></>,
   'alert-circle': <><circle cx="12" cy="12" r="9" /><path d="M12 8v4M12 16h.01" /></>,
   package: <><path d="M11 21.73a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73z" /><path d="m3.3 7 8.7 5 8.7-5M12 22V12" /></>,
+  'message-circle': <><path d="M21 11.5a8.4 8.4 0 0 1-9 8.5 9.6 9.6 0 0 1-4-.9L3 21l1.7-4.5A8.5 8.5 0 1 1 21 11.5Z" /></>,
 }
 
 export default function Icon({ name, size = 18, className = '', fill = 'none', strokeWidth = 1.8, style }) {

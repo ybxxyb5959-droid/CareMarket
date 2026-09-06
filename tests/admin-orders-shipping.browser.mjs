@@ -98,6 +98,26 @@ try {
       delivery_request: null,
       order_items: [{ product_id: 2, quantity: 1, price_at_order: 10000, products: { name: '이전 주문 상품', brand: 'CareMarket' } }],
     },
+    {
+      order_id: '10000000-0000-4000-8000-000000000003',
+      user_id: adminUserId,
+      toss_order_id: 'CM-PENDING-001',
+      total_price: 16000,
+      status: 'pending',
+      created_at: '2026-09-06T00:35:00.000Z',
+      recipient_name: '박용빈',
+      order_items: [{ product_id: 3, quantity: 1, price_at_order: 13000, products: { name: '결제 미완료 상품', brand: 'CareMarket' } }],
+    },
+    {
+      order_id: '10000000-0000-4000-8000-000000000004',
+      user_id: adminUserId,
+      toss_order_id: 'CM-PAID-001',
+      total_price: 23000,
+      status: 'paid',
+      created_at: '2026-09-06T00:34:00.000Z',
+      recipient_name: '박용빈',
+      order_items: [{ product_id: 4, quantity: 1, price_at_order: 20000, products: { name: '결제 완료 상품', brand: 'CareMarket' } }],
+    },
   ]
 
   const statusUpdates = []
@@ -110,6 +130,17 @@ try {
   await page.goto(`${origin}/admin/orders`)
   await page.getByRole('heading', { name: '주문 · 출고 관리', exact: true }).waitFor()
   await page.getByText('CM-20260906-001', { exact: true }).waitFor()
+  assert.equal(await page.getByText('CM-PENDING-001', { exact: true }).count(), 0)
+  assert.equal(await page.getByText('CM-PAID-001', { exact: true }).count(), 1)
+  assert.equal(await page.locator('.admin-order-summary > div').filter({ hasText: '전체 주문' }).locator('dd').innerText(), '3건')
+
+  await page.getByRole('button', { name: '결제 미완료', exact: true }).click()
+  await page.getByText('CM-PENDING-001', { exact: true }).waitFor()
+  assert.equal(await page.getByText('CM-20260906-001', { exact: true }).count(), 0)
+  assert.equal(await page.getByText('CM-PAID-001', { exact: true }).count(), 0)
+  await page.getByRole('button', { name: '출고 전체', exact: true }).click()
+  await page.getByText('CM-20260906-001', { exact: true }).waitFor()
+  assert.equal(await page.getByText('CM-PENDING-001', { exact: true }).count(), 0)
 
   await page.getByRole('button', { name: '상세', exact: true }).first().click()
   const detail = page.getByRole('dialog')
@@ -161,6 +192,9 @@ try {
   await userContext.close()
 
   console.log(JSON.stringify({
+    pendingSeparatedFromDefaultFulfillmentList: true,
+    paidVisibleInDefaultFulfillmentList: true,
+    fulfillmentTotalExcludesPending: true,
     shippingSnapshotVisible: true,
     missingSnapshotEmptyStateVisible: true,
     regularUserBlockedBeforeAdminOrderRead: true,

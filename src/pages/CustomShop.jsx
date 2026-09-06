@@ -137,7 +137,7 @@ export default function CustomShop() {
             <ProductRow title="가볍게 즐기기 좋은 상품" hint="200kcal 이하" items={lightRow} />
 
             <div className="foryou-foot">
-              <button type="button" className="btn btn-ghost btn-sm" onClick={() => navigate('products')}>
+              <button type="button" className="btn btn-text btn-sm" onClick={() => navigate('products')}>
                 전체 상품 보기 <Icon name="chevron-right" size={15} />
               </button>
             </div>

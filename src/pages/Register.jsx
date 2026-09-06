@@ -28,7 +28,6 @@ const AGREEMENTS = [
 
 export default function Register() {
   const { navigate, register, checkEmailExists } = useStore()
-  const [role, setRole] = useState('general') // general | seller | admin
   const [step, setStep] = useState(1)
 
   // STEP 1 — 약관
@@ -113,62 +112,14 @@ export default function Register() {
         <div className="auth-head auth-head-lg">
           <span className="eyebrow">Join CareMarket</span>
           <h2>회원가입</h2>
-          <p>가입 유형을 선택해 주세요.</p>
+          <p>약관에 동의하고 회원정보를 입력해 주세요.</p>
         </div>
 
-          {/* 가입 진입 — 일반 / 판매자 / 관리자 */}
-          <div className="auth-roles" role="tablist" aria-label="가입 유형">
-            {[
-              { id: 'general', label: '일반회원 가입' },
-              { id: 'seller', label: '판매자 가입' },
-              { id: 'admin', label: '관리자 로그인' },
-            ].map((r) => (
-              <button
-                key={r.id}
-                type="button"
-                role="tab"
-                aria-selected={role === r.id}
-                className={`auth-role${role === r.id ? ' on' : ''}`}
-                onClick={() => { setRole(r.id); setError('') }}
-              >
-                {r.label}
-              </button>
-            ))}
-          </div>
-
-          {role === 'admin' && (
-            <div className="auth-notice">
-              <Icon name="shield-check" size={18} />
-              <div>
-                <b>관리자 전용 로그인</b>
-                <p>관리자 계정은 별도로 발급됩니다. 로그인 화면에서 관리자 계정으로 접속해 주세요.</p>
-                <button type="button" className="btn btn-primary btn-sm" onClick={() => navigate('login')}>
-                  로그인 화면으로
-                </button>
-              </div>
-            </div>
-          )}
-
-          {role === 'seller' && (
-            <div className="auth-notice">
-              <Icon name="leaf" size={18} />
-              <div>
-                <b>판매자 입점 신청</b>
-                <p>판매자 회원가입은 현재 준비 중입니다. 입점 문의는 고객센터를 통해 접수해 주세요.</p>
-                <button type="button" className="btn btn-ghost btn-sm" onClick={() => setRole('general')}>
-                  일반회원으로 가입하기
-                </button>
-              </div>
-            </div>
-          )}
-
-          {role === 'general' && (
-            <>
-              <div className="auth-steps">
+        <div className="auth-steps">
                 <span className={`auth-step${step === 1 ? ' on' : ''}`}><i>1</i> 약관 동의</span>
                 <span className="auth-step-line" />
                 <span className={`auth-step${step === 2 ? ' on' : ''}`}><i>2</i> 회원정보 입력</span>
-              </div>
+        </div>
 
               {step === 1 ? (
                 <div>
@@ -285,9 +236,6 @@ export default function Register() {
                   </div>
                 </form>
               )}
-            </>
-          )}
-
         <div className="auth-foot">
           이미 계정이 있으신가요?
           <button onClick={() => navigate('login')}>로그인</button>

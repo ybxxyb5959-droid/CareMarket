@@ -108,7 +108,7 @@ export default function CartDrawer() {
               </div>
             </div>
             <div className="drawer-cta">
-              <button className="btn btn-ghost" onClick={() => { setDrawerOpen(false); navigate('cart') }}>장바구니 상세</button>
+              <button className="btn btn-text" onClick={() => { setDrawerOpen(false); navigate('cart') }}>장바구니 상세 보기</button>
               <button className="btn btn-primary" disabled={cartLoading || cartPending > 0 || Boolean(cartError)} onClick={checkout}>주문하기</button>
             </div>
           </div>

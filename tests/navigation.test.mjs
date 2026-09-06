@@ -40,6 +40,7 @@ test('AI search, page and product paths are canonical', () => {
   assert.equal(productUrl(7), '/products/7')
   assert.equal(productUrl('bad'), '/products')
   assert.equal(viewUrl('cart'), '/cart')
+  assert.equal(viewUrl('deals'), '/deals')
   assert.equal(viewUrl('about'), '/about')
   assert.equal(viewUrl('principles'), '/principles')
   assert.equal(viewUrl('partners'), '/partners')
@@ -48,4 +49,8 @@ test('AI search, page and product paths are canonical', () => {
   assert.equal(viewUrl('adminPartnerships'), '/admin/partnerships')
   assert.equal(parseAppLocation({ pathname: '/principles', search: '' }).view, 'principles')
   assert.equal(viewUrl('unknown'), '/')
+})
+
+test('deals is a direct application route', () => {
+  assert.equal(parseAppLocation({ pathname: '/deals', search: '' }).view, 'deals')
 })

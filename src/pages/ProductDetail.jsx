@@ -11,20 +11,27 @@ const MAX_PURCHASE_QUANTITY = 99
 export default function ProductDetail() {
   const {
     selectedProduct: p, productsLoading, productsError,
-    goal, subFilters, allergies, wishlist, toggleWish, addToCart, navigate, setDrawerOpen,
+    goal, subFilters, allergies, wishlist, toggleWish, addToCart, navigate, setDrawerOpen, reloadProducts,
   } = useStore()
   const [tab, setTab] = useState('nutrition')
   const [quantity, setQuantity] = useState(1)
   const [purchasePending, setPurchasePending] = useState(false)
 
   if (!p) {
+    const isError = !productsLoading && Boolean(productsError)
     return (
-      <div className="wrap page">
-        <div className="empty" role={productsError ? 'alert' : undefined}>
-          <Icon name={productsError ? 'alert-circle' : 'package'} size={44} />
-          <h3>{productsLoading ? '상품을 불러오고 있습니다.' : '선택된 상품이 없습니다.'}</h3>
-          <p>{productsError ? '상품 조회 상태를 확인한 뒤 다시 시도해 주세요.' : '잠시만 기다려 주세요.'}</p>
-          {!productsLoading && <button className="btn btn-primary" onClick={() => navigate('products')}>상품 목록으로</button>}
+      <div className="wrap page page-narrow exception-page">
+        <div className="empty" role={isError ? 'alert' : productsLoading ? 'status' : undefined}>
+          <Icon name={isError ? 'alert-circle' : 'package'} size={44} />
+          <h1>{productsLoading ? '상품을 불러오고 있습니다.' : isError ? '상품을 불러오지 못했어요.' : '상품을 찾을 수 없습니다.'}</h1>
+          <p>{productsLoading ? '최신 상품 정보를 확인하는 중입니다.' : isError ? '잠시 후 다시 시도해 주세요.' : '판매가 종료되었거나 존재하지 않는 상품이에요.'}</p>
+          {!productsLoading && (
+            <div className="exception-actions">
+              {isError && <button type="button" className="btn btn-primary" onClick={reloadProducts}>다시 시도</button>}
+              <button type="button" className={isError ? 'btn btn-ghost' : 'btn btn-primary'} onClick={() => navigate('products')}>전체 상품 보기</button>
+              {!isError && <button type="button" className="btn btn-text" onClick={() => navigate('main')}>← 홈으로 돌아가기</button>}
+            </div>
+          )}
         </div>
       </div>
     )

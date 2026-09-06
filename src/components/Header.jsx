@@ -97,7 +97,7 @@ function CompanyMenu({ navigate }) {
 
 export default function Header() {
   const {
-    navigate, navigateToCatalog, search, setSearch,
+    navigate, navigateToCatalog, search, setSearch, view,
     searchMode, setSearchMode, aiQuery, setAiQuery, aiLoading, runAiSearch, clearAiSearch,
     shopCategory, shopSub, setDealsOnly,
     wishlist, cartCount, setDrawerOpen, isLoggedIn, requireCartLogin,
@@ -283,6 +283,17 @@ export default function Header() {
                     </button>
                   )}
 
+              <button
+                type="button"
+                className={`search-inline-mode${isAi ? ' on' : ''}`}
+                onClick={isAi ? clearAiSearch : enterAiMode}
+                aria-label={isAi ? '일반 검색으로 전환' : 'AI 검색으로 전환'}
+                title={isAi ? '일반 검색으로 전환' : 'AI 자연어 검색으로 전환'}
+              >
+                <Icon name={isAi ? 'search' : 'sparkles'} size={14} />
+                <span>{isAi ? '일반' : 'AI'}</span>
+              </button>
+
               <button type="button" className="mobile-search-close" onClick={() => { setMobileSearchOpen(false); setSugOpen(false) }} aria-label="검색 닫기">
                 <Icon name="x" size={19} />
               </button>
@@ -320,16 +331,6 @@ export default function Header() {
               )}
             </form>
 
-            {isAi ? (
-              <button type="button" className="search-mode-btn on" onClick={clearAiSearch} title="일반 검색으로 전환">
-                <Icon name="chevron-left" size={15} /> <span>일반 검색</span>
-              </button>
-            ) : (
-              <button type="button" className="search-mode-btn" onClick={enterAiMode} title="AI 자연어 검색으로 전환">
-                <Icon name="sparkles" size={15} /> <span>AI 검색</span>
-              </button>
-            )}
-
             <div className="header-actions">
               <button
                 type="button"
@@ -348,7 +349,7 @@ export default function Header() {
                     <button
                       type="button"
                       className="header-admin-btn"
-                      onClick={() => navigate('adminProducts')}
+                      onClick={() => navigate('adminDashboard')}
                       title="관리자 화면으로 전환"
                     >
                       <Icon name="shield-check" size={15} /> <span>관리자 화면</span>
@@ -356,24 +357,29 @@ export default function Header() {
                   )}
                   <button
                     className="icon-btn header-wishlist-btn"
-                    onClick={() => navigate('mypage')}
+                    onClick={() => navigate('wishlist')}
                     aria-label={`찜한 상품 ${wishlist.length}개`}
+                    title="찜한 상품"
                     style={wishlist.length ? { color: 'var(--danger)' } : undefined}
                   >
                     <Icon name="heart" size={20} fill={wishlist.length ? 'currentColor' : 'none'} />
+                    {wishlist.length > 0 && <span className="header-wishlist-count">{wishlist.length > 99 ? '99+' : wishlist.length}</span>}
                   </button>
                   <button className="icon-btn" onClick={() => navigate('mypage')} aria-label="마이페이지">
                     <Icon name="user" size={20} />
                   </button>
                 </>
               ) : (
-                <button className="btn btn-soft btn-sm header-login-btn" onClick={() => navigate('login')}>
-                  <Icon name="user" size={15} /> 로그인
+                <button className="header-shop-action header-login-btn" onClick={() => navigate('login')} aria-label="로그인">
+                  <Icon name="user" size={21} /> <span>로그인</span>
                 </button>
               )}
-              <button className="cart-btn" onClick={() => { if (requireCartLogin()) setDrawerOpen(true) }}>
-                <Icon name="cart" size={17} /> 장바구니
-                <span className="qty">{cartCount}</span>
+              <button className="cart-btn" aria-label={`장바구니 ${cartCount}개`} onClick={() => { if (requireCartLogin()) setDrawerOpen(true) }}>
+                <span className="cart-icon-wrap">
+                  <Icon name="cart" size={21} />
+                  <span className="qty">{cartCount}</span>
+                </span>
+                <span className="cart-label">장바구니</span>
               </button>
             </div>
           </div>
@@ -412,6 +418,13 @@ export default function Header() {
                   </button>
                 )
               ))}
+              <button
+                type="button"
+                className={`deal-nav-item${view === 'deals' ? ' on' : ''}`}
+                onClick={() => navigate('deals')}
+              >
+                특가상품
+              </button>
             </div>
             <div className="header-nav-right">
               <CompanyMenu navigate={navigate} />

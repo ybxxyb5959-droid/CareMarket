@@ -65,11 +65,6 @@ const PAGES = {
     intro: ['클린라벨은 일률적인 인증 문구가 아니라 상품 페이지의 등록 정보로 확인합니다.'],
     sections: [['표기 기준', '원재료, 알레르기, 영양성분 및 카페인 정보는 판매자가 등록한 내용과 상품 표시 정보를 기준으로 안내합니다.'], ['확인 방법', '구매 전 상품 상세의 원재료 및 영양성분 정보를 확인해 주세요. 개인의 알레르기 또는 건강 상태는 전문가와 상담이 필요할 수 있습니다.']],
   },
-  support: {
-    eyebrow: 'CareMarket', title: '고객센터 안내',
-    intro: ['주문과 서비스 이용에 관한 문의를 확인할 수 있는 안내 페이지입니다.'],
-    sections: [['주문 확인', '결제가 완료된 주문은 마이페이지의 주문 · 배송 조회에서 상태를 확인할 수 있습니다.'], ['문의 안내', '서비스 내 주문 정보와 상품 상세 정보를 먼저 확인해 주세요. 추가 지원 채널은 서비스 운영 상황에 맞춰 안내됩니다.']],
-  },
 }
 
 function BrandStoryVisual({ type }) {
@@ -115,9 +110,8 @@ function BrandStoryVisual({ type }) {
       <path d="M280 65v300M130 215h300" />
     </svg>
     <div className="principles-center">
-      <Icon name="shield-check" size={25} />
+      <Icon name="sprout" size={34} />
       <small>ONE STANDARD</small>
-      <strong>더 잘<br />고를 수 있도록</strong>
     </div>
     <span className="principle-word word-need"><i>01</i>필요</span>
     <span className="principle-word word-understand"><i>02</i>이해</span>

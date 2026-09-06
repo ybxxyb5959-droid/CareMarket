@@ -5,7 +5,7 @@ import { adaptProductRow, fetchActiveProducts } from './lib/products'
 import { calculateCartPricing, createCartController, EMPTY_CART } from './lib/cart'
 import { AI_SORT_TO_UI, conditionLabels, requestAiConditions } from './lib/ai-search'
 import { fetchWishlistIds, saveWishlistItem } from './lib/wishlist'
-import { catalogUrl, parseAppLocation, productUrl, viewUrl } from './lib/navigation'
+import { adminOrdersUrl, catalogUrl, parseAppLocation, productUrl, viewUrl } from './lib/navigation'
 
 const scrollTop = () => window.scrollTo({ top: 0, behavior: 'smooth' })
 
@@ -79,6 +79,9 @@ export function StoreProvider({ children }) {
 
   // 커머스 상태
   const [wishlist, setWishlist] = useState([])
+  const [wishlistLoading, setWishlistLoading] = useState(false)
+  const [wishlistError, setWishlistError] = useState(null)
+  const [wishlistReloadKey, setWishlistReloadKey] = useState(0)
   const wishlistPending = useRef(new Set())
   const [cartState, setCartState] = useState(EMPTY_CART)
   const [loginPromptOpen, setLoginPromptOpen] = useState(false)
@@ -93,6 +96,8 @@ export function StoreProvider({ children }) {
   const [authLoading, setAuthLoading] = useState(true)
   const [settingsLoading, setSettingsLoading] = useState(false)
   const [profileLoading, setProfileLoading] = useState(false)
+  const [profileError, setProfileError] = useState(null)
+  const [profileReloadKey, setProfileReloadKey] = useState(0)
   const [isAdmin, setIsAdmin] = useState(false)
   // 배송 자동입력 등에 쓰는 회원 연락처 정보 (마이그레이션 적용 전에는 빈 값)
   const [profile, setProfile] = useState(EMPTY_PROFILE)
@@ -128,7 +133,9 @@ export function StoreProvider({ children }) {
     if (cartController.getOwner() !== nextId) {
       cartController.setOwner(nextId)
       setWishlist([])
+      setWishlistError(null)
       setProfile(EMPTY_PROFILE)
+      setProfileError(null)
       wishlistPending.current.clear()
       setDrawerOpen(false)
       setLoginPromptOpen(false)
@@ -146,7 +153,10 @@ export function StoreProvider({ children }) {
     setIsLoggedIn(false)
     setAuthUserId(null)
     setSettingsLoading(false)
+    setWishlistLoading(false)
+    setWishlistError(null)
     setProfileLoading(false)
+    setProfileError(null)
     setIsAdmin(false)
     setProfile(EMPTY_PROFILE)
     setGoal(DEFAULT_GOAL)
@@ -157,17 +167,23 @@ export function StoreProvider({ children }) {
   useEffect(() => {
     let active = true
     if (!authUserId) return () => { active = false }
+    setWishlistLoading(true)
+    setWishlistError(null)
     fetchWishlistIds(supabase, authUserId)
       .then((ids) => { if (active) setWishlist(ids) })
       .catch((error) => {
         if (!active) return
         console.error('Supabase wishlist fetch failed:', { code: error?.code || 'WISHLIST_FETCH_FAILED' })
+        setWishlistError('찜 목록을 불러오지 못했어요.')
         showToast('찜한 상품을 불러오지 못했습니다.')
       })
+      .finally(() => { if (active) setWishlistLoading(false) })
     return () => { active = false }
   // showToast is intentionally excluded: the load is scoped to the authenticated owner.
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [authUserId])
+  }, [authUserId, wishlistReloadKey])
+
+  const reloadWishlist = () => setWishlistReloadKey((key) => key + 1)
 
   useEffect(() => {
     let mounted = true
@@ -178,7 +194,6 @@ export function StoreProvider({ children }) {
 
       try {
         const nextProducts = await fetchActiveProducts()
-        if (!nextProducts.length) throw new Error('조회 가능한 상품이 없습니다.')
         if (!mounted) return
 
         const productsById = new Map(nextProducts.map((product) => [product.id, product]))
@@ -258,6 +273,7 @@ export function StoreProvider({ children }) {
     const loadWellnessSettings = async () => {
       setSettingsLoading(true)
       setProfileLoading(true)
+      setProfileError(null)
 
       const [profileResult, preferencesResult] = await Promise.all([
         supabase
@@ -276,7 +292,9 @@ export function StoreProvider({ children }) {
 
       if (profileResult.error) {
         const error = profileResult.error
-        showToast(`맞춤 설정을 불러오지 못했습니다. ${error.message}`)
+        console.error('Supabase profile fetch failed:', { code: error?.code || 'PROFILE_FETCH_FAILED' })
+        showToast('회원정보를 불러오지 못했습니다.')
+        setProfileError('회원정보를 불러오지 못했어요.')
         setSettingsLoading(false)
         setProfileLoading(false)
         setIsAdmin(false)
@@ -288,54 +306,64 @@ export function StoreProvider({ children }) {
 
       if (isAdminUser && !window.location.pathname.startsWith('/payment/')) {
         const currentRoute = parseAppLocation(window.location)
-        const adminView = ['adminProducts', 'adminOrders', 'adminPartnerships'].includes(currentRoute.view)
+        const adminView = currentRoute.view === 'notFound'
+          ? 'notFound'
+          : ['adminDashboard', 'adminProducts', 'adminOrders', 'adminPartnerships', 'adminInquiries'].includes(currentRoute.view)
           ? currentRoute.view
-          : 'adminProducts'
-        const adminUrl = viewUrl(adminView)
-        window.history.replaceState({ ...window.history.state, view: adminView, scrollY: 0 }, '', adminUrl)
-        setView(adminView)
-        scrollTop()
+          : 'adminDashboard'
+        if (adminView !== 'notFound') {
+          const adminUrl = adminView === 'adminOrders'
+            ? adminOrdersUrl({ status: new URLSearchParams(window.location.search).get('status') })
+            : viewUrl(adminView)
+          window.history.replaceState({ ...window.history.state, view: adminView, scrollY: 0 }, '', adminUrl)
+          setView(adminView)
+          scrollTop()
+        }
       }
 
       if (preferencesResult.error) {
-        showToast(`맞춤 설정을 불러오지 못했습니다. ${preferencesResult.error.message}`)
+        console.error('Supabase preferences fetch failed:', { code: preferencesResult.error?.code || 'PREFERENCES_FETCH_FAILED' })
+        showToast('맞춤 설정을 불러오지 못했습니다.')
         setSettingsLoading(false)
-        setProfileLoading(false)
-        return
       }
 
       const loadedGoal = DB_TO_GOAL[profileResult.data.primary_goal] || null
-      const loadedPreferences = toPreferenceState(preferencesResult.data)
+      const loadedPreferences = toPreferenceState(preferencesResult.error ? null : preferencesResult.data)
 
       setUser((current) => current && profileResult.data.display_name
         ? { ...current, name: profileResult.data.display_name }
         : current)
       setGoal(loadedGoal)
-      setSubFilters(loadedPreferences.subFilters)
-      setAllergies(loadedPreferences.allergies)
+      if (!preferencesResult.error) {
+        setSubFilters(loadedPreferences.subFilters)
+        setAllergies(loadedPreferences.allergies)
+      }
       setSettingsLoading(false)
-      setProfileLoading(false)
 
       // 연락처 컬럼은 별도 마이그레이션으로 추가된다. 해당 마이그레이션이 아직
       // 적용되지 않은 환경에서도 role 조회와 관리자 권한 판별은 정상 동작해야 한다.
-      supabase
+      const contactResult = await supabase
         .from('profiles')
         .select('phone, postal_code, address, address_detail')
         .eq('user_id', authUserId)
         .maybeSingle()
-        .then(({ data, error }) => {
-          if (!mounted || error || !data) return
-          setProfile({
-            phone: data.phone || '',
-            postalCode: data.postal_code || '',
-            address: data.address || '',
-            addressDetail: data.address_detail || '',
-          })
+      if (!mounted) return
+      if (contactResult.error) {
+        console.error('Supabase profile contact fetch failed:', { code: contactResult.error?.code || 'PROFILE_CONTACT_FETCH_FAILED' })
+        setProfileError('회원정보를 불러오지 못했어요.')
+      } else if (contactResult.data) {
+        setProfile({
+          phone: contactResult.data.phone || '',
+          postalCode: contactResult.data.postal_code || '',
+          address: contactResult.data.address || '',
+          addressDetail: contactResult.data.address_detail || '',
         })
+      }
+      setProfileLoading(false)
 
       // 조건 미설정 회원은 설정을 강제하지 않고 맞춤 상품 화면으로 안내한다.
       // (맞춤 상품 화면에서 '추천 조건 설정하기'로 자연스럽게 설정 화면으로 이동)
-      if (!loadedGoal && !isAdminUser && !window.location.pathname.startsWith('/payment/')) {
+      if (!loadedGoal && !isAdminUser && !window.location.pathname.startsWith('/payment/') && parseAppLocation(window.location).view !== 'deals') {
         setView('custom')
         scrollTop()
       }
@@ -348,14 +376,16 @@ export function StoreProvider({ children }) {
     }
   // 인증 사용자 변경 시에만 DB 설정을 다시 불러온다.
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [authUserId])
+  }, [authUserId, profileReloadKey])
+
+  const reloadProfile = () => setProfileReloadKey((key) => key + 1)
 
   const rememberScroll = () => {
     window.history.replaceState({ ...window.history.state, view, scrollY: window.scrollY }, '', window.location.href)
   }
   const catalogStateUrl = () => catalogUrl({ search, searchMode, aiQuery, shopCategory, shopSub, dealsOnly, sortBy })
-  const navigate = (v) => {
-    if (['adminProducts', 'adminOrders', 'adminPartnerships'].includes(v) && !authLoading && !isAdmin) {
+  const navigate = (v, options = {}) => {
+    if ((['adminProducts', 'adminOrders', 'adminPartnerships', 'adminInquiries'].includes(v) || v === 'adminDashboard') && !authLoading && !isAdmin) {
       showToast('관리자 권한이 필요한 페이지입니다.')
       setView('main')
       window.history.pushState({ view: 'main', scrollY: 0 }, '', '/')
@@ -363,7 +393,11 @@ export function StoreProvider({ children }) {
       return
     }
     rememberScroll()
-    const nextUrl = v === 'products' ? catalogStateUrl() : viewUrl(v)
+    const nextUrl = v === 'products'
+      ? catalogStateUrl()
+      : v === 'adminOrders'
+      ? adminOrdersUrl(options)
+      : viewUrl(v)
     if (`${window.location.pathname}${window.location.search}` !== nextUrl) {
       window.history.pushState({ view: v, scrollY: 0 }, '', nextUrl)
     }
@@ -752,19 +786,19 @@ export function StoreProvider({ children }) {
       searchMode, setSearchMode, aiQuery, setAiQuery, aiResult, aiLoading, aiError, runAiSearch, clearAiSearch,
       shopCategory, setShopCategory, shopSub, setShopSub, dealsOnly, setDealsOnly,
       sortBy, setSortBy,
-      wishlist, toggleWish,
+      wishlist, wishlistLoading, wishlistError, reloadWishlist, toggleWish,
       cart, addToCart, changeCartQty, removeFromCart, cartLoading, cartPending, cartError,
       reloadCart: cartController.load, requireCartLogin, loginPromptOpen, setLoginPromptOpen,
       drawerOpen, setDrawerOpen,
       checkout,
       products, setProducts, productsLoading, productsError, reloadProducts,
-      user, setUser, login, register, logout, isLoggedIn, authUserId, authLoading, profileLoading, isAdmin,
+      user, setUser, login, register, logout, isLoggedIn, authUserId, authLoading, profileLoading, profileError, reloadProfile, isAdmin,
       profile, updateProfile, checkEmailExists,
       cartTotal, deliveryFee, cartCount,
       toast, showToast,
     }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [view, selectedProduct, goal, subFilters, allergies, search, searchMode, aiQuery, aiResult, aiLoading, aiError, shopCategory, shopSub, dealsOnly, sortBy, wishlist, cart, cartState, loginPromptOpen, drawerOpen, products, productsLoading, productsError, user, isLoggedIn, authUserId, authLoading, settingsLoading, profileLoading, isAdmin, profile, toast],
+    [view, selectedProduct, goal, subFilters, allergies, search, searchMode, aiQuery, aiResult, aiLoading, aiError, shopCategory, shopSub, dealsOnly, sortBy, wishlist, wishlistLoading, wishlistError, cart, cartState, loginPromptOpen, drawerOpen, products, productsLoading, productsError, user, isLoggedIn, authUserId, authLoading, settingsLoading, profileLoading, profileError, isAdmin, profile, toast],
   )
 
   return <StoreContext.Provider value={value}>{children}</StoreContext.Provider>

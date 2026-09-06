@@ -10,12 +10,14 @@ const paymentFailSource = readFileSync(new URL('../src/pages/PaymentFail.jsx', i
 
 const directRoutes = {
   '/': 'main',
+  '/deals': 'deals',
   '/products': 'products',
   '/search': 'products',
   '/cart': 'cart',
   '/checkout': 'checkout',
   '/orders': 'orders',
   '/mypage': 'mypage',
+  '/wishlist': 'wishlist',
   '/admin/products': 'adminProducts',
   '/admin/orders': 'adminOrders',
   '/admin/partnerships': 'adminPartnerships',
@@ -23,6 +25,8 @@ const directRoutes = {
   '/principles': 'principles',
   '/partners': 'partners',
   '/partners/proposal': 'partnerProposal',
+  '/support': 'support',
+  '/support/inquiry': 'supportInquiry',
   '/payment/success': 'paymentSuccess',
   '/payment/fail': 'paymentFail',
 }
