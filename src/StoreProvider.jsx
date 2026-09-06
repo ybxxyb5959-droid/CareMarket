@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { StoreContext } from './store'
-import { supabase } from './lib/supabase'
+import { supabase, oauthCallbackFailed } from './lib/supabase'
+import { startOAuthLogin, isOAuthAccount, oauthDisplayName, needsGoogleRegistration, completeGoogleProfile } from './lib/google-auth'
 import { adaptProductRow, fetchActiveProducts } from './lib/products'
 import { calculateCartPricing, createCartController, EMPTY_CART } from './lib/cart'
 import { AI_SORT_TO_UI, conditionLabels, requestAiConditions } from './lib/ai-search'
@@ -42,8 +43,9 @@ function toPreferenceState(preferences) {
 function toAppUser(authUser) {
   // 실제 Supabase auth 사용자만 사용한다. (포인트/쿠폰 등 미구현 필드는 신뢰 가능한 기본값)
   return {
-    name: authUser.user_metadata?.display_name?.trim() || authUser.email?.split('@')[0] || 'CareMarket 회원',
+    name: oauthDisplayName(authUser),
     email: authUser.email || '',
+    oauth: isOAuthAccount(authUser),
     tier: 'CareMarket 회원',
     points: 0,
     coupons: 0,
@@ -94,6 +96,7 @@ export function StoreProvider({ children }) {
   const [isLoggedIn, setIsLoggedIn] = useState(false)
   const [authUserId, setAuthUserId] = useState(null)
   const [authLoading, setAuthLoading] = useState(true)
+  const [oauthRegistrationRequired, setOauthRegistrationRequired] = useState(null)
   const [settingsLoading, setSettingsLoading] = useState(false)
   const [profileLoading, setProfileLoading] = useState(false)
   const [profileError, setProfileError] = useState(null)
@@ -132,6 +135,7 @@ export function StoreProvider({ children }) {
     const nextId = session?.user?.id || null
     const ownerChanged = cartController.getOwner() !== nextId
     if (ownerChanged) {
+      setOauthRegistrationRequired(null)
       cartController.setOwner(nextId)
       setWishlist([])
       setWishlistError(null)
@@ -151,6 +155,7 @@ export function StoreProvider({ children }) {
     }
 
     setUser(null)
+    setOauthRegistrationRequired(null)
     setIsLoggedIn(false)
     setAuthUserId(null)
     setSettingsLoading(false)
@@ -239,18 +244,28 @@ export function StoreProvider({ children }) {
     let authChanged = false
 
     const restoreSession = async () => {
-      const { data, error } = await supabase.auth.getSession()
+      const { data, error } = await supabase.auth.getSession().catch(error => ({ data: {}, error }))
       if (!mounted || authChanged) return
 
       if (error) {
         console.error('Supabase session restore failed:', error.message)
         setAuthLoading(false)
+        showToast('로그인 상태를 확인하지 못했습니다. 다시 로그인해 주세요.', 'auth-error')
         return
       }
 
       syncAuthSession(data.session)
     }
 
+    if (oauthCallbackFailed) {
+      showToast('간편 로그인이 취소되었거나 실패했습니다. 다시 시도해 주세요.', 'auth-error')
+      const url = new URL(window.location.href)
+      for (const key of ['error', 'error_code', 'error_description']) url.searchParams.delete(key)
+      url.hash = ''
+      url.pathname = '/login'
+      window.history.replaceState({ view: 'login', scrollY: 0 }, '', url)
+      setView('login')
+    }
     restoreSession()
 
     const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
@@ -264,7 +279,7 @@ export function StoreProvider({ children }) {
       cartController.setOwner(null)
       window.clearTimeout(toastTimer.current)
     }
-  }, [cartController, syncAuthSession])
+  }, [cartController, syncAuthSession, showToast])
 
   useEffect(() => {
     if (!authUserId) return undefined
@@ -304,6 +319,7 @@ export function StoreProvider({ children }) {
 
       const isAdminUser = profileResult.data.role === 'admin'
       setIsAdmin(isAdminUser)
+      if (isAdminUser) setOauthRegistrationRequired(false)
 
       if (isAdminUser && !window.location.pathname.startsWith('/payment/')) {
         const currentRoute = parseAppLocation(window.location)
@@ -362,6 +378,25 @@ export function StoreProvider({ children }) {
         })
       }
       setProfileLoading(false)
+
+      if (user?.oauth && !isAdminUser) {
+        if (contactResult.error) return
+        const agreementsResult = await supabase.from('profiles')
+          .select('terms_agreed_at, privacy_agreed_at').eq('user_id', authUserId).single()
+        if (!mounted) return
+        if (agreementsResult.error) {
+          setProfileError('가입 정보를 확인하지 못했습니다. 다시 시도해 주세요.')
+          return
+        }
+        const incomplete = needsGoogleRegistration({ ...contactResult.data, ...agreementsResult.data })
+        setOauthRegistrationRequired(incomplete)
+        if (incomplete) {
+          window.history.replaceState({ view: 'register', scrollY: 0 }, '', viewUrl('register'))
+          setView('register')
+          scrollTop()
+          return
+        }
+      }
 
       // 조건 미설정 회원은 설정을 강제하지 않고 맞춤 상품 화면으로 안내한다.
       // (맞춤 상품 화면에서 '추천 조건 설정하기'로 자연스럽게 설정 화면으로 이동)
@@ -652,6 +687,33 @@ export function StoreProvider({ children }) {
     return true
   }
 
+  const loginWithOAuth = async (provider) => {
+    try {
+      await startOAuthLogin(supabase, window.location.origin, provider)
+      return true
+    } catch {
+      showToast(`${provider === 'kakao' ? '카카오' : 'Google'} 로그인을 시작하지 못했습니다. 잠시 후 다시 시도해 주세요.`, 'auth-error')
+      return false
+    }
+  }
+
+  const completeOAuthRegistration = async (fields) => {
+    if (!authUserId || !user?.oauth) return { ok: false }
+    try {
+      await completeGoogleProfile(supabase, fields)
+      if (cartController.getOwner() !== authUserId) return { ok: false }
+      setUser(current => current && { ...current, name: fields.displayName.trim() })
+      setProfile({ phone: fields.phone.trim(), postalCode: fields.postalCode?.trim() || '', address: fields.address.trim(), addressDetail: fields.addressDetail?.trim() || '' })
+      setOauthRegistrationRequired(false)
+      navigate('goalSetup')
+      showToast('회원가입이 완료되었습니다.', 'auth')
+      return { ok: true }
+    } catch {
+      showToast('가입 정보를 저장하지 못했습니다. 입력 내용을 확인하고 다시 시도해 주세요.', 'auth-error')
+      return { ok: false }
+    }
+  }
+
   const login = async ({ email, password }) => {
     const { data, error } = await supabase.auth.signInWithPassword({ email, password })
 
@@ -808,11 +870,12 @@ export function StoreProvider({ children }) {
       products, setProducts, productsLoading, productsError, reloadProducts,
       user, setUser, login, register, logout, isLoggedIn, authUserId, authLoading, profileLoading, profileError, reloadProfile, isAdmin,
       profile, updateProfile, checkEmailExists,
+      loginWithOAuth, completeOAuthRegistration, oauthRegistrationRequired,
       cartTotal, deliveryFee, cartCount,
       toast, showToast,
     }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [view, selectedProduct, goal, subFilters, allergies, search, searchMode, aiQuery, aiResult, aiLoading, aiError, shopCategory, shopSub, dealsOnly, sortBy, wishlist, wishlistLoading, wishlistError, cart, cartState, loginPromptOpen, drawerOpen, products, productsLoading, productsError, user, isLoggedIn, authUserId, authLoading, settingsLoading, profileLoading, profileError, isAdmin, profile, toast],
+    [view, selectedProduct, goal, subFilters, allergies, search, searchMode, aiQuery, aiResult, aiLoading, aiError, shopCategory, shopSub, dealsOnly, sortBy, wishlist, wishlistLoading, wishlistError, cart, cartState, loginPromptOpen, drawerOpen, products, productsLoading, productsError, user, isLoggedIn, authUserId, authLoading, settingsLoading, profileLoading, profileError, isAdmin, profile, toast, oauthRegistrationRequired],
   )
 
   return <StoreContext.Provider value={value}>{children}</StoreContext.Provider>

@@ -27,7 +27,8 @@ const AGREEMENTS = [
 ]
 
 export default function Register() {
-  const { navigate, register, checkEmailExists } = useStore()
+  const { navigate, register, checkEmailExists, user, profile, oauthRegistrationRequired, completeOAuthRegistration, logout } = useStore()
+  const oauthSignup = Boolean(user?.oauth && oauthRegistrationRequired)
   const [step, setStep] = useState(1)
 
   // STEP 1 — 약관
@@ -36,8 +37,9 @@ export default function Register() {
 
   // STEP 2 — 회원정보
   const [form, setForm] = useState({
-    email: '', password: '', passwordConfirm: '',
-    displayName: '', phone: '', postalCode: '', address: '', addressDetail: '',
+    email: oauthSignup ? user.email : '', password: '', passwordConfirm: '',
+    displayName: oauthSignup ? user.name : '', phone: oauthSignup ? profile.phone : '',
+    postalCode: oauthSignup ? profile.postalCode : '', address: oauthSignup ? profile.address : '', addressDetail: oauthSignup ? profile.addressDetail : '',
   })
   const [showPw, setShowPw] = useState(false)
   const [error, setError] = useState('')
@@ -48,6 +50,7 @@ export default function Register() {
 
   // 이메일 입력이 멈추면(디바운스) 이미 가입된 이메일인지 실시간 확인
   useEffect(() => {
+    if (oauthSignup) return undefined
     const value = form.email.trim()
     if (emailDebounce.current) window.clearTimeout(emailDebounce.current)
     if (!EMAIL_RE.test(value)) return undefined
@@ -57,7 +60,7 @@ export default function Register() {
       if (exists && value === form.email.trim()) setEmailError('이미 가입되어 있는 이메일입니다.')
     }, 450)
     return () => window.clearTimeout(emailDebounce.current)
-  }, [form.email, checkEmailExists])
+  }, [form.email, checkEmailExists, oauthSignup])
 
   const pwFilled = form.passwordConfirm.length > 0
   const pwMatch = pwFilled && form.password === form.passwordConfirm
@@ -84,10 +87,11 @@ export default function Register() {
     e.preventDefault()
     setError('')
     setEmailError('')
-    if (form.password.length < 6) return setError('비밀번호는 6자 이상 입력해 주세요.')
-    if (form.password !== form.passwordConfirm) return setError('비밀번호가 일치하지 않습니다.')
+    if (!requiredDone) return setError('필수 약관에 동의해 주세요.')
+    if (!oauthSignup && form.password.length < 6) return setError('비밀번호는 6자 이상 입력해 주세요.')
+    if (!oauthSignup && form.password !== form.passwordConfirm) return setError('비밀번호가 일치하지 않습니다.')
     setIsSubmitting(true)
-    const result = await register({
+    const result = await (oauthSignup ? completeOAuthRegistration : register)({
       email: form.email,
       password: form.password,
       displayName: form.displayName,
@@ -112,7 +116,7 @@ export default function Register() {
         <div className="auth-head auth-head-lg">
           <span className="eyebrow">Join CareMarket</span>
           <h2>회원가입</h2>
-          <p>약관에 동의하고 회원정보를 입력해 주세요.</p>
+          <p>{oauthSignup ? '간편 로그인 인증이 완료되었습니다. 약관 동의와 배송 정보를 입력하면 가입이 완료됩니다.' : '약관에 동의하고 회원정보를 입력해 주세요.'}</p>
         </div>
 
         <div className="auth-steps">
@@ -169,14 +173,14 @@ export default function Register() {
                   <div className="auth-fields">
                     <div className="field">
                       <label>이메일</label>
-                      <input className={emailError ? 'input-warning' : ''} type="email" value={form.email} onChange={(e) => setField('email', e.target.value)} autoComplete="email" aria-describedby={emailError ? 'email-error' : undefined} required />
+                      <input className={emailError ? 'input-warning' : ''} type="email" value={form.email} readOnly={oauthSignup} placeholder={oauthSignup && !form.email ? '제공되지 않음' : undefined} onChange={(e) => setField('email', e.target.value)} autoComplete="email" aria-describedby={emailError ? 'email-error' : undefined} required={!oauthSignup} />
                       {emailError && <p id="email-error" className="auth-field-error" role="alert">{emailError}</p>}
                     </div>
                     <div className="field">
                       <label>이름</label>
                       <input type="text" value={form.displayName} onChange={(e) => setField('displayName', e.target.value)} autoComplete="name" required />
                     </div>
-                    <div className="field">
+                    {!oauthSignup && <><div className="field">
                       <label>비밀번호</label>
                       <div className="pw-field">
                         <input type={showPw ? 'text' : 'password'} value={form.password} onChange={(e) => setField('password', e.target.value)} autoComplete="new-password" minLength={6} aria-describedby="password-hint" required />
@@ -205,6 +209,7 @@ export default function Register() {
                         </p>
                       )}
                     </div>
+                    </>}
                     <div className="field">
                       <label>휴대전화번호</label>
                       <input type="tel" inputMode="tel" value={form.phone} onChange={(e) => setField('phone', e.target.value)} autoComplete="tel" placeholder="010-0000-0000" required />
@@ -237,8 +242,7 @@ export default function Register() {
                 </form>
               )}
         <div className="auth-foot">
-          이미 계정이 있으신가요?
-          <button onClick={() => navigate('login')}>로그인</button>
+          {oauthSignup ? <button onClick={logout} disabled={isSubmitting}>나중에 완료하고 로그아웃</button> : <>이미 계정이 있으신가요?<button onClick={() => navigate('login')}>로그인</button></>}
         </div>
       </div>
     </div>

@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useStore } from '../store'
 
 const SOCIAL_PROVIDERS = [
@@ -40,10 +40,28 @@ function SocialMark({ provider }) {
 }
 
 export default function Login() {
-  const { login, navigate, showToast } = useStore()
+  const { login, loginWithOAuth, navigate, showToast } = useStore()
+  const [oauthPending, setOauthPending] = useState(null)
+  const handleOAuthLogin = async (provider) => {
+    if (oauthPending || isSubmitting) return
+    setOauthPending(provider)
+    if (!await loginWithOAuth(provider)) setOauthPending(null)
+  }
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
+
+  useEffect(() => {
+    if (!oauthPending) return undefined
+    // Recover if external navigation is blocked, or the user returns using Back.
+    const reset = () => setOauthPending(null)
+    const timer = window.setTimeout(() => {
+      reset()
+      showToast('인증 페이지로 이동하지 못했습니다. 일반 브라우저에서 다시 시도해 주세요.', 'auth-error')
+    }, 15000)
+    window.addEventListener('pageshow', reset)
+    return () => { window.clearTimeout(timer); window.removeEventListener('pageshow', reset) }
+  }, [oauthPending, showToast])
 
   const handleSubmit = async (e) => {
     e.preventDefault()
@@ -69,7 +87,7 @@ export default function Login() {
             <label>비밀번호</label>
             <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} autoComplete="current-password" required />
           </div>
-          <button type="submit" className="btn btn-primary btn-lg auth-login-submit" disabled={isSubmitting}>
+          <button type="submit" className="btn btn-primary btn-lg auth-login-submit" disabled={isSubmitting || Boolean(oauthPending)}>
             {isSubmitting ? '로그인 중...' : '로그인하기'}
           </button>
         </form>
@@ -89,13 +107,17 @@ export default function Login() {
                 key={provider.id}
                 type="button"
                 className={`social-login-button social-login-${provider.id}`}
-                aria-label={`${provider.label}로 간편 로그인`}
-                onClick={() => showToast(`${provider.label} 간편 로그인은 준비 중입니다.`)}
+                aria-label={['google', 'kakao'].includes(provider.id) ? `${provider.id === 'google' ? 'Google' : provider.label}로 계속하기` : `${provider.label}로 간편 로그인`}
+                title={`${provider.label}로 계속하기`}
+                disabled={isSubmitting || Boolean(oauthPending)}
+                aria-busy={oauthPending === provider.id}
+                onClick={() => ['google', 'kakao'].includes(provider.id) ? handleOAuthLogin(provider.id) : showToast(`${provider.label} 간편 로그인은 준비 중입니다.`)}
               >
                 <SocialMark provider={provider.id} />
               </button>
             ))}
           </div>
+          {oauthPending && <p className="auth-hint" role="status">{oauthPending === 'google' ? 'Google' : '카카오'}로 이동 중...</p>}
           <button type="button" className="social-login-privacy" onClick={() => navigate('privacy')}>
             개인정보처리방침
           </button>

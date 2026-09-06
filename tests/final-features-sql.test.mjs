@@ -11,7 +11,7 @@ test('final feature SQL contracts', { skip: !process.env.PGLITE_MODULE }, async 
   const a = '00000000-0000-4000-8000-000000000001'
   const b = '00000000-0000-4000-8000-000000000002'
   await db.exec(`create role anon; create role authenticated; create role service_role;
-    create schema auth; create table auth.users(id uuid primary key, email text, raw_user_meta_data jsonb);
+    create schema auth; create table auth.users(id uuid primary key, email text, raw_user_meta_data jsonb, raw_app_meta_data jsonb);
     create function auth.uid() returns uuid language sql stable as $$ select nullif(current_setting('request.jwt.claim.sub', true), '')::uuid $$;
     create function auth.role() returns text language sql stable as $$ select current_setting('request.jwt.claim.role', true) $$;
     grant usage on schema public, auth to anon, authenticated;`)
@@ -65,6 +65,59 @@ test('final feature SQL contracts', { skip: !process.env.PGLITE_MODULE }, async 
   await db.exec(migration('20260903000100_create_profile_on_signup'))
   await db.exec(migration('20260905000200_profile_contact_and_agreements'))
   await db.exec(migration('20260906000700_welcome_coupon'))
+  await db.exec(migration('20260906001200_google_registration_completion'))
+  await db.exec(migration('20260906001300_kakao_oauth_profile_support'))
+  await t.test('OAuth signup creates one profile and coupon; completion is atomic and repeat-safe', async () => {
+    const googleId = '00000000-0000-4000-8000-000000000009'
+    await db.query('insert into auth.users(id,email,raw_user_meta_data) values ($1,$2,$3)', [googleId, 'google@example.test', { full_name: 'Google Test' }])
+    await db.query('update auth.users set raw_app_meta_data=$1 where id=$2', [{ provider: 'google' }, googleId])
+    const snapshot = async () => (await db.query('select display_name,phone,terms_agreed_at,privacy_agreed_at,role from profiles where user_id=$1', [googleId])).rows[0]
+    const couponCount = async () => (await db.query('select count(*)::int n from user_coupons where user_id=$1', [googleId])).rows[0].n
+    assert.equal((await snapshot()).terms_agreed_at, null)
+    assert.equal(await couponCount(), 1)
+    await db.exec('set role anon')
+    const complete = (agreed = true) => db.query("select complete_google_registration('Google Test','01012345678','12345','서울','', $1,true,false)", [agreed])
+    await assert.rejects(complete(), /permission denied/)
+    await db.exec('reset role; set role authenticated')
+    await db.query("select set_config('request.jwt.claim.sub','',false)")
+    await assert.rejects(complete(), /Authentication required/)
+    await db.query("select set_config('request.jwt.claim.sub',$1,false)", [googleId])
+    await assert.rejects(complete(false), /Required registration fields missing/)
+    await complete()
+    await db.exec('reset role')
+    const first = await snapshot()
+    assert.equal(first.phone, '01012345678')
+    assert.equal(first.role, 'user')
+    assert.ok(first.terms_agreed_at && first.privacy_agreed_at)
+    assert.equal(await couponCount(), 1)
+    await db.exec('set role authenticated')
+    await complete()
+    await db.exec('reset role')
+    assert.deepEqual(await snapshot(), first)
+    assert.equal(await couponCount(), 1)
+    assert.equal((await db.query('select count(*)::int n from profiles where user_id=$1', [googleId])).rows[0].n, 1)
+  })
+  await t.test('email-less Kakao signup keeps one profile/coupon and reuses the completion RPC', async () => {
+    const id = '00000000-0000-4000-8000-000000000010'
+    await db.query('insert into auth.users(id,email,raw_user_meta_data,raw_app_meta_data) values ($1,null,$2,$3)', [id, {}, { provider: 'kakao' }])
+    assert.equal((await db.query('select display_name from profiles where user_id=$1', [id])).rows[0].display_name, 'CareMarket 회원')
+    await db.exec('set role authenticated')
+    await db.query("select set_config('request.jwt.claim.sub',$1,false)", [id])
+    for (let attempt = 0; attempt < 2; attempt++) {
+      await db.query("select complete_google_registration('카카오 회원','01012345678',null,'서울',null,true,true,false)")
+    }
+    await db.exec('reset role')
+    const profile = (await db.query('select * from profiles where user_id=$1', [id])).rows[0]
+    assert.equal(profile.display_name, '카카오 회원')
+    assert.ok(profile.terms_agreed_at && profile.privacy_agreed_at)
+    assert.equal(profile.role, 'user')
+    assert.equal((await db.query('select email from auth.users where id=$1', [id])).rows[0].email, null)
+    assert.equal((await db.query('select count(*)::int n from user_coupons where user_id=$1', [id])).rows[0].n, 1)
+    await db.exec('set role authenticated')
+    await db.query("select set_config('request.jwt.claim.sub',$1,false)", [a])
+    await assert.rejects(db.query("select complete_google_registration('Other','01012345678',null,'서울',null,true,true,false)"), /Supported OAuth account required/)
+    await db.exec('reset role')
+  })
   await t.test('signup coupon is single-use, server priced, atomic and idempotent', async () => {
     const c = '00000000-0000-4000-8000-000000000003'
     await db.exec(`insert into auth.users(id,email,raw_user_meta_data) values ('${c}','c@example.test','{"display_name":"C","terms_agreed":true,"privacy_agreed":true}');

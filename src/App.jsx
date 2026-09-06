@@ -73,22 +73,29 @@ const PAGES = {
 }
 
 function Shell() {
-  const { view, loginPromptOpen } = useStore()
-  const Page = PAGES[view] || NotFound
+  const { view, loginPromptOpen, user, authLoading, authUserId, oauthRegistrationRequired, profileError, reloadProfile, logout } = useStore()
+  const pendingOAuthProfile = user?.oauth && oauthRegistrationRequired === null
+  const completingOAuth = user?.oauth && oauthRegistrationRequired === true
+  const Page = completingOAuth ? Register : PAGES[view] || NotFound
   const isAdmin = ['adminDashboard', 'adminHistory', 'adminProducts', 'adminOrders', 'adminPartnerships', 'adminInquiries'].includes(view)
   return (
     <div className="app">
       {isAdmin ? <AdminTopbar /> : <Header />}
       <main>
-        <div className="view-fade" key={view}>
-          <Page />
+        <div className="view-fade" key={completingOAuth ? `oauth-register:${authUserId}` : view}>
+          {authLoading || pendingOAuthProfile ? <div className="wrap page auth-page">
+            <div className="auth-container">
+              <p role={profileError ? 'alert' : 'status'}>{profileError || '로그인 정보를 확인하고 있습니다.'}</p>
+              {profileError && <><button type="button" className="btn btn-primary" onClick={reloadProfile}>다시 시도</button><button type="button" className="btn btn-text" onClick={logout}>로그아웃</button></>}
+            </div>
+          </div> : <Page />}
         </div>
       </main>
       {!isAdmin && <Footer />}
-      <CartDrawer />
+      {!pendingOAuthProfile && !completingOAuth && <CartDrawer />}
       <Toast />
       {loginPromptOpen && <CartLoginPrompt />}
-      {!isAdmin && <EventPopup />}
+      {!isAdmin && !pendingOAuthProfile && !completingOAuth && <EventPopup />}
     </div>
   )
 }

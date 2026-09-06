@@ -43,14 +43,13 @@ function buildSuggestions(products, vocab, query) {
 
 function AnnouncementBar({ navigate, isLoggedIn }) {
   const [active, setActive] = useState(0)
-  const [paused, setPaused] = useState(false)
   const [interacting, setInteracting] = useState(false)
 
   useEffect(() => {
-    if (paused || interacting) return undefined
+    if (interacting) return undefined
     const timer = window.setInterval(() => setActive(current => 1 - current), 5000)
     return () => window.clearInterval(timer)
-  }, [paused, interacting])
+  }, [interacting])
 
   const openCoupons = () => {
     if (!isLoggedIn) { navigate('login'); return }
@@ -76,9 +75,6 @@ function AnnouncementBar({ navigate, isLoggedIn }) {
             <button type="button" className="link" onClick={openCoupons}>쿠폰함 확인하기 →</button>
           </div>
         </div>
-      </div>
-      <div className="announce-controls">
-        <button type="button" onClick={() => setPaused(current => !current)} aria-label={paused ? '혜택 안내 자동 전환 재생' : '혜택 안내 자동 전환 일시정지'} aria-pressed={paused}><span aria-hidden="true">{paused ? '▶' : 'Ⅱ'}</span></button>
       </div>
     </div>
   </div>

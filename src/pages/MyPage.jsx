@@ -92,7 +92,7 @@ export default function MyPage() {
     <div className="wrap page mypage">
       <WishlistQuickPanel />
       <div className="mypage-head">
-        <div className="profile-id"><div className="avatar">{user.name.slice(0, 1)}</div><div><span className="eyebrow">마이 쇼핑</span><h1>{user.name}님, 안녕하세요</h1><div className="em">{user.email}</div></div></div>
+        <div className="profile-id"><div className="avatar">{user.name.slice(0, 1)}</div><div><span className="eyebrow">마이 쇼핑</span><h1>{user.name}님, 안녕하세요</h1><div className="em">{user.email || '제공되지 않음'}</div></div></div>
         <button className="btn btn-ghost btn-sm" onClick={logout}>로그아웃</button>
       </div>
 
@@ -124,12 +124,12 @@ export default function MyPage() {
         ) : !editing ? (
           <div className="mypage-profile-grid">
             <div><span>기본 배송지</span><strong>{profile?.address ? `${profile.address}${profile.addressDetail ? ` ${profile.addressDetail}` : ''}` : '등록된 배송지가 없습니다.'}</strong><small>{profile?.postalCode ? `(${profile.postalCode})` : '주문 전 배송지를 등록해 주세요.'}</small></div>
-            <div><span>연락처</span><strong>{profile?.phone || '미등록'}</strong></div><div><span>이름</span><strong>{user.name}</strong></div><div><span>이메일</span><strong>{user.email}</strong></div>
+            <div><span>연락처</span><strong>{profile?.phone || '미등록'}</strong></div><div><span>이름</span><strong>{user.name}</strong></div><div><span>이메일</span><strong>{user.email || '제공되지 않음'}</strong></div>
           </div>
         ) : (
           <div className="mypage-edit-form">
             <div className="field"><label>이름</label><input type="text" value={form.displayName} onChange={(event) => setField('displayName', event.target.value)} /></div>
-            <div className="field"><label>이메일 (변경 불가)</label><input type="email" value={user.email} readOnly aria-readonly="true" /></div>
+            <div className="field"><label>이메일 (변경 불가)</label><input type="email" value={user.email} placeholder="제공되지 않음" readOnly aria-readonly="true" /></div>
             <div className="field"><label>휴대전화번호</label><input type="tel" inputMode="tel" value={form.phone} onChange={(event) => setField('phone', event.target.value)} placeholder="010-0000-0000" /></div>
             <div className="field"><label>우편번호</label><div className="postcode-row"><input type="text" value={form.postalCode} placeholder="우편번호" readOnly /><button type="button" className="btn btn-ghost btn-sm" onClick={findPostcode}>주소 찾기</button></div></div>
             <div className="field mypage-edit-wide"><label>기본주소</label><input type="text" value={form.address} onChange={(event) => setField('address', event.target.value)} placeholder="배송받을 주소를 입력해 주세요" /></div>

@@ -432,8 +432,6 @@ main {
 .announce-track { transition: transform 500ms cubic-bezier(.22, 1, .36, 1); }
 .announce-track .announce-inner { height: 40px; padding: 0 8px; flex-wrap: nowrap; }
 .announce button { border: 0; background: transparent; font: inherit; }
-.announce-controls { display: flex; gap: 2px; }
-.announce-controls button { display: inline-flex; align-items: center; justify-content: center; width: 24px; height: 28px; padding: 0; color: #dcefe3; cursor: pointer; font-size: 11px; }
 .announce button:focus-visible { outline: 1px solid #fff; outline-offset: 2px; border-radius: 2px; }
 #my-coupons { scroll-margin-top: 170px; }
 @media (prefers-reduced-motion: reduce) { .announce-track { transition: none; } }
