@@ -4,6 +4,7 @@ import { GOALS, HERO_SLIDES, VALUES } from '../data/mock'
 import Icon from '../components/Icon'
 import ProductCard from '../components/ProductCard'
 import WellnessTable from '../components/WellnessTable'
+import DailyRoutine from '../components/DailyRoutine'
 import { filterAndSort } from '../lib/catalog'
 
 // 주목표별 강조 안내문
@@ -246,6 +247,7 @@ export default function Home() {
 
       {/* ── 오늘의 웰빙 테이블 (Shoppable image) ── */}
       <WellnessTable />
+      <DailyRoutine />
 
       {/* ── 가치 배너 (Trust) ── */}
       <section className="section" style={{ paddingTop: 0 }}>

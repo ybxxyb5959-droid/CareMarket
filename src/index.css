@@ -3,6 +3,58 @@
    Modern editorial · warm paper base · restrained sage/forest accents
    ============================================================ */
 
+/* Daily meal edit — warm paper, typography and quiet rules. */
+.section.daily-routine { padding-top: 0; }
+.routine-heading { display: flex; align-items: end; justify-content: space-between; gap: 24px; padding-bottom: 26px; border-bottom: 1px solid var(--line); }
+.routine-heading h2 { font-size: 26px; font-weight: 400; letter-spacing: -.025em; margin-top: 9px; }
+.routine-heading > p { display: flex; gap: 14px; font-size: 12px; color: var(--muted); white-space: nowrap; }
+.routine-heading time { color: var(--brand); }
+.routine-layout { display: grid; grid-template-columns: 285px minmax(0, 1fr); padding: 32px 0 8px; gap: 48px; }
+.routine-tabs { display: flex; flex-direction: column; }
+.routine-tabs > button { display: flex; align-items: center; gap: 19px; text-align: left; padding: 20px 14px; border-bottom: 1px solid var(--line); color: var(--muted); border-left: 2px solid transparent; }
+.routine-tabs > button:last-child { border-bottom: 0; }
+.routine-tabs > button[aria-selected="true"] { border-left-color: var(--brand); background: var(--surface-3); color: var(--brand); }
+.routine-time { font-family: var(--serif); font-size: 17px; font-variant-numeric: tabular-nums; }
+.routine-tab-copy { display: grid; gap: 5px; }
+.routine-tab-copy strong { font-size: 14px; font-weight: 600; }
+.routine-tab-copy > span { font-size: 11px; }
+.routine-now { font-size: 10px; margin-left: auto; color: var(--brand); white-space: nowrap; }
+.routine-panel { min-width: 0; padding: 22px 0 12px; align-self: center; }
+.routine-kicker { color: var(--brand-600); font-size: 12px; letter-spacing: .015em; }
+.routine-panel h3 { font-size: 28px; font-weight: 400; letter-spacing: -.03em; margin: 15px 0; }
+.routine-description { max-width: 570px; font-size: 14px; line-height: 1.9; color: var(--muted); word-break: keep-all; }
+.routine-product { width: 100%; display: flex; align-items: center; gap: 18px; text-align: left; margin-top: 30px; padding-top: 22px; border-top: 1px solid var(--line); }
+.routine-product-image { width: 76px; height: 76px; flex-shrink: 0; overflow: hidden; }
+.routine-product-image img { width: 100%; height: 100%; object-fit: contain; mix-blend-mode: multiply; }
+.routine-product-copy { display: grid; gap: 6px; min-width: 0; }
+.routine-product-copy > span { font-size: 11px; color: var(--muted); }
+.routine-product-copy strong { font-size: 14px; font-weight: 500; line-height: 1.5; word-break: keep-all; }
+.routine-product-copy .routine-price { color: var(--ink-2); font-size: 13px; }
+.routine-product-link { display: inline-flex; align-items: center; gap: 6px; margin-left: auto; color: var(--brand); font-size: 12px; white-space: nowrap; }
+.routine-product:hover .routine-product-link { text-decoration: underline; }
+.routine-status { margin-top: 30px; padding-top: 22px; border-top: 1px solid var(--line); font-size: 13px; color: var(--muted); }
+.routine-tabs > button:focus-visible, .routine-product:focus-visible { outline: 2px solid var(--brand); outline-offset: 3px; }
+@media (max-width: 760px) {
+  .routine-heading { display: block; padding-bottom: 22px; }
+  .routine-heading h2 { font-size: 23px; line-height: 1.5; word-break: keep-all; }
+  .routine-heading > p { margin-top: 14px; font-size: 11px; }
+  .routine-layout { grid-template-columns: minmax(0, 1fr); gap: 8px; padding-top: 18px; }
+  .routine-tabs { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .routine-tabs > button, .routine-tabs > button:last-child { flex-direction: column; gap: 7px; padding: 12px 3px; border-left: 0; border-bottom: 2px solid var(--line); position: relative; }
+  .routine-tabs > button[aria-selected="true"] { background: transparent; border-bottom-color: var(--brand); }
+  .routine-time { font-size: 16px; }
+  .routine-tab-copy strong { font-size: 12px; }
+  .routine-tab-copy > span { display: none; }
+  .routine-now { position: absolute; top: -8px; right: 4px; font-size: 9px; }
+  .routine-panel { padding-top: 24px; }
+  .routine-panel h3 { font-size: 24px; line-height: 1.5; word-break: keep-all; }
+  .routine-description { font-size: 13px; }
+  .routine-product { gap: 12px; flex-wrap: wrap; margin-top: 24px; }
+  .routine-product-image { width: 60px; height: 60px; }
+  .routine-product-copy { flex: 1; }
+  .routine-product-link { justify-content: flex-end; width: 100%; }
+}
+
 /* ---------- Design tokens ---------- */
 :root {
   /* surfaces */
