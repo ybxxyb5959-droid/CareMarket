@@ -146,6 +146,8 @@ VITE_TOSS_CLIENT_KEY=
 
 Edge 전용 Secrets: `GEMINI_API_KEY`, `TOSS_SECRET_KEY`(테스트 키). 허용 origin은 `AI_SEARCH_ALLOWED_ORIGINS`, `AI_INSIGHTS_ALLOWED_ORIGINS`, `PAYMENT_ALLOWED_ORIGINS`입니다. 정확한 HTTPS origin을 쉼표로 구분하며 localhost 개발은 별도 허용합니다. Secret 값은 코드·README·브라우저 환경변수에 넣지 않습니다.
 
+`ai-insights`는 운영 주소 `https://caremarket.vercel.app`를 기본 허용하고, `AI_INSIGHTS_ALLOWED_ORIGINS`(미설정 시 `AI_SEARCH_ALLOWED_ORIGINS`)의 추가 주소를 함께 허용합니다. 다른 Vercel 주소는 자동 허용하지 않습니다. 함수 변경은 Vercel push 배포와 별도로 `npx supabase functions deploy ai-insights --use-api`로 연결된 Supabase에 반영해야 합니다.
+
 ## 프로젝트 한계 / 데모 고지
 
 - 포트폴리오·캡스톤용 가상 상품입니다. 가격·재고·영양정보는 실제 상품의 구매 근거가 아닙니다.

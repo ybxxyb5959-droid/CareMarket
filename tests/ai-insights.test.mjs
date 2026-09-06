@@ -1,6 +1,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { createAiInsightsHandler, GEMINI_MODEL } from '../supabase/functions/ai-insights/handler.js'
+import { resolveInsightOrigins, STOREFRONT_ORIGIN } from '../supabase/functions/ai-insights/origins.js'
 import { GEMINI_CART_SCHEMA, GEMINI_COMPARE_SCHEMA } from '../supabase/functions/_shared/ai-insights-contract.js'
 import { analyzeCartNutrition, CART_NUTRITION_THRESHOLDS, composeCartInsight, cartAnalysisBasis, isCartInsight } from '../supabase/functions/_shared/cart-nutrition-analysis.js'
 import { getCountdown, getLocalDateKey, isDiscountProduct, selectDailyDeals } from '../src/lib/deals.js'
@@ -54,6 +55,30 @@ function makeHandler(fetchImpl, overrides = {}) {
   })
 }
 
+test('production storefront preflight works with missing or stale origin secrets', async () => {
+  for (const configured of ['', 'https://old-store.example', ` ${STOREFRONT_ORIGIN}, https://preview.example, `]) {
+    const origins = resolveInsightOrigins(configured)
+    assert.equal(origins.filter((value) => value === STOREFRONT_ORIGIN).length, 1)
+    if (configured.includes('preview.example')) assert.ok(origins.includes('https://preview.example'))
+    const handler = makeHandler(() => { throw new Error('Preflight must not call Gemini') }, { productionOrigins: origins })
+    const response = await handler(new Request('https://example.test/ai-insights', {
+      method: 'OPTIONS',
+      headers: { origin: STOREFRONT_ORIGIN, 'access-control-request-method': 'POST', 'access-control-request-headers': 'authorization,apikey,content-type,x-client-info' },
+    }))
+    assert.equal(response.status, 204)
+    assert.equal(response.headers.get('access-control-allow-origin'), STOREFRONT_ORIGIN)
+    assert.match(response.headers.get('access-control-allow-headers'), /authorization/)
+  }
+})
+
+test('production origin default does not allow unrelated or lookalike origins', async () => {
+  const handler = makeHandler(() => { throw new Error('Untrusted origins must not call Gemini') }, { productionOrigins: resolveInsightOrigins() })
+  for (const origin of ['https://other.vercel.app', `${STOREFRONT_ORIGIN}.evil.test`, `${STOREFRONT_ORIGIN}/path`, 'http://caremarket.vercel.app']) {
+    const response = await handler(new Request('https://example.test/ai-insights', { method: 'OPTIONS', headers: { origin } }))
+    assert.equal(response.status, 403)
+  }
+})
+
 for (const ids of [[1, 2], [1, 2, 3]]) {
   test(`compares exactly ${ids.length} server-loaded products`, async () => {
     let fetchedIds
@@ -67,13 +92,17 @@ for (const ids of [[1, 2], [1, 2, 3]]) {
       assert.match(url, new RegExp(`/${GEMINI_MODEL}:generateContent$`))
       const payload = JSON.parse(options.body)
       assert.deepEqual(payload.generationConfig.responseJsonSchema, GEMINI_COMPARE_SCHEMA)
+      assert.equal(payload.generationConfig.maxOutputTokens, 1536)
       const prompt = JSON.parse(payload.contents[0].parts[0].text)
       assert.deepEqual(prompt.products.map((item) => item.product_id), ids)
       assert.equal(prompt.primary_goal, 'muscle_gain')
       assert.equal(JSON.stringify(payload).includes('test-only-key'), false)
       return geminiResponse(output)
-    }, { getProducts: async (requested) => { fetchedIds = requested; return requested.map((id) => product(id)) } })
-    const response = await handler(request({ mode: 'compare', product_ids: ids }))
+    }, {
+      productionOrigins: resolveInsightOrigins(),
+      getProducts: async (requested) => { fetchedIds = requested; return requested.map((id) => product(id)) },
+    })
+    const response = await handler(request({ mode: 'compare', product_ids: ids }, { origin: STOREFRONT_ORIGIN }))
     assert.equal(response.status, 200)
     assert.deepEqual(fetchedIds, ids)
     assert.deepEqual((await response.json()).insight, output)

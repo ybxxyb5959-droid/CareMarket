@@ -186,7 +186,8 @@ vary_fiber_food_groups 방향이 있으면 식이섬유를 보완할 수 있는 
           responseMimeType: 'application/json',
           responseJsonSchema: schema,
           candidateCount: 1,
-          maxOutputTokens: mode === 'compare' ? 768 : 512,
+          // Korean summaries plus three highlights and a recommendation can exceed 768 tokens.
+          maxOutputTokens: mode === 'compare' ? 1536 : 512,
           thinkingConfig: { thinkingLevel: 'minimal' },
         },
       }),
