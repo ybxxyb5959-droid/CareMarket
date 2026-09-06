@@ -5,6 +5,7 @@ import { fetchMyOrders } from '../lib/orders'
 import { won } from '../lib/format'
 import Icon from '../components/Icon'
 import WishlistQuickPanel from '../components/WishlistQuickPanel'
+import MyCoupons from '../components/MyCoupons'
 import { openPostcode } from '../lib/postcode'
 
 const STATUS_LABELS = { paid: '결제완료', preparing: '상품준비중', shipped: '배송중', delivered: '배송완료' }
@@ -25,6 +26,12 @@ export default function MyPage() {
   const [ordersReloadKey, setOrdersReloadKey] = useState(0)
   const [withdrawalOpen, setWithdrawalOpen] = useState(false)
   const [withdrawalAgreed, setWithdrawalAgreed] = useState(false)
+
+  useEffect(() => {
+    if (isLoggedIn && window.location.hash === '#my-coupons') {
+      document.getElementById('my-coupons')?.scrollIntoView({ block: 'start' })
+    }
+  }, [isLoggedIn])
 
   useEffect(() => {
     if (!withdrawalOpen) return undefined
@@ -142,6 +149,7 @@ export default function MyPage() {
         <div className="mypage-empty-row"><div><Icon name="message-circle" size={22} /><span><strong>1:1 문의 내역</strong><small>접수한 문의와 답변을 확인할 수 있어요.</small></span></div><button type="button" className="btn btn-primary btn-sm" onClick={() => navigate('supportInquiries')}>확인하기</button></div>
       </section>
 
+      <div id="my-coupons"><MyCoupons key={authUserId} userId={authUserId} /></div>
       <div className="mypage-account-actions">
         <button type="button" className="mypage-withdrawal-link" onClick={() => { setWithdrawalAgreed(false); setWithdrawalOpen(true) }}>회원탈퇴</button>
       </div>

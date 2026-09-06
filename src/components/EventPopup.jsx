@@ -1,36 +1,41 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useStore } from '../store'
 
-const KEY = 'cm_welcome_hide_date'
-const today = () => new Date().toISOString().slice(0, 10)
+const KEY = 'cm_welcome_dismissed'
 
 export default function EventPopup() {
-  const { isLoggedIn, view, navigate } = useStore()
+  const { isLoggedIn, authLoading, view, navigate } = useStore()
   const [open, setOpen] = useState(() => {
-    try { return localStorage.getItem(KEY) !== today() } catch { return true }
+    try { return sessionStorage.getItem(KEY) !== '1' } catch { return true }
   })
-
-  if (isLoggedIn || view !== 'main' || !open) return null
-
-  const close = () => setOpen(false)
-  const hideToday = () => {
-    try { localStorage.setItem(KEY, today()) } catch { /* 비공개 모드 등 무시 */ }
+  const dialog = useRef(null)
+  const close = () => {
+    try { sessionStorage.setItem(KEY, '1') } catch { /* Storage may be unavailable. */ }
     setOpen(false)
   }
+  const visible = !authLoading && !isLoggedIn && view === 'main' && open
+  useEffect(() => {
+    if (!visible) return
+    const previous = document.activeElement
+    const modal = dialog.current
+    modal?.showModal()
+    return () => { modal?.close(); previous?.focus?.() }
+  }, [visible])
+
+  if (!visible) return null
 
   return (
-    <div className="ev-overlay" onClick={close}>
-      <div className="ev-modal" onClick={(e) => e.stopPropagation()}>
+      <dialog ref={dialog} className="ev-modal" aria-labelledby="welcome-title" onCancel={close} onClick={e => { if (e.target === e.currentTarget && (e.clientX < e.currentTarget.getBoundingClientRect().left || e.clientX > e.currentTarget.getBoundingClientRect().right)) close() }}>
         <button className="ev-close" onClick={close} aria-label="닫기">×</button>
         <p className="ev-kicker">CAREMARKET WELCOME</p>
-        <h2 className="ev-title">신규 회원 20% 쿠폰</h2>
-        <p className="ev-sub">회원가입 후 첫 쇼핑에 사용할 수 있어요.</p>
+        <h2 className="ev-title" id="welcome-title">반가워요.</h2>
+        <p className="ev-sub">신규회원 20% 쿠폰으로<br />건강한 첫 선택을 시작하세요.</p>
 
         <div className="ev-coupon">
           <div className="ev-coupon-main">
             <div className="cap">WELCOME COUPON</div>
             <div className="off">20%<small>OFF</small></div>
-            <div className="use">회원가입 혜택으로 안내됩니다</div>
+            <div className="use">가입 시 자동 발급 · 상품금액 20% 할인<br />배송비 제외 · 회원당 1회</div>
           </div>
           <div className="ev-coupon-side">
             COUPON
@@ -38,10 +43,9 @@ export default function EventPopup() {
         </div>
 
         <div className="ev-foot">
-          <button className="ev-skip" onClick={hideToday}>오늘 하루 보지 않기</button>
-          <button className="btn btn-primary btn-sm" onClick={() => { close(); navigate('register') }}>회원가입하기</button>
+          <button className="ev-skip" onClick={close}>다음에 볼게요</button>
+          <button className="btn btn-primary btn-sm" onClick={() => { close(); navigate('register') }}>혜택 확인하기</button>
         </div>
-      </div>
-    </div>
+      </dialog>
   )
 }

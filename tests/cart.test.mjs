@@ -79,7 +79,7 @@ function fixture() {
   return {
     controller, client, rows, calls, errors, state: () => state,
     holdRead: () => (heldRead = deferred()), holdWrite: () => (heldWrite = deferred()),
-    failWrite: () => { writeError = new Error('network failure') },
+    failWrite: (error = new Error('network failure')) => { writeError = error },
   }
 }
 
@@ -90,6 +90,22 @@ test('anonymous cart never sends reads or writes', async () => {
   assert.equal(await f.controller.changeQuantity(1, 1), false)
   assert.equal(await f.controller.remove(1), false)
   assert.equal(f.calls.length, 0)
+})
+
+test('stock rejection refreshes current product stock without changing cart quantity', async () => {
+  const f = fixture()
+  f.rows.push({ cart_item_id: 'A-1', user_id: 'A', product_id: 1, quantity: 1, product: { stock: 3 } })
+  f.controller.setOwner('A')
+  await f.controller.load()
+  f.rows[0].product = { stock: 0 }
+  f.failWrite({ code: '23514', message: 'Cart quantity exceeds available stock' })
+  assert.equal(await f.controller.changeQuantity(1, 1), false)
+  assert.equal(f.state().rows[0].quantity, 1)
+  assert.equal(f.state().rows[0].product.stock, 0)
+  assert.equal(f.state().error, null)
+  assert.equal(f.state().pending, 0)
+  assert.deepEqual(f.errors, ['현재 구매 가능한 최대 수량입니다.'])
+  assert.equal(f.calls.filter(call => call.operation === 'read').length, 2)
 })
 
 test('queued adds, deltas, minimum one, delete and refresh persistence', async () => {

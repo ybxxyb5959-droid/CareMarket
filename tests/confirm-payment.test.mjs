@@ -114,7 +114,7 @@ test('does not mark non-DONE payments as paid', async () => {
   assert.equal(completed, 0)
 })
 
-test('automatically cancels a deterministic stock failure with a separate idempotency key', async () => {
+for (const failure of ['CHECKOUT_STOCK_UNAVAILABLE', 'CHECKOUT_COUPON_UNAVAILABLE']) test(`automatically cancels ${failure} with a separate idempotency key`, async () => {
   const calls = []
   const handler = createConfirmPaymentHandler(dependencies({
     fetchImpl: async (url, options) => {
@@ -124,7 +124,7 @@ test('automatically cancels a deterministic stock failure with a separate idempo
       }
       return Response.json({ status: 'CANCELED' })
     },
-    completeOrder: async () => { throw new Error('CHECKOUT_STOCK_UNAVAILABLE') },
+    completeOrder: async () => { throw new Error(failure) },
   }))
   const response = await handler(request(validBody))
   assert.equal(response.status, 409)

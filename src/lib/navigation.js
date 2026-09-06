@@ -1,6 +1,8 @@
 const VIEW_PATHS = {
   main: '/',
   deals: '/deals',
+  best: '/best',
+  new: '/new',
   products: '/products',
   custom: '/for-you',
   goalSetup: '/goals',
@@ -12,6 +14,7 @@ const VIEW_PATHS = {
   login: '/login',
   register: '/register',
   adminDashboard: '/admin',
+  adminHistory: '/admin/history',
   adminProducts: '/admin/products',
   adminOrders: '/admin/orders',
   adminPartnerships: '/admin/partnerships',

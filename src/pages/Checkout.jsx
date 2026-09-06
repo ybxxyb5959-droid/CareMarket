@@ -5,6 +5,7 @@ import CheckoutOrderItems from '../components/checkout/CheckoutOrderItems'
 import CheckoutBuyerInfo from '../components/checkout/CheckoutBuyerInfo'
 import CheckoutPaymentMethods from '../components/checkout/CheckoutPaymentMethods'
 import CheckoutSummary from '../components/checkout/CheckoutSummary'
+import MyCoupons from '../components/MyCoupons'
 import { supabase } from '../lib/supabase'
 import {
   checkoutRequestErrorMessage,
@@ -64,6 +65,9 @@ function CheckoutContent() {
   const [widgets, setWidgets] = useState(null)
   const [submitting, setSubmitting] = useState(false)
   const [serverTotal, setServerTotal] = useState(null)
+  const [userCouponId, setUserCouponId] = useState('')
+  const discountAmount = userCouponId ? Math.floor(cartTotal * 20 / 100) : 0
+  const estimatedTotal = cartTotal + deliveryFee - discountAmount
   const [paymentError, setPaymentError] = useState('')
   const submittingRef = useRef(false)
   const onWidgetsReady = useCallback((next) => setWidgets(next), [])
@@ -101,9 +105,9 @@ function CheckoutContent() {
     setPaymentError('')
 
     try {
-      const order = await createCheckoutOrder(supabase, shipping)
+      const order = await createCheckoutOrder(supabase, shipping, userCouponId)
       setServerTotal(order.total_price)
-      const displayedTotal = cartTotal + deliveryFee
+      const displayedTotal = serverTotal ?? estimatedTotal
       if (order.total_price !== displayedTotal) {
         await widgets.setAmount({ currency: 'KRW', value: order.total_price })
         const message = '결제금액이 변경되었습니다. 변경된 금액을 확인한 뒤 다시 결제해 주세요.'
@@ -111,6 +115,7 @@ function CheckoutContent() {
         showToast(message)
         return
       }
+      await widgets.setAmount({ currency: 'KRW', value: order.total_price })
       await widgets.requestPayment({
         orderId: order.toss_order_id,
         orderName: order.order_name,
@@ -182,9 +187,10 @@ function CheckoutContent() {
             complete={isCheckoutShippingComplete(shipping)}
             onExpandedToggle={() => setBuyerInfoOpen((current) => !current)}
           />
-          <CheckoutPaymentMethods customerKey={authUserId} amount={cartTotal + deliveryFee} onReady={onWidgetsReady} />
+          <MyCoupons userId={authUserId} selected={userCouponId} disabled={submitting} onSelect={id => { setUserCouponId(id); setServerTotal(null) }} />
+          <CheckoutPaymentMethods customerKey={authUserId} amount={serverTotal ?? estimatedTotal} onReady={onWidgetsReady} />
         </div>
-        <CheckoutSummary cartTotal={cartTotal} deliveryFee={deliveryFee} cartCount={cart.reduce((sum, item) => sum + item.quantity, 0)} totalOverride={serverTotal} disabled={cartLoading || cartPending > 0 || Boolean(cartError) || !widgets || submitting} submitting={submitting} onPay={submitCheckout} />
+        <CheckoutSummary cartTotal={cartTotal} deliveryFee={deliveryFee} discountAmount={discountAmount} cartCount={cart.reduce((sum, item) => sum + item.quantity, 0)} totalOverride={serverTotal} disabled={cartLoading || cartPending > 0 || Boolean(cartError) || !widgets || submitting} submitting={submitting} onPay={submitCheckout} />
       </div>
     </div>
   )

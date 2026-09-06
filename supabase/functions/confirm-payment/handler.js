@@ -237,6 +237,7 @@ export function createConfirmPaymentHandler({
       }
 
       const deterministicFailure = error?.message === 'CHECKOUT_PRODUCT_UNAVAILABLE'
+        || error?.message === 'CHECKOUT_COUPON_UNAVAILABLE'
         || error?.message === 'CHECKOUT_STOCK_UNAVAILABLE'
         || error?.message === 'CHECKOUT_TOTAL_INTEGRITY_ERROR'
 

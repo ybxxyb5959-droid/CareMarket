@@ -41,6 +41,49 @@ function buildSuggestions(products, vocab, query) {
   return { terms, items }
 }
 
+function AnnouncementBar({ navigate, isLoggedIn }) {
+  const [active, setActive] = useState(0)
+  const [paused, setPaused] = useState(false)
+  const [interacting, setInteracting] = useState(false)
+
+  useEffect(() => {
+    if (paused || interacting) return undefined
+    const timer = window.setInterval(() => setActive(current => 1 - current), 5000)
+    return () => window.clearInterval(timer)
+  }, [paused, interacting])
+
+  const openCoupons = () => {
+    if (!isLoggedIn) { navigate('login'); return }
+    navigate('mypage')
+    window.history.replaceState(window.history.state, '', '/mypage#my-coupons')
+    document.getElementById('my-coupons')?.scrollIntoView({ block: 'start' })
+  }
+
+  return <div className="announce" aria-label="쇼핑 혜택 안내"
+    onMouseEnter={() => setInteracting(true)} onMouseLeave={() => setInteracting(false)}
+    onFocus={() => setInteracting(true)} onBlur={event => { if (!event.currentTarget.contains(event.relatedTarget)) setInteracting(false) }}>
+    <div className="announce-shell">
+      <div className="announce-viewport">
+        <div className="announce-track" style={{ transform: `translateY(-${active * 50}%)` }}>
+          <div className="announce-inner" aria-hidden={active !== 0} inert={active !== 0}>
+            <b>ORGANIC &amp; CLEAN</b>
+            <span>자연에서 온 무첨가 할인식단 · 40,000원 이상 무료배송</span>
+            <button type="button" className="link" onClick={() => navigate('custom')}>내 맞춤 상품 보기 →</button>
+          </div>
+          <div className="announce-inner" aria-hidden={active !== 1} inert={active !== 1}>
+            <b>WELCOME BENEFIT</b>
+            <span>반가워요, 신규 가입 <strong>20% 쿠폰 지급</strong></span>
+            <button type="button" className="link" onClick={openCoupons}>쿠폰함 확인하기 →</button>
+          </div>
+        </div>
+      </div>
+      <div className="announce-controls">
+        <button type="button" onClick={() => setPaused(current => !current)} aria-label={paused ? '혜택 안내 자동 전환 재생' : '혜택 안내 자동 전환 일시정지'} aria-pressed={paused}><span aria-hidden="true">{paused ? '▶' : 'Ⅱ'}</span></button>
+      </div>
+    </div>
+  </div>
+}
+
 function CompanyMenu({ navigate }) {
   const [open, setOpen] = useState(false)
   const menuRef = useRef(null)
@@ -199,13 +242,7 @@ export default function Header() {
   return (
     <>
       {/* 공지 스트립 */}
-      <div className="announce">
-        <div className="announce-inner">
-          <b>ORGANIC &amp; CLEAN</b>
-          <span>자연에서 온 무첨가 할인식단 · 40,000원 이상 무료배송</span>
-          <span className="link" onClick={() => navigate('custom')}>내 맞춤 상품 보기 →</span>
-        </div>
-      </div>
+      <AnnouncementBar navigate={navigate} isLoggedIn={isLoggedIn} />
 
       {/* GNB */}
       <header className="header">

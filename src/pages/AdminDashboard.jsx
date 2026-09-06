@@ -8,10 +8,11 @@ import {
   fetchAdminOrders,
   fetchAdminPartnerships,
   fetchAdminProducts,
+  fetchAdminSalesSummary,
   isFulfillmentOrder,
   ORDER_STATUS_LABELS,
 } from '../lib/admin'
-import { getDashboardMetrics, maskDashboardName, MOCK_CATEGORY_SALES_DATA, MOCK_PAYMENT_CHART_DATA } from '../lib/admin-dashboard'
+import { getDashboardMetrics, maskDashboardName, salesDateRange, validSalesRange, salesChange } from '../lib/admin-dashboard'
 
 const DASHBOARD_VIEWS = {
   products: 'adminProducts',
@@ -33,51 +34,54 @@ function MetricValue({ value, loading, error, unit = '' }) {
   return <>{value.toLocaleString('ko-KR')}<small>{unit}</small></>
 }
 
-function DashboardMetric({ icon, label, value, unit, loading, error, tone = '' }) {
+function DashboardMetric({ icon, label, value, unit, loading, error, tone = '', comparison }) {
   return <article className={`admin-dashboard-metric ${tone}`}>
     <div className="admin-dashboard-metric-icon"><Icon name={icon} size={18} /></div>
     <div className="admin-dashboard-metric-copy">
       <span>{label}</span>
       <strong><MetricValue value={value} loading={loading} error={error} unit={unit} /></strong>
+      {!loading && !error && comparison && <small>{comparison}</small>}
     </div>
   </article>
 }
 
-function PaymentChart() {
-  const max = Math.max(...MOCK_PAYMENT_CHART_DATA.map((item) => item.value))
+function PaymentChart({ data }) {
+  const max = Math.max(1, ...data.map((item) => item.value))
   const chartWidth = 620
   const chartHeight = 178
   const baseline = 143
   const plotHeight = 108
   const startX = 28
   const plotWidth = 566
-  const points = MOCK_PAYMENT_CHART_DATA.map((item, index) => {
-    const x = startX + (plotWidth / (MOCK_PAYMENT_CHART_DATA.length - 1)) * index
+  const labelStep = Math.max(1, Math.ceil((data.length - 1) / 6))
+  const points = data.map((item, index) => {
+    const x = data.length === 1 ? chartWidth / 2 : startX + (plotWidth / (data.length - 1)) * index
     const y = baseline - (item.value / max) * plotHeight
     return { ...item, x, y }
   })
   return <div className="admin-dashboard-chart-visual">
-    <svg viewBox={`0 0 ${chartWidth} ${chartHeight}`} role="img" aria-label="최근 7일 결제금액 추이 샘플 꺾은선 차트">
+    <svg viewBox={`0 0 ${chartWidth} ${chartHeight}`} role="img" aria-label={`${data[0]?.date || ''}부터 ${data.at(-1)?.date || ''}까지 일자별 결제금액 추이`}>
       {[0, 1, 2, 3].map((line) => {
         const y = baseline - (plotHeight / 3) * line
         return <line key={line} x1="22" x2="600" y1={y} y2={y} className="admin-dashboard-chart-grid" />
       })}
       <polyline className="admin-dashboard-payment-line" points={points.map((point) => `${point.x},${point.y}`).join(' ')} />
-      {points.map((point) => <g key={point.label}>
-        <circle className="admin-dashboard-payment-point" cx={point.x} cy={point.y} r="3.5"><title>{`${point.label} ${point.value.toLocaleString('ko-KR')}원`}</title></circle>
-        <text className="admin-dashboard-chart-label" x={point.x} y="166" textAnchor="middle">{point.label}</text>
+      {points.map((point, index) => <g key={point.date}>
+        <circle className="admin-dashboard-payment-point" cx={point.x} cy={point.y} r={data.length > 30 ? 2 : 3.5}><title>{`${point.date} ${point.value.toLocaleString('ko-KR')}원`}</title></circle>
+        {(index % labelStep === 0 || index === points.length - 1) && <text className="admin-dashboard-chart-label" x={point.x} y="166" textAnchor="middle">{point.label}</text>}
       </g>)}
     </svg>
   </div>
 }
 
-function CategoryChart() {
-  const max = Math.max(...MOCK_CATEGORY_SALES_DATA.map((item) => item.value))
-  return <div className="admin-dashboard-category-chart" role="img" aria-label="카테고리별 판매량 샘플 가로 막대 차트">
-    {MOCK_CATEGORY_SALES_DATA.map((item) => <div className="admin-dashboard-category-row" key={item.label}>
+function CategoryChart({ data }) {
+  const max = Math.max(1, ...data.map((item) => item.value))
+  if (!data.length) return <div className="admin-dashboard-empty">선택한 기간의 판매 데이터가 없습니다.</div>
+  return <div className="admin-dashboard-category-chart" role="img" aria-label="카테고리별 판매 수량">
+    {data.map((item) => <div className="admin-dashboard-category-row" key={item.label}>
       <span>{item.label}</span>
       <div className="admin-dashboard-category-track"><i style={{ width: `${(item.value / max) * 100}%` }} /></div>
-      <b>{item.value}</b>
+      <b>{item.value.toLocaleString('ko-KR')}</b>
     </div>)}
   </div>
 }
@@ -90,6 +94,107 @@ function DashboardCard({ title, kicker, action, onAction, children, className = 
     </div>
     {children}
   </section>
+}
+
+function useSalesSummary(range) {
+  const { start, end } = range
+  const [revision, setRevision] = useState(0)
+  const [state, setState] = useState({ data: null, error: false, key: '' })
+  const key = `${start}:${end}:${revision}`
+  useEffect(() => {
+    let active = true
+    fetchAdminSalesSummary({ start, end }).then(data => {
+      if (active) setState({ data, error: false, key })
+    }).catch(() => {
+      if (active) setState({ data: null, error: true, key })
+    })
+    return () => { active = false }
+  }, [start, end, key])
+  return { data: state.key === key ? state.data : null, error: state.key === key && state.error,
+    loading: state.key !== key, retry: () => setRevision(n => n + 1) }
+}
+
+function SalesCharts({ sales, history = false, navigate }) {
+  if (sales.loading) return <div className="admin-dashboard-empty" role="status">판매 현황을 불러오는 중입니다.</div>
+  if (sales.error || !sales.data) return <div className="admin-dashboard-refresh" role="alert">판매 현황을 불러오지 못했습니다.<button className="btn btn-ghost btn-sm" onClick={sales.retry}>다시 시도</button></div>
+  return <>
+    <div className="admin-dashboard-grid admin-dashboard-chart-grid">
+      <DashboardCard title={history ? '일자별 결제금액 추이' : '최근 7일 결제금액 추이'} kicker="PAYMENT OVERVIEW" className="admin-dashboard-chart-card" action={!history ? '지난 현황 보기' : undefined} onAction={() => navigate('adminHistory')}>
+        <PaymentChart data={sales.data.daily} />
+        <p className="admin-dashboard-demo-note">결제 완료 주문 · 쿠폰 할인 후 배송비 포함 · 한국 시간 기준</p>
+      </DashboardCard>
+      <DashboardCard title="카테고리별 판매량" kicker="CATEGORY MIX" className="admin-dashboard-chart-card">
+        <CategoryChart data={sales.data.categories} />
+        <p className="admin-dashboard-demo-note">{history ? '선택 기간' : '최근 7일'} 결제 완료 주문의 상품 수량</p>
+      </DashboardCard>
+    </div>
+    {sales.data.order_count === 0 && <p className="admin-dashboard-empty" role="status">선택한 기간의 판매 데이터가 없습니다.</p>}
+    {sales.data.legacy_order_count > 0 && <p className="admin-dashboard-demo-note">결제 시각 기록 도입 전 주문 {sales.data.legacy_order_count}건은 주문 생성일로 집계됩니다.</p>}
+  </>
+}
+
+function AdminHistoryContent() {
+  const { navigate } = useStore()
+  const [range, setRange] = useState(() => {
+    const params = new URLSearchParams(window.location.search)
+    const saved = { start: params.get('start') || '', end: params.get('end') || '' }
+    return validSalesRange(saved) ? saved : salesDateRange(30)
+  })
+  const [draft, setDraft] = useState(range)
+  const [rangeError, setRangeError] = useState('')
+  const sales = useSalesSummary(range)
+  const selectRange = next => {
+    if (!validSalesRange(next)) {
+      setRangeError('시작일과 종료일을 확인해 주세요. 한 번에 최대 3,660일까지 조회할 수 있습니다.')
+      return
+    }
+    setRangeError('')
+    setRange(next)
+    setDraft(next)
+    window.history.replaceState(window.history.state, '', `/admin/history?${new URLSearchParams(next)}`)
+  }
+  const summary = sales.data
+  const metrics = [
+    { key: 'total_payment', label: '총 결제금액', unit: '원', icon: 'credit-card' },
+    { key: 'order_count', label: '결제 완료 주문', unit: '건', icon: 'package' },
+    { key: 'quantity', label: '판매 상품 총수량', unit: '개', icon: 'cart' },
+    { key: 'average_payment', label: '주문당 평균 결제금액', unit: '원', icon: 'credit-card' },
+  ]
+  return <div className="wrap page admin-dashboard-page">
+    <div className="admin-head admin-dashboard-head"><h1>지난 현황 보기</h1><p>기간별 판매 현황</p></div>
+    <button className="btn btn-ghost btn-sm" onClick={() => navigate('adminDashboard')}>대시보드로 돌아가기</button>
+    <section className="admin-dashboard-card admin-sales-filters" aria-label="판매 현황 조회 기간">
+      <div className="admin-sales-presets">{[7, 30, 90].map(days => {
+        const preset = salesDateRange(days)
+        const selected = preset.start === range.start && preset.end === range.end
+        return <button key={days} className={`btn btn-sm ${selected ? 'btn-primary' : 'btn-soft'}`} aria-pressed={selected} onClick={() => selectRange(preset)}>최근 {days}일</button>
+      })}</div>
+      <form className="admin-sales-dates" onSubmit={event => {
+        event.preventDefault()
+        const values = new FormData(event.currentTarget)
+        selectRange({ start: String(values.get('start')), end: String(values.get('end')) })
+      }}>
+        <label>시작일<input name="start" type="date" required value={draft.start} onChange={event => setDraft({ ...draft, start: event.target.value })} /></label>
+        <span aria-hidden="true">~</span>
+        <label>종료일<input name="end" type="date" required value={draft.end} onChange={event => setDraft({ ...draft, end: event.target.value })} /></label>
+        <button className="btn btn-soft btn-sm" type="submit">기간 조회</button>
+      </form>
+      {rangeError && <p role="alert">{rangeError}</p>}
+      <p className="admin-dashboard-demo-note">조회 기간: {range.start} ~ {range.end} · 직전 동일 길이의 기간과 비교합니다.</p>
+    </section>
+    <section className="admin-dashboard-metrics admin-sales-metrics" aria-label="기간별 운영 지표">
+      {metrics.map(metric => <DashboardMetric key={metric.key} {...metric} value={summary?.[metric.key] || 0} loading={sales.loading} error={sales.error}
+        comparison={summary && metric.key !== 'average_payment' ? salesChange(summary[metric.key], summary.previous[metric.key]) : undefined} />)}
+    </section>
+    <SalesCharts sales={sales} history navigate={navigate} />
+    {summary && <DashboardCard title="기간 내 베스트 상품" kicker="BEST PRODUCTS">
+      {!summary.best.length ? <div className="admin-dashboard-empty">선택한 기간의 판매 데이터가 없습니다.</div> : <div className="admin-sales-table-wrap"><table className="admin-sales-table">
+        <thead><tr><th scope="col">순위</th><th scope="col">상품명</th><th scope="col">판매수량</th><th scope="col">상품금액</th></tr></thead>
+        <tbody>{summary.best.map((product, index) => <tr key={product.product_id}><td>{index + 1}</td><td>{product.name}</td><td>{product.quantity.toLocaleString('ko-KR')}개</td><td>{won(product.revenue)}</td></tr>)}</tbody>
+      </table></div>}
+      <p className="admin-dashboard-demo-note">판매수량 기준 상위 100개 · 상품금액은 주문 당시 단가 × 수량이며 주문 쿠폰 할인과 배송비 배분 전입니다.</p>
+    </DashboardCard>}
+  </div>
 }
 
 function NeedsAttention({ metrics, loading, errors, navigate }) {
@@ -129,6 +234,7 @@ function AdminDashboardContent() {
   const { navigate } = useStore()
   const [resources, setResources] = useState(initialResources)
   const [loading, setLoading] = useState(true)
+  const sales = useSalesSummary(salesDateRange(7))
 
   const load = async ({ initial = false } = {}) => {
     if (!initial) setLoading(true)
@@ -159,12 +265,13 @@ function AdminDashboardContent() {
   const inquiries = resources.inquiries.data
   const metrics = useMemo(() => getDashboardMetrics({ products, orders, partnerships, inquiries }), [inquiries, orders, partnerships, products])
   const metricErrors = {
-    todayOrders: resources.orders.error,
-    todayPayment: resources.orders.error,
+    todayOrders: sales.error,
+    todayPayment: sales.error,
     preparingOrders: resources.orders.error,
     waitingInquiries: resources.inquiries.error,
     newPartnerships: resources.partnerships.error,
     lowStockProducts: resources.products.error,
+    pendingOrders: resources.orders.error,
   }
   const hasError = Object.values(resources).some((resource) => resource.error)
 
@@ -176,24 +283,15 @@ function AdminDashboardContent() {
 
     {loading ? <div className="empty" role="status"><p>대시보드 운영 데이터를 불러오는 중입니다.</p></div> : <>
       <section className="admin-dashboard-metrics" aria-label="주요 운영 현황">
-        <DashboardMetric icon="package" label="오늘 주문" value={metrics.todayOrders} unit="건" loading={false} error={metricErrors.todayOrders} />
-        <DashboardMetric icon="credit-card" label="오늘 결제금액" value={metrics.todayPayment} unit="원" loading={false} error={metricErrors.todayPayment} />
+        <DashboardMetric icon="package" label="오늘 주문" value={sales.data?.daily.at(-1)?.orders || 0} unit="건" loading={sales.loading} error={metricErrors.todayOrders} />
+        <DashboardMetric icon="credit-card" label="오늘 결제금액" value={sales.data?.daily.at(-1)?.value || 0} unit="원" loading={sales.loading} error={metricErrors.todayPayment} />
         <DashboardMetric icon="clock" label="상품 준비중" value={metrics.preparingOrders} unit="건" loading={false} error={metricErrors.preparingOrders} tone={metrics.preparingOrders > 0 ? 'accent' : ''} />
         <DashboardMetric icon="message-circle" label="답변 대기 문의" value={metrics.waitingInquiries} unit="건" loading={false} error={metricErrors.waitingInquiries} tone={metrics.waitingInquiries > 0 ? 'warning' : ''} />
         <DashboardMetric icon="leaf" label="신규 협업 제안" value={metrics.newPartnerships} unit="건" loading={false} error={metricErrors.newPartnerships} tone={metrics.newPartnerships > 0 ? 'warning' : ''} />
         <DashboardMetric icon="alert-circle" label="재고 부족 상품" value={metrics.lowStockProducts} unit="개" loading={false} error={metricErrors.lowStockProducts} tone={metrics.lowStockProducts > 0 ? 'warning' : ''} />
       </section>
 
-      <div className="admin-dashboard-grid admin-dashboard-chart-grid">
-        <DashboardCard title="최근 7일 결제금액 추이" kicker="PAYMENT OVERVIEW" className="admin-dashboard-chart-card">
-          <PaymentChart />
-          <p className="admin-dashboard-demo-note">샘플 데이터 · 실제 결제 집계가 아닙니다.</p>
-        </DashboardCard>
-        <DashboardCard title="카테고리별 판매량" kicker="CATEGORY MIX" className="admin-dashboard-chart-card">
-          <CategoryChart />
-          <p className="admin-dashboard-demo-note">데모 데이터 · 추후 실제 집계로 교체할 수 있습니다.</p>
-        </DashboardCard>
-      </div>
+      <SalesCharts sales={sales} navigate={navigate} />
 
       <div className="admin-dashboard-grid admin-dashboard-operation-grid">
         <DashboardCard title="확인이 필요한 항목" kicker="NEEDS ATTENTION">
@@ -209,5 +307,6 @@ function AdminDashboardContent() {
 }
 
 export default function AdminDashboard() {
-  return <AdminGate><AdminDashboardContent /></AdminGate>
+  const { view } = useStore()
+  return <AdminGate>{view === 'adminHistory' ? <AdminHistoryContent /> : <AdminDashboardContent />}</AdminGate>
 }

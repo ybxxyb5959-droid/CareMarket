@@ -44,6 +44,7 @@ export default function Cart() {
 
   const updateQuantity = async (productId, currentQuantity, delta) => {
     const nextQuantity = Math.max(1, currentQuantity + delta)
+    if (delta > 0 && nextQuantity > cart.find(item => item.product.id === productId)?.product.stock) return
     if (nextQuantity === currentQuantity) return
 
     setOptimisticQuantities((current) => ({ ...current, [productId]: nextQuantity }))
@@ -131,9 +132,10 @@ export default function Cart() {
                         <div className="qty-stepper">
                           <button type="button" aria-label={`${product.name} 수량 감소`} disabled={quantity <= 1 || Boolean(cartError)} onClick={() => updateQuantity(product.id, quantity, -1)}><Icon name="minus" size={14} /></button>
                           <span aria-live="polite">{quantity}</span>
-                          <button type="button" aria-label={`${product.name} 수량 증가`} disabled={Boolean(cartError)} onClick={() => updateQuantity(product.id, quantity, 1)}><Icon name="plus" size={14} /></button>
+                          <button type="button" aria-label={`${product.name} 수량 증가`} disabled={quantity >= product.stock || isBusy || Boolean(cartError)} onClick={() => updateQuantity(product.id, quantity, 1)}><Icon name="plus" size={14} /></button>
                         </div>
                       </div>
+                      {quantity >= product.stock && <small role="status">현재 구매 가능한 최대 수량입니다.</small>}
                       <button type="button" className="del" onClick={() => removeItem(product.id)} disabled={isBusy || Boolean(cartError)}>
                         <Icon name="trash" size={15} /> 삭제
                       </button>

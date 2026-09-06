@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
-import { getDashboardMetrics, LOW_STOCK_THRESHOLD, maskDashboardName } from '../src/lib/admin-dashboard.js'
-import { adminOrdersUrl } from '../src/lib/navigation.js'
+import { getDashboardMetrics, LOW_STOCK_THRESHOLD, maskDashboardName, koreaDate, salesDateRange, validSalesRange, salesChange } from '../src/lib/admin-dashboard.js'
+import { adminOrdersUrl, parseAppLocation, viewUrl } from '../src/lib/navigation.js'
 
 test('dashboard metrics use fulfillment orders and exclude pending orders', () => {
   const today = new Date().toISOString()
@@ -36,4 +36,31 @@ test('dashboard masks names without exposing extra customer details', () => {
 test('dashboard pending attention item reuses the existing orders filter route', () => {
   assert.equal(adminOrdersUrl({ status: 'pending' }), '/admin/orders?status=pending')
   assert.equal(adminOrdersUrl(), '/admin/orders')
+})
+
+test('sales ranges include today and use Korea midnight, including leap days', () => {
+  assert.equal(koreaDate('2026-09-05T15:00:00Z'), '2026-09-06')
+  assert.deepEqual(salesDateRange(7, '2026-09-05T15:00:00Z'), { start: '2026-08-31', end: '2026-09-06' })
+  assert.deepEqual(salesDateRange(30, '2024-03-01T00:00:00Z'), { start: '2024-02-01', end: '2024-03-01' })
+  assert.equal(validSalesRange({ start: '2026-02-30', end: '2026-03-01' }), false)
+  assert.equal(validSalesRange({ start: '2026-09-06', end: '2026-09-05' }), false)
+  assert.equal(validSalesRange({ start: '2026-09-06', end: '2026-09-06' }), true)
+})
+
+test('today metrics prefer paid time over old checkout creation time', () => {
+  const metrics = getDashboardMetrics({ orders: [
+    { status: 'paid', created_at: '2000-01-01', paid_at: new Date().toISOString(), total_price: 2000 },
+    { status: 'paid', created_at: new Date().toISOString(), paid_at: '2000-01-01', total_price: 9000 },
+  ] })
+  assert.equal(metrics.todayPayment, 2000)
+  assert.equal(metrics.todayOrders, 1)
+})
+
+test('history route survives refresh and comparisons do not divide by zero', () => {
+  assert.equal(viewUrl('adminHistory'), '/admin/history')
+  assert.equal(parseAppLocation({ pathname: '/admin/history', search: '?start=2026-09-01&end=2026-09-06' }).view, 'adminHistory')
+  assert.equal(salesChange(120, 100), '직전 기간 대비 +20.0%')
+  assert.equal(salesChange(0, 100), '직전 기간 대비 -100.0%')
+  assert.equal(salesChange(100, 0), '직전 기간 실적 없음')
+  assert.equal(salesChange(0, 0), '직전 기간 대비 0%')
 })

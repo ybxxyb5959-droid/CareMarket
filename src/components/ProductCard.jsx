@@ -2,6 +2,7 @@ import { useStore } from '../store'
 import Icon from './Icon'
 import GoalBadge from './GoalBadge'
 import ProductImage from './ProductImage'
+import { SampleRating } from './Stars'
 import { discountRate, won } from '../lib/format'
 
 export default function ProductCard({ product, compareSelected = false, onCompareToggle = null }) {
@@ -37,6 +38,7 @@ export default function ProductCard({ product, compareSelected = false, onCompar
         <div className="card-top"><span className="card-brand">{product.brand}</span></div>
 
         <h3 className="card-name" onClick={() => openProduct(product)}>{product.name}</h3>
+        <SampleRating productId={product.id} showSampleLabel={false} />
 
         <span className="card-origin">
           <Icon name="leaf" size={13} />
@@ -54,7 +56,7 @@ export default function ProductCard({ product, compareSelected = false, onCompar
         <GoalBadge goal={goal} product={product} />
 
         <div className="card-actions">
-          <button className="card-add" onClick={() => addToCart(product, 1)} aria-label="장바구니 담기">
+          <button className="card-add" disabled={product.stock < 1} onClick={() => addToCart(product, 1)} aria-label={product.stock < 1 ? '품절' : '장바구니 담기'}>
             <Icon name="cart" size={18} />
             <span>담기</span>
           </button>

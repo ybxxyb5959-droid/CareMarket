@@ -42,8 +42,29 @@ test('automatic admin entry updates the browser URL as well as the rendered view
   assert.match(storeSource, /setView\(adminView\)/)
 })
 
+test('same-user auth refresh does not leave profile loading stuck; account changes still load', () => {
+  const body = storeSource.match(/const syncAuthSession = useCallback\(\(session\) => \{([\s\S]*?)\n  \}, \[cartController\]\)/)[1]
+  let owner = 'member-a'
+  const calls = []
+  const scope = {
+    loggingOut: { current: false },
+    cartController: { getOwner: () => owner, setOwner: id => { owner = id } },
+    wishlistPending: { current: new Set() },
+    EMPTY_PROFILE: {}, DEFAULT_GOAL: '', DEFAULT_SUB_FILTERS: [],
+    toAppUser: user => ({ name: user.id }),
+  }
+  for (const [, setter] of body.matchAll(/\b(set\w+)\(/g)) scope[setter] = value => calls.push([setter, value])
+  const sync = new Function(...Object.keys(scope), `return (session) => {${body}}`)(...Object.values(scope))
+  sync({ user: { id: 'member-a' } })
+  assert.equal(calls.some(([name]) => name === 'setProfileLoading'), false)
+  sync({ user: { id: 'member-b' } })
+  assert.ok(calls.some(([name, value]) => name === 'setProfileLoading' && value === true))
+  sync(null)
+  assert.ok(calls.some(([name, value]) => name === 'setProfileLoading' && value === false))
+})
+
 test('partnership and inquiry administration use the existing role guard in navigation', () => {
-  assert.match(storeSource, /\['adminProducts', 'adminOrders', 'adminPartnerships', 'adminInquiries'\]\.includes\(v\)/)
+  assert.match(storeSource, /\['adminHistory', 'adminProducts', 'adminOrders', 'adminPartnerships', 'adminInquiries'\]\.includes\(v\)/)
 })
 
 test('admin page headers use concise operational subtitles without the duplicated eyebrow', () => {

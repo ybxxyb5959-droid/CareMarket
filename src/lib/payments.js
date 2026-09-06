@@ -31,6 +31,7 @@ export function isCheckoutShippingComplete(values = {}) {
 }
 
 export function checkoutRequestErrorMessage(error) {
+  if (error?.message === 'CHECKOUT_COUPON_UNAVAILABLE') return '이미 사용했거나 사용할 수 없는 쿠폰입니다. 쿠폰 적용을 취소한 뒤 다시 선택해 주세요.'
   const code = String(error?.code || error?.name || '')
   if (/NOT_SELECTED_PAYMENT_METHOD|NotSelectedPaymentMethod/i.test(code)) return '결제수단을 선택해 주세요.'
   if (/NEED_AGREEMENT|NeedAgreement/i.test(code)) return '필수 결제 약관에 동의해 주세요.'
@@ -58,19 +59,20 @@ export function normalizeCheckoutShipping(values = {}) {
   return shipping
 }
 
-export async function createCheckoutOrder(client, values) {
+export async function createCheckoutOrder(client, values, userCouponId = '') {
   const shipping = normalizeCheckoutShipping(values)
-  let { data, error } = await client.rpc('create_checkout_order', {
+  let { data, error } = await client.rpc(userCouponId ? 'create_coupon_checkout_order' : 'create_checkout_order', {
     p_recipient_name: shipping.recipientName,
     p_recipient_phone: shipping.recipientPhone,
     p_postal_code: shipping.postalCode || null,
     p_address: shipping.address,
     p_address_detail: shipping.addressDetail || null,
     p_delivery_request: shipping.deliveryRequest || null,
+    ...(userCouponId ? { p_user_coupon_id: userCouponId } : {}),
   })
   // Deployments that still expose only the previous no-argument RPC can keep
   // checkout working until the additive shipping-snapshot migration is applied.
-  if (error?.code === 'PGRST202') {
+  if (!userCouponId && error?.code === 'PGRST202') {
     const legacy = await client.rpc('create_checkout_order')
     data = legacy.data
     error = legacy.error

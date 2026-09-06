@@ -87,6 +87,16 @@ test('checkout sends the validated shipping snapshot to the order RPC', async ()
   })
 })
 
+test('coupon checkout sends only coupon identity and never falls back to undiscounted checkout', async () => {
+  const calls = []
+  const client = { rpc: async (name, params) => { calls.push({ name, params }); return { error: { code: 'PGRST202' } } } }
+  await assert.rejects(createCheckoutOrder(client, validShipping, 'coupon-id'))
+  assert.equal(calls.length, 1)
+  assert.equal(calls[0].name, 'create_coupon_checkout_order')
+  assert.equal(calls[0].params.p_user_coupon_id, 'coupon-id')
+  assert.equal('discount_amount' in calls[0].params, false)
+})
+
 test('checkout falls back only when the remote shipping RPC signature is not deployed', async () => {
   const calls = []
   const order = { order_id: 'order-id', toss_order_id: 'toss-id', order_name: '상품', total_price: 43000 }

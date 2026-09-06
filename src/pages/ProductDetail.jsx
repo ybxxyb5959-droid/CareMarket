@@ -2,6 +2,8 @@ import { useState } from 'react'
 import { useStore } from '../store'
 import Icon from '../components/Icon'
 import ProductImage from '../components/ProductImage'
+import ProductReviews from '../components/ProductReviews'
+import { SampleRating } from '../components/Stars'
 import { discountRate, won } from '../lib/format'
 
 const FREE_DELIVERY_THRESHOLD = 40000
@@ -106,6 +108,7 @@ export default function ProductDetail() {
             </button>
           </div>
           <h1 id="product-title" className="detail-title">{p.name}</h1>
+          <SampleRating productId={p.id} />
 
           <div className="detail-price" aria-label="상품 가격">
             {rate > 0 && <span className="disc">{rate}% 할인</span>}
@@ -230,6 +233,7 @@ export default function ProductDetail() {
         )}
       </section>
 
+      <ProductReviews key={p.id} product={p} />
       <aside className="detail-mobile-buy" aria-label="모바일 구매 영역">
         <div><span>예상 결제금액</span><strong>{won(estimatedTotal)}</strong></div>
         <button className="btn btn-ghost" onClick={addSelectedToCart} disabled={purchasePending || unavailable}>담기</button>

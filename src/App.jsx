@@ -6,8 +6,10 @@ import AdminTopbar from './components/AdminTopbar'
 import Toast from './components/Toast'
 import CartDrawer from './components/CartDrawer'
 import CartLoginPrompt from './components/CartLoginPrompt'
+import EventPopup from './components/EventPopup'
 import Home from './pages/Home'
 import Deals from './pages/Deals'
+import ProductCollection from './pages/ProductCollection'
 import AllProducts from './pages/AllProducts'
 import CustomShop from './pages/CustomShop'
 import GoalSetup from './pages/GoalSetup'
@@ -36,6 +38,8 @@ import NotFound from './pages/NotFound'
 const PAGES = {
   main: Home,
   deals: Deals,
+  best: ProductCollection,
+  new: ProductCollection,
   products: AllProducts,
   custom: CustomShop,
   goalSetup: GoalSetup,
@@ -50,6 +54,7 @@ const PAGES = {
   login: Login,
   register: Register,
   adminDashboard: AdminDashboard,
+  adminHistory: AdminDashboard,
   adminProducts: AdminProducts,
   adminOrders: AdminOrders,
   adminPartnerships: AdminPartnerships,
@@ -70,7 +75,7 @@ const PAGES = {
 function Shell() {
   const { view, loginPromptOpen } = useStore()
   const Page = PAGES[view] || NotFound
-  const isAdmin = ['adminDashboard', 'adminProducts', 'adminOrders', 'adminPartnerships', 'adminInquiries'].includes(view)
+  const isAdmin = ['adminDashboard', 'adminHistory', 'adminProducts', 'adminOrders', 'adminPartnerships', 'adminInquiries'].includes(view)
   return (
     <div className="app">
       {isAdmin ? <AdminTopbar /> : <Header />}
@@ -83,6 +88,7 @@ function Shell() {
       <CartDrawer />
       <Toast />
       {loginPromptOpen && <CartLoginPrompt />}
+      {!isAdmin && <EventPopup />}
     </div>
   )
 }

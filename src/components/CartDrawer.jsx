@@ -85,10 +85,11 @@ export default function CartDrawer() {
                       <div className="qty-stepper">
                         <button aria-label="수량 감소" disabled={quantity <= 1} onClick={() => changeCartQty(product.id, -1)}><Icon name="minus" size={13} /></button>
                         <span>{quantity}</span>
-                        <button aria-label="수량 증가" onClick={() => changeCartQty(product.id, 1)}><Icon name="plus" size={13} /></button>
+                        <button aria-label="수량 증가" disabled={quantity >= product.stock || cartPending > 0} onClick={() => changeCartQty(product.id, 1)}><Icon name="plus" size={13} /></button>
                       </div>
                       <button className="link-del" onClick={() => removeFromCart(product.id)}>삭제</button>
                     </div>
+                    {quantity >= product.stock && <small role="status">현재 구매 가능한 최대 수량입니다.</small>}
                   </div>
                 </div>
               )

@@ -130,7 +130,8 @@ export function StoreProvider({ children }) {
     if (loggingOut.current && session?.user) return
     setAuthLoading(false)
     const nextId = session?.user?.id || null
-    if (cartController.getOwner() !== nextId) {
+    const ownerChanged = cartController.getOwner() !== nextId
+    if (ownerChanged) {
       cartController.setOwner(nextId)
       setWishlist([])
       setWishlistError(null)
@@ -145,7 +146,7 @@ export function StoreProvider({ children }) {
       setUser(toAppUser(session.user))
       setIsLoggedIn(true)
       setAuthUserId(session.user.id)
-      setProfileLoading(true)
+      if (ownerChanged) setProfileLoading(true)
       return
     }
 
@@ -308,12 +309,13 @@ export function StoreProvider({ children }) {
         const currentRoute = parseAppLocation(window.location)
         const adminView = currentRoute.view === 'notFound'
           ? 'notFound'
-          : ['adminDashboard', 'adminProducts', 'adminOrders', 'adminPartnerships', 'adminInquiries'].includes(currentRoute.view)
+          : ['adminDashboard', 'adminHistory', 'adminProducts', 'adminOrders', 'adminPartnerships', 'adminInquiries'].includes(currentRoute.view)
           ? currentRoute.view
           : 'adminDashboard'
         if (adminView !== 'notFound') {
           const adminUrl = adminView === 'adminOrders'
             ? adminOrdersUrl({ status: new URLSearchParams(window.location.search).get('status') })
+            : adminView === 'adminHistory' ? `${viewUrl(adminView)}${window.location.search}`
             : viewUrl(adminView)
           window.history.replaceState({ ...window.history.state, view: adminView, scrollY: 0 }, '', adminUrl)
           setView(adminView)
@@ -363,7 +365,8 @@ export function StoreProvider({ children }) {
 
       // 조건 미설정 회원은 설정을 강제하지 않고 맞춤 상품 화면으로 안내한다.
       // (맞춤 상품 화면에서 '추천 조건 설정하기'로 자연스럽게 설정 화면으로 이동)
-      if (!loadedGoal && !isAdminUser && !window.location.pathname.startsWith('/payment/') && parseAppLocation(window.location).view !== 'deals') {
+      if (!loadedGoal && !isAdminUser && ['main', 'login'].includes(parseAppLocation(window.location).view)) {
+        window.history.replaceState({ ...window.history.state, view: 'custom', scrollY: 0 }, '', viewUrl('custom'))
         setView('custom')
         scrollTop()
       }
@@ -383,9 +386,9 @@ export function StoreProvider({ children }) {
   const rememberScroll = () => {
     window.history.replaceState({ ...window.history.state, view, scrollY: window.scrollY }, '', window.location.href)
   }
-  const catalogStateUrl = () => catalogUrl({ search, searchMode, aiQuery, shopCategory, shopSub, dealsOnly, sortBy })
+  const catalogStateUrl = (overrides = {}) => catalogUrl({ search, searchMode, aiQuery, shopCategory, shopSub, dealsOnly, sortBy, ...overrides })
   const navigate = (v, options = {}) => {
-    if ((['adminProducts', 'adminOrders', 'adminPartnerships', 'adminInquiries'].includes(v) || v === 'adminDashboard') && !authLoading && !isAdmin) {
+    if ((['adminHistory', 'adminProducts', 'adminOrders', 'adminPartnerships', 'adminInquiries'].includes(v) || v === 'adminDashboard') && !authLoading && !isAdmin) {
       showToast('관리자 권한이 필요한 페이지입니다.')
       setView('main')
       window.history.pushState({ view: 'main', scrollY: 0 }, '', '/')
@@ -393,8 +396,14 @@ export function StoreProvider({ children }) {
       return
     }
     rememberScroll()
+    // Ordinary catalog links exit AI search; only an explicit search keeps it active.
+    const resetAi = v === 'products' && !options.preserveAiSearch
+    if (resetAi) clearAiSearch()
     const nextUrl = v === 'products'
-      ? catalogStateUrl()
+      ? catalogStateUrl(resetAi ? {
+        searchMode: 'normal', aiQuery: '',
+        sortBy: ['protein', 'sugar', 'sodium'].includes(sortBy) ? 'recommend' : sortBy,
+      } : {})
       : v === 'adminOrders'
       ? adminOrdersUrl(options)
       : viewUrl(v)
@@ -461,7 +470,7 @@ export function StoreProvider({ children }) {
     setAiError(null)
     setAiLoading(true)
     setDealsOnly(false)
-    navigate('products')
+    navigate('products', { preserveAiSearch: true })
     window.setTimeout(() => document.getElementById('product-list')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 0)
     try {
       const filters = await requestAiConditions(supabase, query, request.signal)
@@ -549,6 +558,11 @@ export function StoreProvider({ children }) {
 
   const addToCart = async (product, count = 1) => {
     if (!requireCartLogin()) return false
+    const existing = cart.find(item => item.product.id === product.id)?.quantity || 0
+    if (!Number.isInteger(count) || count < 1 || existing + count > product.stock) {
+      showToast('현재 구매 가능한 최대 수량입니다.')
+      return false
+    }
     const generation = cartController.getGeneration()
     const saved = await cartController.add(product.id, count)
     if (saved && generation === cartController.getGeneration()) {

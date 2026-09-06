@@ -2,7 +2,7 @@ import { useStore } from '../store'
 
 const GROUPS = [
   { title: 'SHOP', links: [
-    ['전체상품', 'products'], ['베스트', null], ['신상품', null], ['오늘의 웰빙 테이블', 'wellness'],
+    ['전체상품', 'products'], ['베스트', 'best'], ['신상품', 'new'], ['오늘의 웰빙 테이블', 'wellness'],
   ] },
   { title: 'ABOUT', links: [
     ['케어마켓 소개', 'about'], ['철학과 원칙', 'principles'], ['클린라벨 정보 기준', 'cleanLabel'],

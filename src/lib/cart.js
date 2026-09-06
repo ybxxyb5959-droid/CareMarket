@@ -27,6 +27,10 @@ export function createCartController(client, publish, reportError) {
   const current = (owner, version) => owner === state.ownerId && version === generation
   const fail = (error) => {
     console.error('Supabase cart operation failed:', error)
+    if (error?.code === '23514' && error?.message?.includes('available stock')) {
+      reportError('현재 구매 가능한 최대 수량입니다.')
+      return
+    }
     emit({ error: '장바구니를 동기화하지 못했습니다. 다시 시도해 주세요.' })
     reportError('장바구니를 동기화하지 못했습니다. 다시 시도해 주세요.')
   }
@@ -78,7 +82,12 @@ export function createCartController(client, publish, reportError) {
         const loaded = await load()
         return current(owner, version) && loaded
       } catch (error) {
-        if (current(owner, version)) fail(error)
+        if (current(owner, version)) {
+          fail(error)
+          // Stock can change after the last read. Reconcile the rejected write
+          // so the quantity controls use the current server stock.
+          if (error?.code === '23514' && error?.message?.includes('available stock')) await load()
+        }
         return false
       } finally {
         if (current(owner, version)) emit({ pending: state.pending - 1, loading: false })

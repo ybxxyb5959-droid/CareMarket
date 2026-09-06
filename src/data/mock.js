@@ -244,220 +244,91 @@ export const VALUES = [
   { icon: 'truck', title: '주문 상태 확인', desc: '결제 후 주문내역에서 배송 흐름을 확인하세요' },
 ]
 
-// 상품 목업
-export const PRODUCTS = [
-  {
-    id: 1,
-    name: '린단백 100% 분리유청 WPI 프로틴 (초코맛 1kg)',
-    brand: 'CARE LABS',
-    price: 43900,
-    originalPrice: 52000,
-    rating: 4.9,
-    reviewCount: 1240,
-    isBest: true,
-    isNew: false,
-    origin: '국내 HACCP 청정 제조',
-    cleanScore: 'Clean 98',
-    category: '근육량 증가',
-    tags: ['고단백', '저당', '클린라벨'],
-    image:
-      'https://images.unsplash.com/photo-1579722821273-0f6c7d44362f?w=800&auto=format&fit=crop&q=80',
-    summary: '순수 WPI 단백질 92% 함유, 속 편한 미세 정제로 완성한 깔끔한 목넘김',
-    nutrition: { servingSize: '1스쿱 (35g)', calories: 125, protein: 29, carbs: 1.5, fat: 0.5, sugar: 0.3, sodium: 95, special: 'BCAA 6,400mg · 글루타민 4,800mg 천연 아미노산' },
-    allergens: ['대두', '우유'],
-    caffeine: false,
-    delivery: '내일(토) 아침 7시 전 신선도착',
-  },
-  {
-    id: 2,
-    name: '통닭가슴살 곤약 볶음밥 5종 패키지 (10팩)',
-    brand: 'FARM POCKET',
-    price: 28900,
-    originalPrice: 35000,
-    rating: 4.85,
-    reviewCount: 890,
-    isBest: true,
-    isNew: false,
-    origin: '국내산 무항생제 닭가슴살',
-    cleanScore: 'Clean 96',
-    category: '체중 관리',
-    tags: ['저당', '고단백', '저염'],
-    image:
-      'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=800&auto=format&fit=crop&q=80',
-    summary: '신선 채소와 곤약쌀로 완성한 265kcal의 든든하고 깨끗한 한 끼 식단',
-    nutrition: { servingSize: '1팩 (200g)', calories: 265, protein: 24, carbs: 34, fat: 3.2, sugar: 1.2, sodium: 240, special: '보리·귀리 천연 식이섬유 6.2g' },
-    allergens: ['닭고기', '대두', '밀'],
-    caffeine: false,
-    delivery: '친환경 아이스팩 안심 신선배송',
-  },
-  {
-    id: 3,
-    name: '데일리 올인원 멀티비타민 & 미네랄 23종 (60정)',
-    brand: 'VITAL BOTANICS',
-    price: 32000,
-    originalPrice: 40000,
-    rating: 4.95,
-    reviewCount: 2310,
-    isBest: true,
-    isNew: false,
-    origin: '자연 유래 건조효모 미네랄',
-    cleanScore: 'Clean 100',
-    category: '영양제 탐색',
-    tags: ['클린라벨', '카페인 제외', '알레르기 제외'],
-    image:
-      'https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?w=800&auto=format&fit=crop&q=80',
-    summary: '합성 착색료 제로, 활성형 비타민B군 8종과 안전성 공인 배합',
-    nutrition: { servingSize: '1정 (1,200mg)', calories: 5, protein: 0, carbs: 1, fat: 0, sugar: 0, sodium: 0, special: '비타민B군 2000% 충족 · 식물성 효모 아연 12mg' },
-    allergens: [],
-    caffeine: false,
-    delivery: '유리병 완충 종이패키지 안심포장',
-  },
-  {
-    id: 4,
-    name: '제로 알룰로스 레몬라임 스파클링 콤부차 (350ml x 12)',
-    brand: 'PURE SPARK',
-    price: 18900,
-    originalPrice: 24000,
-    rating: 4.75,
-    reviewCount: 450,
-    isBest: false,
-    isNew: true,
-    origin: '제주 유기농 녹차엽 발효',
-    cleanScore: 'Clean 99',
-    category: '체중 관리',
-    tags: ['저당', '저염', '카페인 제외'],
-    image:
-      'https://images.unsplash.com/photo-1600271886742-f049cd451bba?w=800&auto=format&fit=crop&q=80',
-    summary: '설탕 0g 천연 발효 탄산, 9kcal로 가볍고 상쾌한 식물성 스파클링 티',
-    nutrition: { servingSize: '1캔 (350ml)', calories: 9, protein: 0.2, carbs: 4.5, fat: 0, sugar: 0, sodium: 15, special: '천연 발효 알룰로스 4.5g · 프리바이오틱스 10억' },
-    allergens: [],
-    caffeine: false,
-    delivery: '무료배송 · 재생지 전용 박스',
-  },
-  {
-    id: 5,
-    name: '식물성 귀리 고단백 크런치 프로틴바 (견과초코 12개입)',
-    brand: 'GREEN HARVEST',
-    price: 24500,
-    originalPrice: 29000,
-    rating: 4.88,
-    reviewCount: 670,
-    isBest: false,
-    isNew: true,
-    origin: '통귀리 & 식물성 완두단백',
-    cleanScore: 'Clean 97',
-    category: '식단 영양 관리',
-    tags: ['고단백', '저당', '클린라벨'],
-    image:
-      'https://images.unsplash.com/photo-1571748982800-fa51082c2224?w=800&auto=format&fit=crop&q=80',
-    summary: '유제품 없이 완두·쌀 단백질 15g, 식이섬유가 씹히는 웰빙 스낵',
-    nutrition: { servingSize: '1개 (50g)', calories: 178, protein: 15, carbs: 18, fat: 4.8, sugar: 1.8, sodium: 110, special: '천연 스테비아 감미 · 불포화 오메가-3 풍부' },
-    allergens: ['견과류', '대두'],
-    caffeine: false,
-    delivery: '2박스 구매 시 린넨 에코파우치 증정',
-  },
-  {
-    id: 6,
-    name: '저염 숙성 소고기 홍두깨살 큐브 스테이크 (150g x 5팩)',
-    brand: 'CLEAN MEAT LAB',
-    price: 33900,
-    originalPrice: 42000,
-    rating: 4.92,
-    reviewCount: 1120,
-    isBest: true,
-    isNew: false,
-    origin: '자연 방목 목초육 웻에이징',
-    cleanScore: 'Clean 99',
-    category: '근육량 증가',
-    tags: ['고단백', '저염', '저당'],
-    image:
-      'https://images.unsplash.com/photo-1600891964092-4316c288032e?w=800&auto=format&fit=crop&q=80',
-    summary: '지방을 덜어낸 순수 단백질 34g, 천일염 극미량으로 완성한 육즙',
-    nutrition: { servingSize: '1팩 (150g)', calories: 195, protein: 34, carbs: 0.8, fat: 2.1, sugar: 0, sodium: 140, special: '자연 숙성 철분 & L-카르니틴 농축' },
-    allergens: ['쇠고기'],
-    caffeine: false,
-    delivery: '친환경 물 100% 보랭제 포장',
-  },
-  {
-    id: 7,
-    name: 'rTG 초임계 고순도 오메가-3 1000mg + 비타민D (60캡슐)',
-    brand: 'VITAL BOTANICS',
-    price: 36000,
-    originalPrice: 45000,
-    rating: 4.94,
-    reviewCount: 3100,
-    isBest: true,
-    isNew: false,
-    origin: '남태평양 소형어종 초임계 추출',
-    cleanScore: 'Clean 100',
-    category: '영양제 탐색',
-    tags: ['카페인 제외', '알레르기 제외', '클린라벨'],
-    image:
-      'https://images.unsplash.com/photo-1512069772995-ec65ed45afd6?w=800&auto=format&fit=crop&q=80',
-    summary: '잔류용매 0% 초임계 추출, 중금속 걱정 없이 비린내를 잡은 고순도 오메가',
-    nutrition: { servingSize: '1캡슐 (1,150mg)', calories: 10, protein: 0, carbs: 0, fat: 1.1, sugar: 0, sodium: 0, special: '생체 흡수율 높은 rTG 오메가 80% 이상 농축' },
-    allergens: ['갑각류'],
-    caffeine: false,
-    delivery: '직사광선 차단 브라운 보틀 패키지',
-  },
-  {
-    id: 8,
-    name: '스마트 효소 밸런스 & 17종 생유산균 포켓 (30포)',
-    brand: 'CARE LABS',
-    price: 21900,
-    originalPrice: 28000,
-    rating: 4.82,
-    reviewCount: 520,
-    isBest: false,
-    isNew: true,
-    origin: '국내산 15곡 발효 효소',
-    cleanScore: 'Clean 98',
-    category: '식단 영양 관리',
-    tags: ['저당', '카페인 제외', '클린라벨'],
-    image:
-      'https://images.unsplash.com/photo-1559181567-c3190ca9959b?w=800&auto=format&fit=crop&q=80',
-    summary: '정제 효소 인위적 첨가 0%, 순수 곡물 발효로 속 편한 식후 루틴',
-    nutrition: { servingSize: '1포 (3g)', calories: 12, protein: 0.5, carbs: 2.3, fat: 0.1, sugar: 0.4, sodium: 8, special: 'α-아밀라아제 600,000unit 보장' },
-    allergens: ['대두', '밀'],
-    caffeine: false,
-    delivery: '내일 아침 문 앞 신선배송',
-  },
-]
-
-export const INITIAL_ORDERS = [
-  {
-    id: 'ORD-20260902-8821',
-    date: '2026. 09. 02  14:22',
-    status: '배송중',
-    active: true,
-    totalAmount: 72800,
-    items: [
-      { name: '린단백 100% 분리유청 WPI 프로틴 (초코맛 1kg)', count: 1, price: 43900 },
-      { name: '통닭가슴살 곤약 볶음밥 5종 패키지', count: 1, price: 28900 },
-    ],
-    tracker: '우체국 안심택배 6821-9920-1123',
-  },
-  {
-    id: 'ORD-20260824-3401',
-    date: '2026. 08. 24  10:15',
-    status: '배송완료',
-    active: false,
-    totalAmount: 32000,
-    items: [{ name: '데일리 올인원 멀티비타민 & 미네랄 23종', count: 1, price: 32000 }],
-    tracker: 'CJ대한통운 1024-5590-3341',
-  },
-]
-
-export const INITIAL_USER = {
-  name: '김케어',
-  email: 'kimcare@caremarket.kr',
-  tier: 'WELL-BEING VIP',
-  points: 5200,
-  coupons: 4,
+// 포트폴리오 전용 샘플 후기. 실제 구매/리뷰/상품 DB와 무관한 표시 데이터다.
+const SAMPLE_REVIEW_TEXT = {
+  [PRODUCT_CATEGORY.HIGH_PROTEIN_FOOD]: [
+    '단백질 챙길 때 식사에 곁들이기 편했어요. 간도 제 입에는 무난했습니다.',
+    '식감은 생각했던 것과 조금 달랐지만 간편하게 먹기에는 괜찮았어요.',
+    '바쁜 날 다른 반찬과 함께 먹기 좋았어요. 다음에도 몇 개 사두려고요.',
+  ],
+  [PRODUCT_CATEGORY.MEAL]: [
+    '바쁜 날 한 끼 준비하는 시간을 줄일 수 있어서 좋았어요.',
+    '먹고 나니 제법 든든했어요. 양은 제 기준에 조금 아쉬웠습니다.',
+    '점심으로 챙겨 먹기 편하고 간도 부담스럽지 않았어요.',
+  ],
+  [PRODUCT_CATEGORY.PROTEIN_SNACK]: [
+    '오후에 출출할 때 간식 대신 먹기 좋았어요. 맛도 무난해요.',
+    '생각한 식감과는 조금 달랐지만 커피와 곁들이니 괜찮았어요.',
+    '조금씩 챙겨 먹기 편해서 책상에 두고 먹고 있어요.',
+  ],
+  [PRODUCT_CATEGORY.CEREAL]: [
+    '요거트에 곁들이니 식감이 더해져서 아침으로 잘 먹고 있어요.',
+    '그냥 먹으면 제 입에는 조금 심심해요. 과일을 더하니 괜찮네요.',
+    '아침에 조금씩 덜어 먹기 편하고 생각보다 든든했어요.',
+  ],
+  [PRODUCT_CATEGORY.DAIRY_ALTERNATIVE]: [
+    '아침 식사에 곁들이기 좋았어요. 맛도 크게 부담스럽지 않아요.',
+    '익숙한 제품과 맛이 조금 달라 처음에는 적응이 필요했어요.',
+    '성분표를 비교해 보고 골랐어요. 평소 식단에 곁들이고 있습니다.',
+  ],
+  [PRODUCT_CATEGORY.DRINK]: [
+    '외출할 때 챙겨 마시기 편했어요. 맛도 제 입에는 무난했어요.',
+    '끝맛은 조금 취향을 탈 것 같아요. 차게 마시니 더 괜찮았습니다.',
+    '당류 표시를 확인하고 골랐어요. 평소 마시던 음료 대신 가끔 먹어요.',
+  ],
+  proteinDrink: [
+    '운동 후에 단백질 챙기기 편했어요. 맛도 생각보다 무난하네요.',
+    '끝에 남는 단백질 맛은 조금 있어요. 차게 마시면 괜찮았습니다.',
+    '따로 준비할 게 없어 운동 가방에 챙겨 다니기 좋았어요.',
+  ],
+  [PRODUCT_CATEGORY.NUTS]: [
+    '오후 간식으로 조금씩 덜어 먹고 있어요. 맛도 무난했어요.',
+    '식감은 예상과 조금 달랐어요. 요거트에 곁들이면 괜찮네요.',
+    '출출할 때 한 줌씩 먹기 좋아서 자주 손이 가요.',
+  ],
+  [PRODUCT_CATEGORY.SUPPLEMENT]: [
+    '섭취 방법 표시가 잘 보여서 처음 챙겨 먹기 편했어요.',
+    '매일 챙기는 건 아직 익숙하지 않아요. 효과는 좀 더 지켜보려고요.',
+    '포장이 깔끔하게 왔어요. 정해진 섭취량을 확인하며 먹고 있습니다.',
+  ],
+  [PRODUCT_CATEGORY.SAUCE]: [
+    '평소 먹는 음식에 조금씩 곁들이니 맛에 변화를 주기 좋았어요.',
+    '익숙한 제품과 맛이 달라서 처음에는 양을 조절하며 썼어요.',
+    '한 번에 많이 쓰지 않아도 돼서 집에서 두고 먹기 괜찮아요.',
+  ],
+  [PRODUCT_CATEGORY.HEALTH_FOOD]: [
+    '먹는 방법을 확인하고 평소 식단에 조금씩 더하고 있어요.',
+    '익숙하지 않은 맛이라 처음에는 적은 양부터 먹어 보고 있어요.',
+    '포장이 깔끔했고 보관 방법도 알아보기 쉬웠어요.',
+  ],
+  lowCalorie: [
+    '칼로리 표시를 보고 골랐어요. 가볍게 먹고 싶을 때 괜찮네요.',
+    '먹고 나니 생각보다 든든했어요. 맛은 평소 먹던 것보다 조금 심심해요.',
+    '칼로리 부담을 줄이면서 식단에 변화를 주기 좋았어요.',
+  ],
 }
 
-export const REVIEWS = [
-  { user: '이*정', goal: '식단 영양 관리', text: '자극적이지 않고 담백해서 식사 후에도 속이 정말 편안합니다. 성분표가 정직해서 믿음이 가요.', date: '2026.09.02' },
-  { user: '강*민', goal: '체중 관리', text: '당류 걱정 없이 단맛을 즐길 수 있어서 다이어트 스트레스가 확 줄었습니다!', date: '2026.08.30' },
-  { user: '박*현', goal: '근육량 증가', text: '물에 잘 녹고 텁텁하지 않아요. 운동 후 회복 속도가 확실히 다릅니다.', date: '2026.08.27' },
-]
+export function getSampleReviewSummary(productId) {
+  const seed = Array.from(String(productId ?? '')).reduce((hash, char) => (
+    (Math.imul(hash, 31) + char.charCodeAt(0)) >>> 0
+  ), 0)
+  return { averageRating: (43 + seed % 7) / 10, reviewCount: 12 + seed % 77 }
+}
+
+export function getSampleReviews(product) {
+  const category = canonicalProductCategory(product.category)
+  const kind = category === PRODUCT_CATEGORY.DRINK && /프로틴|WPI|단백질/i.test(product.name)
+    ? 'proteinDrink'
+    : /저칼로리/.test(product.name) && category !== PRODUCT_CATEGORY.SAUCE
+      ? 'lowCalorie' : category
+  const texts = SAMPLE_REVIEW_TEXT[kind] || SAMPLE_REVIEW_TEXT[PRODUCT_CATEGORY.HEALTH_FOOD]
+  const { reviewCount } = getSampleReviewSummary(product.id)
+  return [...texts, '포장이 흐트러지지 않고 도착했어요. 집에 두고 필요할 때 꺼내 먹고 있습니다.',
+    '전체적으로 무난했어요. 가격은 조금 아쉬워서 다음에는 할인할 때 사려고요.'].map((content, index) => ({
+    id: `${product.id}-sample-${index}`,
+    author: ['김**', '박**', '이**', '최**', '정**'][(index + reviewCount) % 5],
+    rating: index === 1 || index === 4 ? 4 : 5,
+    content,
+    date: `2026-08-${String(28 - index * 5 - reviewCount % 3).padStart(2, '0')}`,
+  }))
+}
