@@ -107,7 +107,7 @@ export default function WellnessTable() {
           <div>
             <span className="eyebrow">Today&apos;s Wellness Table</span>
             <h2 className="serif" style={{ fontSize: 26, fontWeight: 400, letterSpacing: '-0.015em' }}>오늘의 웰빙 테이블</h2>
-            <p>식탁 위 <b style={{ color: 'var(--brand-600)' }}>+</b>에 마우스를 올려보세요.</p>
+            <p>식탁 위 <b style={{ color: 'var(--brand-600)' }}>+</b>{isMobile ? '를 눌러 상품을 확인하세요.' : '에 마우스를 올려보세요.'}</p>
           </div>
           <div className="wtable-tabs" role="tablist" aria-label="웰빙 테이블 테마">
             {WELLNESS_TABLE_THEMES.map((item) => (
@@ -124,7 +124,7 @@ export default function WellnessTable() {
           </div>
         </div>
 
-        <div className="wtable-stage">
+        <div className="wtable-stage" style={{ '--wtable-image-ratio': theme.visual.aspectRatio }}>
           <div
             className="wtable-media"
             style={{ backgroundImage: `url(${theme.visual.image})`, backgroundPosition: theme.visual.objectPosition }}

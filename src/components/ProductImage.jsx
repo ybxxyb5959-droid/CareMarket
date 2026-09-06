@@ -3,8 +3,8 @@ import Icon from './Icon'
 
 // 네트워크 이미지가 실패해도 발표 화면이 깨지지 않도록 세이지 톤 폴백 처리
 export default function ProductImage({ src, alt, className }) {
-  const [ok, setOk] = useState(true)
-  if (!ok) {
+  const [failedSrc, setFailedSrc] = useState(null)
+  if (!src || failedSrc === src) {
     return (
       <div
         className={className}
@@ -23,6 +23,6 @@ export default function ProductImage({ src, alt, className }) {
     )
   }
   return (
-    <img src={src} alt={alt} className={className} loading="lazy" onError={() => setOk(false)} />
+    <img src={src} alt={alt} className={className} loading="lazy" onError={() => setFailedSrc(src)} />
   )
 }

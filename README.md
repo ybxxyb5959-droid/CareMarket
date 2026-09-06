@@ -154,3 +154,7 @@ Edge 전용 Secrets: `GEMINI_API_KEY`, `TOSS_SECRET_KEY`(테스트 키). 허용 
 - AI 설명은 참고 정보입니다. 알레르기 안전·의료적 적합성을 보장하지 않습니다.
 - 정기 뉴스레터 캠페인·자동 재발송·고급 쿠폰·회원등급·포인트는 구현 범위에 없습니다.
 - 원격 반영 및 실제 가입·Toss 테스트 결제·메일 수신 검증 전에는 전체 개발 종료로 판정하지 않습니다.
+
+제품 이미지는 `public/assets/products/product-NNN-*.webp`에 저장합니다. `npm run dev`와 `npm run build` 실행 전 파일 SHA-256으로 `src/data/product-images.json`을 생성하며, 이미지 URL의 `?v=` 값이 파일 변경 시 갱신됩니다. 개발 환경과 Vercel 운영 빌드는 동일한 이미지 resolver를 사용합니다. 기존 Unsplash URL 또는 같은 로컬 파일 경로는 번들 이미지로 연결하고, 관리자가 별도로 지정한 외부 URL은 유지합니다. 관리자 상품 목록에도 같은 규칙을 적용합니다.
+
+이미지를 교체한 후 파일과 생성된 manifest를 함께 커밋하고 배포하세요. 기존의 `import.meta.env.DEV` 전용 미리보기 때문에 운영에서 DB의 예전 이미지가 나오던 문제를 제거했으므로, 운영 DB에 seed 전체를 다시 실행할 필요가 없습니다.

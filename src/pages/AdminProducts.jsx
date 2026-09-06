@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import AdminGate from '../components/AdminGate'
 import ProductImage from '../components/ProductImage'
 import Icon from '../components/Icon'
+import { resolveProductImage } from '../lib/product-images'
 import { useStore } from '../store'
 import { won } from '../lib/format'
 import { ALLERGEN_OPTIONS, PRODUCT_CATEGORIES, fetchAdminProducts, saveAdminProduct, toAdminProductForm } from '../lib/admin'
@@ -43,7 +44,7 @@ function AdminProductPreview({ form, isNew }) {
       <div className="admin-preview-card">
         <div className="admin-preview-media">
           {form.image_url
-            ? <ProductImage key={form.image_url} src={form.image_url} alt="" />
+            ? <ProductImage src={resolveProductImage(form.product_id, form.image_url)} alt="" />
             : <div className="admin-preview-placeholder"><Icon name="package" size={44} /><span>기본 이미지</span></div>}
           {!isNew && <span className={`admin-preview-status${form.is_active ? '' : ' inactive'}`}>{status}</span>}
         </div>
@@ -307,18 +308,18 @@ function AdminProductsContent() {
         <input className="admin-search" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="상품명 또는 브랜드 검색" aria-label="상품명 또는 브랜드 검색" />
       </div>
       {loading ? <div className="empty"><p>상품 데이터를 불러오는 중입니다.</p></div> : error ? <div className="empty"><h3>상품을 불러오지 못했습니다.</h3><p>{error}</p><button className="btn btn-primary btn-sm" onClick={() => void load()}>다시 시도</button></div> : visibleProducts.length === 0 ? <div className="empty"><h3>조건에 맞는 상품이 없습니다.</h3></div> : <div className="table-wrap admin-products-table-wrap">
-        <table className="admin-products-table">
+        <table role="table" className="admin-mobile-cards admin-products-table">
           <thead><tr><th>ID</th><th>상품</th><th>카테고리</th><th>판매가</th><th>재고</th><th>상태</th><th>관리</th></tr></thead>
           <tbody>{visibleProducts.map((product) => {
             const status = !product.is_active ? 'inactive' : product.stock === 0 ? 'soldout' : 'active'
             return <tr key={product.product_id}>
-              <td className="td-mono">#{product.product_id}</td>
-              <td><div className="admin-table-product"><ProductImage className="admin-product-thumb" src={product.image_url} alt="" /><div className="admin-product-identity"><div className="td-name">{product.name}</div><div className="admin-product-brand">{product.brand}</div></div></div></td>
-              <td><span className="admin-product-category">{product.category}</span></td>
-              <td className="admin-number">{won(product.price)}</td>
-              <td className="admin-number">{product.stock}</td>
-              <td><span className={`admin-product-status ${status}`}>{status === 'active' ? '판매중' : status === 'soldout' ? '품절' : '비활성'}</span></td>
-              <td><div className="admin-row-actions"><button className="admin-product-action edit" onClick={() => setEditorProduct(product)}>수정</button><button className={`admin-product-action ${product.is_active ? 'danger' : 'resume'}`} onClick={() => void toggleActive(product)}>{product.is_active ? '판매중지' : '판매재개'}</button></div></td>
+              <td data-label="ID" className="td-mono">#{product.product_id}</td>
+              <td data-label="상품"><div className="admin-table-product"><ProductImage className="admin-product-thumb" src={resolveProductImage(product.product_id, product.image_url)} alt="" /><div className="admin-product-identity"><div className="td-name">{product.name}</div><div className="admin-product-brand">{product.brand}</div></div></div></td>
+              <td data-label="카테고리"><span className="admin-product-category">{product.category}</span></td>
+              <td data-label="판매가" className="admin-number">{won(product.price)}</td>
+              <td data-label="재고" className="admin-number">{product.stock}</td>
+              <td data-label="상태"><span className={`admin-product-status ${status}`}>{status === 'active' ? '판매중' : status === 'soldout' ? '품절' : '비활성'}</span></td>
+              <td data-label="관리"><div className="admin-row-actions"><button className="admin-product-action edit" onClick={() => setEditorProduct(product)}>수정</button><button className={`admin-product-action ${product.is_active ? 'danger' : 'resume'}`} onClick={() => void toggleActive(product)}>{product.is_active ? '판매중지' : '판매재개'}</button></div></td>
             </tr>
           })}</tbody>
         </table>

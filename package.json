@@ -4,7 +4,9 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
+    "predev": "node scripts/generate-product-images.mjs",
     "dev": "vite",
+    "prebuild": "node scripts/generate-product-images.mjs",
     "build": "vite build",
     "lint": "oxlint",
     "test": "node --test tests/*.test.mjs",

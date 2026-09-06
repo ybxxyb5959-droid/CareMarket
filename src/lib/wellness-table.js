@@ -1,4 +1,5 @@
 // 오늘의 웰빙 테이블의 비주얼·슬롯·요일별 고정 큐레이션 설정.
+// Mobile coordinates are percentages of the uncropped source image.
 // hero는 특정 CareMarket 상품 패키지가 아닌, 상품군을 표현하는 라이프스타일 이미지다.
 export const WELLNESS_TABLE_THEMES = [
   {
@@ -9,12 +10,13 @@ export const WELLNESS_TABLE_THEMES = [
     visual: {
       image: 'https://bio-synergy.uk/cdn/shop/articles/no-logo-or-text_d6a57650-d566-4464-b97a-94b31792f1eb.png?v=1778686647&width=1500',
       objectPosition: '50% 50%',
+      aspectRatio: '1248 / 832',
       alt: '닭가슴살, 요거트, 견과류와 단백질 음료가 놓인 고단백 식단 이미지',
       slots: [
-        { id: 'chicken', label: '닭가슴살', categories: ['닭가슴살·고단백 식품'], keywords: ['닭가슴살', '닭고기'], coordinates: { desktop: { x: 36, y: 76 }, mobile: { x: 33, y: 74 } } },
-        { id: 'yogurt', label: '고단백 요거트', categories: ['유제품·대체유'], keywords: ['요거트', '코티지', '케피어'], minProtein: 8, coordinates: { desktop: { x: 60, y: 77 }, mobile: { x: 54, y: 67 } } },
-        { id: 'proteinDrink', label: '프로틴 음료', categories: ['음료·프로틴음료'], keywords: ['프로틴', '단백질', 'WPI', 'WPC', '완두'], coordinates: { desktop: { x: 78, y: 76 }, mobile: { x: 76, y: 56 } } },
-        { id: 'nuts', label: '견과 토핑', categories: ['견과·건과류'], keywords: ['견과', '아몬드', '호두', '캐슈', '마카다미아', '브라질너트'], minProtein: 4, coordinates: { desktop: { x: 61, y: 59 }, mobile: { x: 57, y: 57 } } },
+        { id: 'chicken', label: '닭가슴살', categories: ['닭가슴살·고단백 식품'], keywords: ['닭가슴살', '닭고기'], coordinates: { desktop: { x: 36, y: 76 }, mobile: { x: 36, y: 72 } } },
+        { id: 'yogurt', label: '고단백 요거트', categories: ['유제품·대체유'], keywords: ['요거트', '코티지', '케피어'], minProtein: 8, coordinates: { desktop: { x: 60, y: 77 }, mobile: { x: 55, y: 70 } } },
+        { id: 'proteinDrink', label: '프로틴 음료', categories: ['음료·프로틴음료'], keywords: ['프로틴', '단백질', 'WPI', 'WPC', '완두'], coordinates: { desktop: { x: 78, y: 76 }, mobile: { x: 80, y: 48 } } },
+        { id: 'nuts', label: '견과 토핑', categories: ['견과·건과류'], keywords: ['견과', '아몬드', '호두', '캐슈', '마카다미아', '브라질너트'], minProtein: 4, coordinates: { desktop: { x: 61, y: 59 }, mobile: { x: 63, y: 54 } } },
       ],
     },
   },
@@ -26,12 +28,13 @@ export const WELLNESS_TABLE_THEMES = [
     visual: {
       image: 'https://static.wixstatic.com/media/11062b_8d2c030f517240428b392a2567fd16c0~mv2.jpg/v1/fill/w_1000%2Ch_667%2Cal_c%2Cq_85%2Cusm_0.66_1.00_0.01/11062b_8d2c030f517240428b392a2567fd16c0~mv2.jpg',
       objectPosition: '50% 50%',
+      aspectRatio: '1000 / 667',
       alt: '그래놀라, 견과 스낵, 음료가 놓인 가벼운 아침 식사 이미지',
       slots: [
-        { id: 'lowSugarDrink', label: '저당 음료', categories: ['음료·프로틴음료', '유제품·대체유'], keywords: ['무가당', '제로', '콤부차', '워터', '아미노', '프로틴', '우유', '밀크'], maxSugar: 5, coordinates: { desktop: { x: 75, y: 37 }, mobile: { x: 75, y: 50 } } },
-        { id: 'granola', label: '시리얼 · 그래놀라', categories: ['시리얼·그래놀라'], keywords: ['시리얼', '그래놀라', '크런치'], maxSugar: 6, coordinates: { desktop: { x: 55, y: 59 }, mobile: { x: 58, y: 60 } } },
-        { id: 'nuts', label: '견과류', categories: ['견과·건과류'], keywords: ['견과', '아몬드', '호두', '캐슈', '마카다미아', '브라질너트', '씨드'], maxSugar: 5, coordinates: { desktop: { x: 60, y: 54 }, mobile: { x: 34, y: 75 } } },
-        { id: 'lightSnack', label: '저당 스낵', categories: ['프로틴바·건강간식'], keywords: ['곤약', '팝칩', '브라우니', '쿠키', '베이글'], maxSugar: 6, coordinates: { desktop: { x: 25, y: 22 }, mobile: { x: 24, y: 42 } } },
+        { id: 'lowSugarDrink', label: '저당 음료', categories: ['음료·프로틴음료', '유제품·대체유'], keywords: ['무가당', '제로', '콤부차', '워터', '아미노', '프로틴', '우유', '밀크'], maxSugar: 5, coordinates: { desktop: { x: 75, y: 37 }, mobile: { x: 75, y: 42 } } },
+        { id: 'granola', label: '시리얼 · 그래놀라', categories: ['시리얼·그래놀라'], keywords: ['시리얼', '그래놀라', '크런치'], maxSugar: 6, coordinates: { desktop: { x: 55, y: 59 }, mobile: { x: 55, y: 61 } } },
+        { id: 'nuts', label: '견과류', categories: ['견과·건과류'], keywords: ['견과', '아몬드', '호두', '캐슈', '마카다미아', '브라질너트', '씨드'], maxSugar: 5, coordinates: { desktop: { x: 60, y: 54 }, mobile: { x: 34, y: 83 } } },
+        { id: 'lightSnack', label: '저당 스낵', categories: ['프로틴바·건강간식'], keywords: ['곤약', '팝칩', '브라우니', '쿠키', '베이글'], maxSugar: 6, coordinates: { desktop: { x: 25, y: 22 }, mobile: { x: 20, y: 45 } } },
       ],
     },
   },
@@ -43,12 +46,13 @@ export const WELLNESS_TABLE_THEMES = [
     visual: {
       image: 'https://irp.cdn-website.com/98adc116/dms3rep/multi/healthy-food-lunch-boxes-view_23-2149060415.jpeg',
       objectPosition: '50% 50%',
+      aspectRatio: '1060 / 706',
       alt: '도시락, 간편식, 음료와 견과 간식이 담긴 웰니스 런치박스 이미지',
       slots: [
-        { id: 'lunchbox', label: '도시락', categories: ['도시락·간편식'], keywords: ['도시락', '볶음밥', '리조또', '덮밥', '솥밥', '플래터'], coordinates: { desktop: { x: 22, y: 13 }, mobile: { x: 23, y: 30 } } },
-        { id: 'quickMeal', label: '랩 · 간편식', categories: ['도시락·간편식'], keywords: ['브리또', '또띠아'], coordinates: { desktop: { x: 14, y: 10 }, mobile: { x: 43, y: 78 } } },
-        { id: 'drink', label: '웰니스 음료', categories: ['음료·프로틴음료', '유제품·대체유'], keywords: ['음료', '드링크', '워터', '콤부차', '프로틴', '라떼', '스무디', '주스'], coordinates: { desktop: { x: 87, y: 38 }, mobile: { x: 82, y: 37 } } },
-        { id: 'snack', label: '건강 간식', categories: ['견과·건과류'], keywords: ['견과', '아몬드', '호두', '캐슈', '마카다미아', '브라질너트'], coordinates: { desktop: { x: 83, y: 70 }, mobile: { x: 85, y: 72 } } },
+        { id: 'lunchbox', label: '도시락', categories: ['도시락·간편식'], keywords: ['도시락', '볶음밥', '리조또', '덮밥', '솥밥', '플래터'], coordinates: { desktop: { x: 22, y: 13 }, mobile: { x: 26, y: 19 } } },
+        { id: 'quickMeal', label: '랩 · 간편식', categories: ['도시락·간편식'], keywords: ['브리또', '또띠아'], coordinates: { desktop: { x: 14, y: 10 }, mobile: { x: 41, y: 81 } } },
+        { id: 'drink', label: '웰니스 음료', categories: ['음료·프로틴음료', '유제품·대체유'], keywords: ['음료', '드링크', '워터', '콤부차', '프로틴', '라떼', '스무디', '주스'], coordinates: { desktop: { x: 87, y: 38 }, mobile: { x: 87, y: 42 } } },
+        { id: 'snack', label: '건강 간식', categories: ['견과·건과류'], keywords: ['견과', '아몬드', '호두', '캐슈', '마카다미아', '브라질너트'], coordinates: { desktop: { x: 83, y: 70 }, mobile: { x: 69, y: 88 } } },
       ],
     },
   },

@@ -142,6 +142,25 @@ try {
   await page.getByText('CM-20260906-001', { exact: true }).waitFor()
   assert.equal(await page.getByText('CM-PENDING-001', { exact: true }).count(), 0)
 
+
+  for (const width of [320, 390, 596, 768]) {
+    await page.setViewportSize({ width, height: 900 })
+    const layout = await page.locator('.admin-orders-table').evaluate((table) => ({
+      width: table.getBoundingClientRect().width,
+      viewport: innerWidth,
+      overflow: table.scrollWidth > table.clientWidth + 1,
+      statuses: [...table.querySelectorAll('.status')].every((el) => el.scrollWidth <= el.clientWidth + 1),
+      fieldsVisible: [...table.querySelectorAll('tbody tr:first-child td')].every((el) => getComputedStyle(el).display !== 'none'),
+    }))
+    assert.ok(layout.width <= layout.viewport)
+    assert.equal(layout.overflow, false)
+    assert.equal(layout.statuses, true)
+    assert.equal(layout.fieldsVisible, true)
+  }
+  const selectAll = page.getByRole('checkbox', { name: '화면의 상품준비중 주문 전체선택' })
+  await selectAll.check()
+  assert.equal(await page.locator('.admin-bulk-bar b').innerText(), '1')
+  await selectAll.uncheck()
   await page.getByRole('button', { name: '상세', exact: true }).first().click()
   const detail = page.getByRole('dialog')
   await detail.waitFor()
