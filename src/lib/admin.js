@@ -34,7 +34,7 @@ export async function fetchAdminOrders() {
   const [{ data: orders, error: ordersError }, { data: profiles, error: profilesError }] = await Promise.all([
     supabase
       .from('orders')
-      .select('order_id, user_id, toss_order_id, total_price, status, created_at, order_items(product_id, quantity, price_at_order, products(name, brand))')
+      .select('order_id, user_id, toss_order_id, total_price, status, created_at, recipient_name, recipient_phone, postal_code, address, address_detail, delivery_request, order_items(product_id, quantity, price_at_order, products(name, brand))')
       .order('created_at', { ascending: false }),
     supabase.from('profiles').select('user_id, display_name'),
   ])
