@@ -31,7 +31,7 @@ export function isGoogleAccount(authUser) {
 }
 
 export function needsGoogleRegistration(profile) {
-  return !profile?.phone?.trim() || !profile?.address?.trim()
+  return !profile?.display_name?.trim() || !profile?.phone?.trim() || !profile?.address?.trim()
     || !profile?.terms_agreed_at || !profile?.privacy_agreed_at
 }
 

@@ -1,17 +1,18 @@
+import { isSupplement, ingredientDescription } from '../../supabase/functions/_shared/product-type.js'
+import { AllergenBadges } from '../components/GoalBadge'
 import { useMemo, useState } from 'react'
 import { useStore } from '../store'
 import Icon from '../components/Icon'
 import { won } from '../lib/format'
 import { calculateCartPricing } from '../lib/cart'
-import { GOAL_NUTRIENTS, NUTRIENT_META, cartNutritionTotals, fmtNutrient } from '../lib/nutrition'
+import { GOAL_NUTRIENTS, NUTRIENT_META, fmtNutrient } from '../lib/nutrition'
 import CartAiInsight from '../components/CartAiInsight'
 
-const SUMMARY_ORDER = ['sodium', 'sugar', 'protein', 'calories']
 
 export default function Cart() {
   const {
     cart, changeCartQty, removeFromCart, openProduct, navigate,
-    checkout, goal, cartLoading, cartPending, cartError, reloadCart,
+    checkout, goal, allergies, cartLoading, cartPending, cartError, reloadCart,
   } = useStore()
   const [optimisticQuantities, setOptimisticQuantities] = useState({})
   const [productsExpanded, setProductsExpanded] = useState(false)
@@ -26,19 +27,19 @@ export default function Cart() {
     freeDeliveryRemaining,
   } = calculateCartPricing(displayCart)
   const cartCount = displayCart.reduce((sum, item) => sum + item.quantity, 0)
-  const goalKeys = GOAL_NUTRIENTS[goal] || []
-  const isSupplement = goal === '영양제 탐색'
-  const totals = cartNutritionTotals(displayCart)
-  const supplementItems = displayCart.filter((c) => c.product.category === '영양제·비타민')
+  const goalKeys = GOAL_NUTRIENTS[goal]?.length ? GOAL_NUTRIENTS[goal] : ['calories']
   const isBusy = cartLoading || cartPending > 0
   const canCollapseProducts = displayCart.length > 3
   const visibleProducts = canCollapseProducts && !productsExpanded ? displayCart.slice(0, 3) : displayCart
 
   const productNutri = (product) => {
-    if (isSupplement) return product.nutrition.special || `${product.category} 카테고리`
-    if (!goalKeys.length) return '등록된 상품 영양정보 기준'
+    if (isSupplement(product)) return ingredientDescription(product)
     return goalKeys
-      .map((key) => `${NUTRIENT_META[key].label} ${fmtNutrient(key, product.nutrition[key])}`)
+      .map((key) => {
+        const value = product.nutrition?.[key]
+        const available = product.nutritionAvailability?.[key] !== false && value != null && value !== '' && Number.isFinite(Number(value)) && Number(value) >= 0
+        return `${NUTRIENT_META[key].label} ${available ? fmtNutrient(key, Number(value)) : '정보 없음'}`
+      })
       .join(' · ')
   }
 
@@ -78,7 +79,7 @@ export default function Cart() {
           <span>총 {cart.length}종 · {cartCount}개</span>
         </div>
 
-        {cartLoading ? (
+        {cartLoading && cart.length === 0 ? (
           <div className="empty cart-empty" role="status">
             <Icon name="cart" size={44} />
             <h3>장바구니를 불러오고 있습니다.</h3>
@@ -116,9 +117,8 @@ export default function Cart() {
                     <div className="ci-info">
                       <div className="ci-brand">{product.brand}</div>
                       <button type="button" className="ci-name" onClick={() => openProduct(product)}>{product.name}</button>
-                      <div className="ci-unit-price"><span>판매가</span><strong>{won(product.price)}</strong></div>
+                      <div><AllergenBadges product={product} allergies={allergies} /></div>
                       <div className="ci-nutri">
-                        <span className="ci-nutri-goal">{goal || '일반 영양 정보'}</span>
                         <span className="ci-nutri-vals">{productNutri(product)}</span>
                       </div>
                     </div>
@@ -173,39 +173,7 @@ export default function Cart() {
               </aside>
 
               <section className="cart-wellness" aria-labelledby="cart-wellness-title">
-                <div className="cart-wellness-head">
-                  <h2 id="cart-wellness-title"><Icon name="leaf" size={17} /> 장바구니 영양 분석</h2>
-                  <small>등록된 영양정보와 현재 구매 목적을 기준으로 살펴봤어요.</small>
-                </div>
                 <div className="cart-wellness-content">
-                  <div className="nutri-summary">
-                    <div className="ns-head">
-                      <h3>내 장바구니 영양 요약</h3>
-                      <span className="ns-goal">{goal ? `현재 목표 · ${goal}` : '맞춤 기준 미설정'}</span>
-                    </div>
-                    <div className="ns-grid">
-                      {SUMMARY_ORDER.map((key) => {
-                        const on = goalKeys.includes(key)
-                        return (
-                          <div key={key} className={`ns-cell${on ? ' on' : ''}`}>
-                            <div className="ns-k">{NUTRIENT_META[key].total}</div>
-                            <div className="ns-v">{fmtNutrient(key, totals[key])}</div>
-                          </div>
-                        )
-                      })}
-                    </div>
-
-                    {isSupplement && supplementItems.length > 0 && (
-                      <div className="ns-supp">
-                        <div className="ns-supp-title"><Icon name="pill" size={14} /> 담긴 영양제 주요 성분</div>
-                        {supplementItems.map(({ product, quantity }) => (
-                          <div key={product.id}>· {product.name.split(' (')[0]} <b>×{quantity}</b> — {product.nutrition.special}</div>
-                        ))}
-                      </div>
-                    )}
-
-                    <p className="ns-note">장바구니에 담긴 상품과 수량을 기준으로 단순 합산한 값입니다. 실제 하루 섭취량을 의미하지 않습니다.</p>
-                  </div>
                   <CartAiInsight cartOverride={displayCart} />
                 </div>
               </section>

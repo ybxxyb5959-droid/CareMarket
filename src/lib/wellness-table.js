@@ -11,6 +11,7 @@ export const WELLNESS_TABLE_THEMES = [
       image: 'https://bio-synergy.uk/cdn/shop/articles/no-logo-or-text_d6a57650-d566-4464-b97a-94b31792f1eb.png?v=1778686647&width=1500',
       objectPosition: '50% 50%',
       aspectRatio: '1248 / 832',
+      hotspotGroups: { desktop: [['yogurt', 'nuts']], mobile: [['yogurt', 'nuts']] },
       alt: '닭가슴살, 요거트, 견과류와 단백질 음료가 놓인 고단백 식단 이미지',
       slots: [
         { id: 'chicken', label: '닭가슴살', categories: ['닭가슴살·고단백 식품'], keywords: ['닭가슴살', '닭고기'], coordinates: { desktop: { x: 36, y: 76 }, mobile: { x: 36, y: 72 } } },
@@ -29,6 +30,7 @@ export const WELLNESS_TABLE_THEMES = [
       image: 'https://static.wixstatic.com/media/11062b_8d2c030f517240428b392a2567fd16c0~mv2.jpg/v1/fill/w_1000%2Ch_667%2Cal_c%2Cq_85%2Cusm_0.66_1.00_0.01/11062b_8d2c030f517240428b392a2567fd16c0~mv2.jpg',
       objectPosition: '50% 50%',
       aspectRatio: '1000 / 667',
+      hotspotGroups: { desktop: [['granola', 'nuts']], mobile: [] },
       alt: '그래놀라, 견과 스낵, 음료가 놓인 가벼운 아침 식사 이미지',
       slots: [
         { id: 'lowSugarDrink', label: '저당 음료', categories: ['음료·프로틴음료', '유제품·대체유'], keywords: ['무가당', '제로', '콤부차', '워터', '아미노', '프로틴', '우유', '밀크'], maxSugar: 5, coordinates: { desktop: { x: 75, y: 37 }, mobile: { x: 75, y: 42 } } },
@@ -47,6 +49,7 @@ export const WELLNESS_TABLE_THEMES = [
       image: 'https://irp.cdn-website.com/98adc116/dms3rep/multi/healthy-food-lunch-boxes-view_23-2149060415.jpeg',
       objectPosition: '50% 50%',
       aspectRatio: '1060 / 706',
+      hotspotGroups: { desktop: [['lunchbox', 'quickMeal']], mobile: [] },
       alt: '도시락, 간편식, 음료와 견과 간식이 담긴 웰니스 런치박스 이미지',
       slots: [
         { id: 'lunchbox', label: '도시락', categories: ['도시락·간편식'], keywords: ['도시락', '볶음밥', '리조또', '덮밥', '솥밥', '플래터'], coordinates: { desktop: { x: 22, y: 13 }, mobile: { x: 26, y: 19 } } },

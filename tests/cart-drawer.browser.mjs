@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict'
 import { pathToFileURL } from 'node:url'
+import { analyzeCartNutrition, composeCartInsight, cartAnalysisBasis } from '../supabase/functions/_shared/cart-nutrition-analysis.js'
 
 // Explicit browser regression test. Real UI with Supabase HTTP fixtures; never writes remote cart data.
 const { chromium } = await import(pathToFileURL(process.env.PLAYWRIGHT_MODULE).href)
@@ -34,6 +35,10 @@ const products = Array.from({ length: 30 }, (_, index) => ({
 
 let serverCart = []
 let analysisCalls = 0
+let failAnalysis = false
+let oldAnalysisVersion = false
+let primaryGoal = 'muscle_gain'
+let excludedAllergens = []
 const json = (route, body, status = 200) => route.fulfill({ status, contentType: 'application/json', body: JSON.stringify(body) })
 const cartRows = () => serverCart.map(({ product, quantity }, index) => ({
   cart_item_id: `00000000-0000-4000-8000-${String(index + 1).padStart(12, '0')}`,
@@ -63,8 +68,8 @@ try {
     if (url.origin !== new URL(supabaseUrl).origin) return route.continue()
     if (url.pathname === '/auth/v1/user') return json(route, authUser)
     if (url.pathname === '/rest/v1/products') return json(route, products)
-    if (url.pathname === '/rest/v1/profiles') return json(route, { user_id: userId, display_name: '테스트 사용자', primary_goal: 'muscle_gain', role: 'user' })
-    if (url.pathname === '/rest/v1/user_preferences') return json(route, { low_sugar: true, low_sodium: false, high_protein: true, exclude_caffeine: false, excluded_allergens: [] })
+    if (url.pathname === '/rest/v1/profiles') return json(route, { user_id: userId, display_name: '테스트 사용자', primary_goal: primaryGoal, role: 'user' })
+    if (url.pathname === '/rest/v1/user_preferences') return json(route, { low_sugar: false, low_sodium: false, high_protein: false, exclude_caffeine: false, excluded_allergens: excludedAllergens })
     if (url.pathname === '/rest/v1/wishlist_items') return json(route, [])
     if (url.pathname === '/rest/v1/cart_items' && request.method() === 'GET') return json(route, cartRows())
     if (url.pathname === '/rest/v1/rpc/add_my_cart_item') {
@@ -88,24 +93,17 @@ try {
     if (url.pathname === '/functions/v1/ai-insights') {
       analysisCalls += 1
       assert.deepEqual(request.postDataJSON(), { mode: 'cart_summary' })
-      return json(route, {
-        insight: {
-          headline: '여러 상품의 단백질 구성이 장바구니 전반에 고르게 포함되어 있어요.',
-          summary: '여러 상품의 단백질 구성이 장바구니 전반에 고르게 포함되어 있어요.',
-          balanceItems: [
-            { key: 'protein', label: '단백질', status: 'good', text: '비중 높음', reason: '고단백 기준 상품의 비중이 높아요.' },
-            { key: 'sugar', label: '당류', status: 'good', text: '저당 위주', reason: '저당 기준 상품이 주로 담겨 있어요.' },
-            { key: 'sodium', label: '나트륨', status: 'good', text: '저염 위주', reason: '저염 기준 상품이 주로 담겨 있어요.' },
-          ],
-          currentFeatures: ['비슷한 종류의 상품이 반복되어 구성을 확인해 보세요.'],
-          actionTitle: '이렇게 보완해보세요',
-          actions: ['필요에 따라 다른 식품군을 함께 살펴보세요.'],
-          recommendation: null,
-          analysisVersion: 2,
-          aiExplanationAvailable: true,
-          basis: { personalized: true, primary_goal: '근육량 증가', selected_conditions: ['저당', '고단백'], excluded_allergens: [] },
-        },
-      })
+      await new Promise(resolve => setTimeout(resolve, 250))
+      if (failAnalysis) return json(route, { error: { code: 'UPSTREAM_ERROR' } }, 503)
+      const basis = { primaryGoal, excludedAllergens }
+      const insight = composeCartInsight(analyzeCartNutrition(serverCart, basis), cartAnalysisBasis(basis))
+      if (oldAnalysisVersion) {
+        insight.compositionVersion = 3
+        insight.aiExplanationAvailable = true
+        insight.summary = '당류와 나트륨 기준에 맞는 구성이에요.'
+        delete insight.explanationNotice
+      }
+      return json(route, { insight })
     }
     return json(route, [])
   })
@@ -197,17 +195,132 @@ try {
   await page.locator('.cart-btn .qty').getByText('29', { exact: true }).waitFor()
   assert.equal(await page.locator('.drawer-item').count(), 29)
 
-  // F: Drawer shows only the short result; detail link opens the expanded Cart analysis.
-  await page.getByRole('button', { name: 'AI 분석하기', exact: true }).click()
-  await page.getByText('여러 상품의 단백질 구성이 장바구니 전반에 고르게 포함되어 있어요.', { exact: true }).waitFor()
-  assert.equal(await page.locator('.drawer').getByText('현재 구성 특징', { exact: true }).count(), 0)
-  await page.getByRole('button', { name: '분석 결과 자세히 보기', exact: true }).click()
-  await page.getByText('현재 구성 특징', { exact: true }).waitFor()
-  assert.equal(await page.locator('.cart-wellness summary').count(), 0)
-  assert.equal(await page.getByRole('heading', { name: '내 장바구니 영양 요약', exact: true }).isVisible(), true)
-  assert.equal(analysisCalls, 1)
-
-  const unexpectedConsoleErrors = consoleErrors.filter((message) => !message.includes('net::ERR_NETWORK_ACCESS_DENIED'))
+  // F: real analysis fixtures; count parity, lifecycle, detail navigation and responsive layout.
+  primaryGoal = 'nutrition_management'
+  excludedAllergens = ['우유']
+  const supplement = { ...products[0], product_id: 101, name: '마그네슘 영양제', category: '영양제·비타민', main_ingredients: ['마그네슘 100mg'] }
+  const allergen = { ...products[2], allergens: ['우유'] }
+  const salty = { ...products[1], sodium: 280 }
+  const sweet = { ...products[3], sugar: 20 }
+  const cases = [
+    { name: 'food-zero', items: [products[0]], warnings: 0 },
+    { name: 'allergy-one', items: [allergen], warnings: 1 },
+    { name: 'three-warnings', items: [salty, sweet, allergen], warnings: 3 },
+    { name: 'supplement', items: [supplement], warnings: 0 },
+    { name: 'mixed', items: [products[0], supplement, allergen], warnings: 1 },
+  ]
+  const resultLayouts = []
+  for (const scenario of cases) {
+    serverCart = scenario.items.map(product => ({ product, quantity: 1 }))
+    await page.reload()
+    await page.locator('.cart-btn .qty').getByText(String(serverCart.length), { exact: true }).waitFor()
+    await page.locator('.cart-btn').click()
+    const callsBefore = analysisCalls
+    await page.getByRole('button', { name: '장바구니 분석하기', exact: true }).click()
+    const result = page.locator('.cart-ai-result-compact')
+    await result.waitFor()
+    assert.equal(analysisCalls - callsBefore, scenario.items.includes(supplement) ? 0 : 1)
+    assert.match(await page.locator('.cart-ai-intro').innerText(), new RegExp(`식단 영양 관리 기준 · ${scenario.items.length}종 분석`))
+    assert.equal(await result.locator('.cart-ai-quick-checks li').count(), Math.min(2, scenario.warnings))
+    if (scenario.warnings) {
+      assert.match(await result.locator('.cart-ai-quick-checks h4').innerText(), new RegExp(`${scenario.warnings}종`))
+      assert.match(await result.locator('.cart-ai-quick-checks li').first().innerText(), /우유/)
+    }
+    if (scenario.warnings === 3) assert.match(await result.innerText(), /외 1종/)
+    const expected = analyzeCartNutrition(serverCart, { primaryGoal, excludedAllergens })
+    const expectedMetrics = [...expected.balanceItems.filter(m => !['attention','protein_complement'].includes(m.key)).slice(0,2), expected.balanceItems.find(m => m.key === 'attention')]
+    assert.deepEqual(await result.locator('.cart-ai-quick-metrics dd').allTextContents(), expectedMetrics.map(m => `${m.count}${m.key === 'attention' ? '' : '/' + m.total}종`))
+    for (const width of [1440, 390]) {
+      await page.setViewportSize({ width, height: width === 390 ? 844 : 1000 })
+      const layout = await page.evaluate(() => {
+        const ai = document.querySelector('.cart-ai-insight.compact'), drawer = document.querySelector('.drawer')
+        return { height: ai.getBoundingClientRect().height, overflow: drawer.scrollWidth > drawer.clientWidth,
+          checkoutBottom: document.querySelector('.drawer-cta').getBoundingClientRect().bottom,
+          bodyHeight: document.querySelector('.drawer-body').clientHeight }
+      })
+      assert.equal(layout.overflow, false)
+      assert.ok(layout.checkoutBottom <= (width === 390 ? 844 : 1000))
+      assert.ok(layout.bodyHeight > 80)
+      if (layout.height >= 370) await page.screenshot({ path: 'tmp/drawer-ai-size-check.png' })
+      assert.ok(layout.height < 370, JSON.stringify({ scenario: scenario.name, width, ...layout }))
+      resultLayouts.push({ scenario: scenario.name, width, ...layout })
+      if (scenario.name === 'three-warnings' || scenario.name === 'mixed') await page.screenshot({ path: `tmp/drawer-ai-${scenario.name}-${width}.png` })
+    }
+    const beforeReopen = analysisCalls
+    await page.locator('.drawer-head').getByRole('button', { name: '닫기' }).click()
+    await page.locator('.cart-btn').click()
+    await result.waitFor()
+    assert.equal(analysisCalls, beforeReopen)
+    await result.getByRole('button', { name: '분석 결과 자세히 보기', exact: true }).click()
+    await page.locator('.cart-ai-dashboard').waitFor()
+    assert.equal(await page.locator('.drawer').count(), 0)
+    await page.waitForFunction(() => document.activeElement?.id === 'cart-wellness-title')
+    assert.equal(await page.locator('.cart-ai-product-reason').count(), scenario.items.length)
+    assert.equal(analysisCalls, beforeReopen)
+  }
+  // Pending mutation hides old numbers; API failure and old contracts use current local analysis.
+  serverCart = [{ product: products[0], quantity: 1 }]
+  await page.reload()
+  await page.locator('.cart-btn .qty').getByText('1', { exact: true }).waitFor()
+  await page.locator('.cart-btn').click()
+  await page.getByRole('button', { name: '장바구니 분석하기', exact: true }).click()
+  await page.locator('.cart-ai-result-compact').waitFor()
+  await page.locator('.drawer-item').first().getByRole('button', { name: '수량 증가' }).click()
+  await page.locator('.drawer .ai-insight-stale').waitFor()
+  assert.equal(await page.locator('.cart-ai-quick-metrics').count(), 0)
+  failAnalysis = true
+  await page.locator('.drawer').getByRole('button', { name: '다시 분석', exact: true }).click()
+  await page.locator('.drawer .cart-ai-trigger.is-loading').waitFor()
+  assert.equal(await page.locator('.drawer .cart-ai-trigger.is-loading').isDisabled(), true)
+  await page.locator('.drawer').getByText('AI 연결 대신 등록된 상품 정보로 분석했어요.', { exact: true }).waitFor()
+  assert.equal(await page.locator('.cart-ai-quick-metrics dd').first().innerText(), '1/1종')
+  const fallbackCalls = analysisCalls
+  await page.locator('.drawer-head').getByRole('button', { name: '닫기' }).click()
+  await page.locator('.cart-btn').click()
+  await page.locator('.drawer').getByText('AI 연결 대신 등록된 상품 정보로 분석했어요.', { exact: true }).waitFor()
+  assert.equal(analysisCalls, fallbackCalls)
+  failAnalysis = false
+  oldAnalysisVersion = true
+  await page.locator('.drawer').getByRole('button', { name: '다시 분석', exact: true }).click()
+  await page.locator('.cart-ai-result-compact').waitFor()
+  assert.equal(await page.locator('.drawer .cart-ai-fallback-note').count(), 0)
+  assert.equal(await page.locator('.cart-ai-quick-metrics dd').first().innerText(), '1/1종')
+  oldAnalysisVersion = false
+  await page.locator('.drawer').getByRole('button', { name: '다시 분석', exact: true }).click()
+  await page.locator('.cart-ai-result-compact').waitFor()
+  assert.match(await page.locator('.cart-ai-intro').innerText(), /1종 분석/)
+  // Product addition/removal and goal changes must invalidate the prior presentation.
+  await page.goto(origin + '/products')
+  await page.locator('.card-add').first().waitFor()
+  await page.locator('.cart-btn').click()
+  await page.getByRole('button', { name: '장바구니 분석하기', exact: true }).click()
+  await page.locator('.cart-ai-result-compact').waitFor()
+  await page.locator('.drawer-head').getByRole('button', { name: '닫기' }).click()
+  const callsBeforeAdd = analysisCalls
+  await page.locator('.card').filter({ hasText: products[1].name }).locator('.card-add').click()
+  await page.locator('.cart-btn .qty').getByText('3', { exact: true }).waitFor()
+  await page.locator('.cart-btn').click()
+  assert.equal(await page.locator('.cart-ai-quick-metrics').count(), 0)
+  assert.equal(analysisCalls, callsBeforeAdd)
+  await page.getByRole('button', { name: '장바구니 분석하기', exact: true }).click()
+  await page.locator('.cart-ai-result-compact').waitFor()
+  await page.locator('.drawer-item').last().getByRole('button', { name: '삭제', exact: true }).click()
+  // Returning to an exactly cached input may reuse that input's result, never the deleted SKU's result.
+  await page.waitForFunction(() => !document.querySelector('.cart-ai-quick-metrics') || document.querySelector('.cart-ai-intro').textContent.includes('1종 분석'))
+  await page.goto(origin + '/goals')
+  await page.locator('.goal-pick').first().waitFor()
+  await page.locator('.cart-btn').click()
+  await page.getByRole('button', { name: '장바구니 분석하기', exact: true }).click()
+  await page.locator('.cart-ai-result-compact').waitFor()
+  // Exercise the actual goal control while the mounted Drawer observes its shared store.
+  await page.locator('.goal-pick').filter({ hasText: '체중 관리' }).evaluate(element => element.click())
+  await page.locator('.drawer .ai-insight-stale').waitFor()
+  assert.equal(await page.locator('.cart-ai-quick-metrics').count(), 0)
+  await page.locator('.drawer').getByRole('button', { name: '다시 분석', exact: true }).click()
+  await page.locator('.cart-ai-result-compact').waitFor()
+  assert.match(await page.locator('.cart-ai-intro').innerText(), /체중 관리 기준/)
+  console.log(JSON.stringify({ resultLayouts }, null, 2))
+  const unexpectedConsoleErrors = consoleErrors.filter((message) => !message.includes('net::ERR_NETWORK_ACCESS_DENIED') && !message.includes('503') && !message.includes('AI insights request failed'))
   assert.deepEqual(pageErrors, [])
   assert.deepEqual(unexpectedConsoleErrors, [])
   console.log(JSON.stringify({
@@ -220,3 +333,5 @@ try {
 } finally {
   await browser.close()
 }
+
+

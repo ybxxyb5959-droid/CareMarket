@@ -102,6 +102,9 @@ export function StoreProvider({ children }) {
   const [profileError, setProfileError] = useState(null)
   const [profileReloadKey, setProfileReloadKey] = useState(0)
   const [isAdmin, setIsAdmin] = useState(false)
+  const [reviewTarget, setReviewTarget] = useState(null)
+  const [reviewInitialRating, setReviewInitialRating] = useState(null)
+  const [reviewRevision, setReviewRevision] = useState(0)
   // 배송 자동입력 등에 쓰는 회원 연락처 정보 (마이그레이션 적용 전에는 빈 값)
   const [profile, setProfile] = useState(EMPTY_PROFILE)
 
@@ -117,14 +120,17 @@ export function StoreProvider({ children }) {
     toastTimer.current = window.setTimeout(() => setToast(null), kind.startsWith('auth') ? 3200 : 2800)
   }, [])
   const cartController = useMemo(() => createCartController(supabase, setCartState, showToast), [showToast])
+  // Demo items stay in memory and never reach cart/order RPCs.
+  const [demoCart, setDemoCart] = useState([])
+  useEffect(() => { setDemoCart([]) }, [authUserId])
   const cart = useMemo(() => {
     if (!authUserId || cartState.ownerId !== authUserId) return []
     return cartState.rows.filter(row => row.product?.is_active).map(row => ({
       cartItemId: row.cart_item_id,
       product: adaptProductRow(row.product),
       quantity: row.quantity,
-    }))
-  }, [authUserId, cartState.ownerId, cartState.rows])
+    })).concat(demoCart)
+  }, [authUserId, cartState.ownerId, cartState.rows, demoCart])
   const cartLoading = Boolean(authUserId && (cartState.ownerId !== authUserId || cartState.loading))
   const cartPending = cartState.ownerId === authUserId ? cartState.pending : 0
   const cartError = cartState.ownerId === authUserId ? cartState.error : null
@@ -145,6 +151,8 @@ export function StoreProvider({ children }) {
       setDrawerOpen(false)
       setLoginPromptOpen(false)
       setToast(null)
+      setReviewTarget(null)
+      setReviewInitialRating(null)
     }
     if (session?.user) {
       setUser(toAppUser(session.user))
@@ -290,13 +298,14 @@ export function StoreProvider({ children }) {
       setSettingsLoading(true)
       setProfileLoading(true)
       setProfileError(null)
+      if (user?.oauth) setOauthRegistrationRequired(null)
 
       const [profileResult, preferencesResult] = await Promise.all([
         supabase
           .from('profiles')
           .select('display_name, primary_goal, role')
           .eq('user_id', authUserId)
-          .single(),
+          .maybeSingle(),
         supabase
           .from('user_preferences')
           .select('low_sugar, low_sodium, high_protein, exclude_caffeine, excluded_allergens')
@@ -308,7 +317,7 @@ export function StoreProvider({ children }) {
 
       if (profileResult.error) {
         const error = profileResult.error
-        console.error('Supabase profile fetch failed:', { code: error?.code || 'PROFILE_FETCH_FAILED' })
+        console.error('Supabase profile fetch failed:', { message: error.message, code: error.code, details: error.details, hint: error.hint })
         showToast('회원정보를 불러오지 못했습니다.')
         setProfileError('회원정보를 불러오지 못했어요.')
         setSettingsLoading(false)
@@ -317,7 +326,7 @@ export function StoreProvider({ children }) {
         return
       }
 
-      const isAdminUser = profileResult.data.role === 'admin'
+      const isAdminUser = profileResult.data?.role === 'admin'
       setIsAdmin(isAdminUser)
       if (isAdminUser) setOauthRegistrationRequired(false)
 
@@ -325,7 +334,7 @@ export function StoreProvider({ children }) {
         const currentRoute = parseAppLocation(window.location)
         const adminView = currentRoute.view === 'notFound'
           ? 'notFound'
-          : ['adminDashboard', 'adminHistory', 'adminProducts', 'adminOrders', 'adminPartnerships', 'adminInquiries'].includes(currentRoute.view)
+          : ['adminDashboard', 'adminHistory', 'adminProducts', 'adminOrders', 'adminReviews', 'adminPartnerships', 'adminInquiries'].includes(currentRoute.view)
           ? currentRoute.view
           : 'adminDashboard'
         if (adminView !== 'notFound') {
@@ -345,10 +354,10 @@ export function StoreProvider({ children }) {
         setSettingsLoading(false)
       }
 
-      const loadedGoal = DB_TO_GOAL[profileResult.data.primary_goal] || null
+      const loadedGoal = DB_TO_GOAL[profileResult.data?.primary_goal] || null
       const loadedPreferences = toPreferenceState(preferencesResult.error ? null : preferencesResult.data)
 
-      setUser((current) => current && profileResult.data.display_name
+      setUser((current) => current && profileResult.data?.display_name
         ? { ...current, name: profileResult.data.display_name }
         : current)
       setGoal(loadedGoal)
@@ -367,7 +376,8 @@ export function StoreProvider({ children }) {
         .maybeSingle()
       if (!mounted) return
       if (contactResult.error) {
-        console.error('Supabase profile contact fetch failed:', { code: contactResult.error?.code || 'PROFILE_CONTACT_FETCH_FAILED' })
+        const error = contactResult.error
+        console.error('Supabase profile contact fetch failed:', { message: error.message, code: error.code, details: error.details, hint: error.hint })
         setProfileError('회원정보를 불러오지 못했어요.')
       } else if (contactResult.data) {
         setProfile({
@@ -382,13 +392,15 @@ export function StoreProvider({ children }) {
       if (user?.oauth && !isAdminUser) {
         if (contactResult.error) return
         const agreementsResult = await supabase.from('profiles')
-          .select('terms_agreed_at, privacy_agreed_at').eq('user_id', authUserId).single()
+          .select('terms_agreed_at, privacy_agreed_at').eq('user_id', authUserId).maybeSingle()
         if (!mounted) return
         if (agreementsResult.error) {
+          const error = agreementsResult.error
+          console.error('Supabase profile agreements fetch failed:', { message: error.message, code: error.code, details: error.details, hint: error.hint })
           setProfileError('가입 정보를 확인하지 못했습니다. 다시 시도해 주세요.')
           return
         }
-        const incomplete = needsGoogleRegistration({ ...contactResult.data, ...agreementsResult.data })
+        const incomplete = needsGoogleRegistration({ ...profileResult.data, ...contactResult.data, ...agreementsResult.data })
         setOauthRegistrationRequired(incomplete)
         if (incomplete) {
           window.history.replaceState({ view: 'register', scrollY: 0 }, '', viewUrl('register'))
@@ -396,6 +408,13 @@ export function StoreProvider({ children }) {
           scrollTop()
           return
         }
+        // A restored completed account must not fall into the email signup form.
+        if (['main', 'login', 'register'].includes(parseAppLocation(window.location).view)) {
+          window.history.replaceState({ view: 'main', scrollY: 0 }, '', viewUrl('main'))
+          setView('main')
+          scrollTop()
+        }
+        return
       }
 
       // 조건 미설정 회원은 설정을 강제하지 않고 맞춤 상품 화면으로 안내한다.
@@ -407,7 +426,13 @@ export function StoreProvider({ children }) {
       }
     }
 
-    loadWellnessSettings()
+    loadWellnessSettings().catch(error => {
+      if (!mounted) return
+      console.error('Supabase profile load failed:', { message: error.message, code: error.code, details: error.details, hint: error.hint })
+      setProfileError('회원정보를 불러오지 못했습니다. 다시 시도해 주세요.')
+      setSettingsLoading(false)
+      setProfileLoading(false)
+    })
 
     return () => {
       mounted = false
@@ -418,12 +443,30 @@ export function StoreProvider({ children }) {
 
   const reloadProfile = () => setProfileReloadKey((key) => key + 1)
 
+  const openReviewForm = useCallback((target, initialRating = null, mode = 'create') => {
+    const editing = mode === 'edit'
+    if (!authUserId || (!editing && !target?.order_item_id) || (editing && !(target?.review_id || target?.id))) return false
+    setReviewTarget({ ...target, form_mode: editing ? 'edit' : 'create' })
+    const existingRating = editing ? Number(target.review_rating ?? target.rating) : initialRating
+    setReviewInitialRating(Number.isInteger(existingRating) && existingRating >= 1 && existingRating <= 5 ? existingRating : null)
+    return true
+  }, [authUserId])
+  const closeReviewForm = useCallback(() => {
+    setReviewTarget(null)
+    setReviewInitialRating(null)
+  }, [])
+  const reviewCompleted = useCallback(() => {
+    setReviewRevision((value) => value + 1)
+    setReviewTarget(null)
+    setReviewInitialRating(null)
+  }, [])
+
   const rememberScroll = () => {
     window.history.replaceState({ ...window.history.state, view, scrollY: window.scrollY }, '', window.location.href)
   }
   const catalogStateUrl = (overrides = {}) => catalogUrl({ search, searchMode, aiQuery, shopCategory, shopSub, dealsOnly, sortBy, ...overrides })
   const navigate = (v, options = {}) => {
-    if ((['adminHistory', 'adminProducts', 'adminOrders', 'adminPartnerships', 'adminInquiries'].includes(v) || v === 'adminDashboard') && !authLoading && !isAdmin) {
+    if ((['adminHistory', 'adminProducts', 'adminOrders', 'adminPartnerships', 'adminInquiries'].includes(v) || v === 'adminReviews' || v === 'adminDashboard') && !authLoading && !isAdmin) {
       showToast('관리자 권한이 필요한 페이지입니다.')
       setView('main')
       window.history.pushState({ view: 'main', scrollY: 0 }, '', '/')
@@ -438,7 +481,7 @@ export function StoreProvider({ children }) {
       ? catalogStateUrl(resetAi ? {
         searchMode: 'normal', aiQuery: '',
         sortBy: ['protein', 'sugar', 'sodium'].includes(sortBy) ? 'recommend' : sortBy,
-      } : {})
+      } : (options.catalog || {}))
       : v === 'adminOrders'
       ? adminOrdersUrl(options)
       : viewUrl(v)
@@ -504,8 +547,19 @@ export function StoreProvider({ children }) {
     setAiResult(null)
     setAiError(null)
     setAiLoading(true)
+    setSearch('')
+    setSubFilters([])
+    setShopCategory('전체상품')
+    setShopSub('전체')
     setDealsOnly(false)
-    navigate('products', { preserveAiSearch: true })
+    setSortBy('recommend')
+    navigate('products', {
+      preserveAiSearch: true,
+      catalog: {
+        search: '', searchMode: 'ai', aiQuery: query,
+        shopCategory: '전체상품', shopSub: '전체', dealsOnly: false, sortBy: 'recommend',
+      },
+    })
     window.setTimeout(() => document.getElementById('product-list')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 0)
     try {
       const filters = await requestAiConditions(supabase, query, request.signal)
@@ -561,6 +615,7 @@ export function StoreProvider({ children }) {
   }
 
   const toggleWish = async (id) => {
+    if (products.find(product => product.id === id)?.isDemoProduct) { showToast('시연용 상품은 찜 저장을 지원하지 않습니다.'); return false }
     if (!authUserId) {
       showToast('로그인 후 상품을 찜할 수 있습니다.')
       navigate('login')
@@ -599,6 +654,13 @@ export function StoreProvider({ children }) {
       return false
     }
     const generation = cartController.getGeneration()
+    if (product.isDemoProduct) {
+      setDemoCart(current => current.some(item => item.product.id === product.id)
+        ? current.map(item => item.product.id === product.id ? { ...item, quantity: item.quantity + count } : item)
+        : [...current, { product, quantity: count }])
+      showToast('시연용 장바구니에 담았어요.')
+      return true
+    }
     const saved = await cartController.add(product.id, count)
     if (saved && generation === cartController.getGeneration()) {
       showToast('장바구니에 담았어요.', 'default', {
@@ -615,9 +677,12 @@ export function StoreProvider({ children }) {
   }
 
   const changeCartQty = (id, delta) => requireCartLogin()
-    ? cartController.changeQuantity(id, delta) : Promise.resolve(false)
+    ? demoCart.some(item => item.product.id === id)
+      ? (setDemoCart(current => current.map(item => item.product.id === id ? { ...item, quantity: Math.max(1, Math.min(item.product.stock, item.quantity + delta)) } : item)), Promise.resolve(true))
+      : cartController.changeQuantity(id, delta) : Promise.resolve(false)
 
   const removeFromCart = async (id) => {
+    if (demoCart.some(item => item.product.id === id)) { setDemoCart(current => current.filter(item => item.product.id !== id)); return true }
     if (!requireCartLogin()) return false
     const generation = cartController.getGeneration()
     const saved = await cartController.remove(id)
@@ -638,6 +703,7 @@ export function StoreProvider({ children }) {
   const cartCount = cart.reduce((s, i) => s + i.quantity, 0)
 
   const checkout = () => {
+    if (cart.some(item => item.product.isDemoProduct)) { showToast('시연용 상품을 제외하면 실제 주문을 진행할 수 있습니다.'); return }
     if (!requireCartLogin() || cart.length === 0 || cartPending || cartLoading || cartError) return
     setDrawerOpen(false)
     navigate('checkout')
@@ -691,7 +757,8 @@ export function StoreProvider({ children }) {
     try {
       await startOAuthLogin(supabase, window.location.origin, provider)
       return true
-    } catch {
+    } catch (error) {
+      console.error('Supabase OAuth sign in failed:', { message: error.message, code: error.code, details: error.details, hint: error.hint })
       showToast(`${provider === 'kakao' ? '카카오' : 'Google'} 로그인을 시작하지 못했습니다. 잠시 후 다시 시도해 주세요.`, 'auth-error')
       return false
     }
@@ -705,12 +772,13 @@ export function StoreProvider({ children }) {
       setUser(current => current && { ...current, name: fields.displayName.trim() })
       setProfile({ phone: fields.phone.trim(), postalCode: fields.postalCode?.trim() || '', address: fields.address.trim(), addressDetail: fields.addressDetail?.trim() || '' })
       setOauthRegistrationRequired(false)
-      navigate('goalSetup')
+      navigate('main')
       showToast('회원가입이 완료되었습니다.', 'auth')
       return { ok: true }
-    } catch {
+    } catch (error) {
+      console.error('Supabase OAuth profile completion failed:', { message: error.message, code: error.code, details: error.details, hint: error.hint })
       showToast('가입 정보를 저장하지 못했습니다. 입력 내용을 확인하고 다시 시도해 주세요.', 'auth-error')
-      return { ok: false }
+      return { ok: false, reason: 'profile-save-failed' }
     }
   }
 
@@ -873,9 +941,10 @@ export function StoreProvider({ children }) {
       loginWithOAuth, completeOAuthRegistration, oauthRegistrationRequired,
       cartTotal, deliveryFee, cartCount,
       toast, showToast,
+      reviewTarget, reviewInitialRating, reviewRevision, openReviewForm, closeReviewForm, reviewCompleted,
     }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [view, selectedProduct, goal, subFilters, allergies, search, searchMode, aiQuery, aiResult, aiLoading, aiError, shopCategory, shopSub, dealsOnly, sortBy, wishlist, wishlistLoading, wishlistError, cart, cartState, loginPromptOpen, drawerOpen, products, productsLoading, productsError, user, isLoggedIn, authUserId, authLoading, settingsLoading, profileLoading, profileError, isAdmin, profile, toast, oauthRegistrationRequired],
+    [view, selectedProduct, goal, subFilters, allergies, search, searchMode, aiQuery, aiResult, aiLoading, aiError, shopCategory, shopSub, dealsOnly, sortBy, wishlist, wishlistLoading, wishlistError, cart, cartState, loginPromptOpen, drawerOpen, products, productsLoading, productsError, user, isLoggedIn, authUserId, authLoading, settingsLoading, profileLoading, profileError, isAdmin, profile, toast, oauthRegistrationRequired, reviewTarget, reviewInitialRating, reviewRevision, openReviewForm, closeReviewForm, reviewCompleted],
   )
 
   return <StoreContext.Provider value={value}>{children}</StoreContext.Provider>

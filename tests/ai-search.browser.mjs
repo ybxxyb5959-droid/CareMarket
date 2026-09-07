@@ -7,7 +7,7 @@ import { searchCases, geminiResponse } from './ai-search-cases.mjs'
 // Run explicitly, not as a node:test file. Real public products GET; Gemini HTTP fixture only.
 const { chromium } = await import(pathToFileURL(process.env.PLAYWRIGHT_MODULE).href)
 const browser = await chromium.launch({ executablePath: process.env.CHROME_PATH, headless: true })
-const origin = 'http://127.0.0.1:5173'
+const origin = process.env.CAREMARKET_TEST_ORIGIN || 'http://127.0.0.1:5173'
 try {
   const context = await browser.newContext({ viewport: { width: 1440, height: 1000 } })
   await context.addInitScript(() => localStorage.setItem('cm_welcome_hide_date', new Date().toISOString().slice(0, 10)))
@@ -39,10 +39,11 @@ try {
     const response = await handler(new Request(request.url(), { method: 'POST', headers: { origin, 'Content-Type': 'application/json' }, body: JSON.stringify(body) }))
     await route.fulfill({ status: response.status, headers: Object.fromEntries(response.headers), body: await response.text() })
   })
-  await page.goto(origin)
+  await page.goto(`${origin}/products?category=${encodeURIComponent('영양제')}`)
   await page.locator('.card-add').first().waitFor({ timeout: 60000 })
   assert.equal(dbProducts.length, 100)
   const names = new Set(dbProducts.map(p => p.name))
+  assert.equal(new URL(page.url()).searchParams.get('category'), '영양제')
   await page.getByTitle('AI 자연어 검색으로 전환').click()
   const input = page.getByRole('textbox', { name: 'AI 자연어 검색' })
   for (const [i, entry] of searchCases.slice(0, 9).entries()) {
@@ -50,6 +51,12 @@ try {
     await input.press('Enter')
     await page.locator('.ai-result-summary .ai-query').waitFor()
     assert.equal(await page.locator('.ai-query').textContent(), `“${entry.query}”`)
+    if (i === 0) {
+      const resultUrl = new URL(page.url())
+      assert.equal(resultUrl.searchParams.has('category'), false, 'AI search must clear the previous category scope')
+      assert.equal(resultUrl.searchParams.has('sub'), false, 'AI search must clear the previous subcategory scope')
+      assert.equal(await page.locator('.goal-nav button').filter({ hasText: '전체상품' }).first().getAttribute('class'), 'on')
+    }
     const shown = await page.locator('.product-grid .card-name').allTextContents()
     assert.ok(shown.every(name => names.has(name)))
     results.push({ case: i + 1, query: entry.query, count: shown.length })

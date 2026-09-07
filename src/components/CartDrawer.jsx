@@ -1,42 +1,15 @@
+import { getGoalNutrientLabel } from '../lib/cart-nutrient-label'
+import { AllergenBadges } from './GoalBadge'
 import { useStore } from '../store'
 import Icon from './Icon'
 import { won } from '../lib/format'
 import CartAiInsight from './CartAiInsight'
 
-const formatNutrientValue = (value) => {
-  const number = Number(value)
-  if (!Number.isFinite(number)) return null
-  return number.toLocaleString('ko-KR', { maximumFractionDigits: 1 })
-}
-
-function getGoalNutrientLabel(goal, product) {
-  const nutrition = product?.nutrition
-  if (!nutrition) return null
-
-  if (goal === '근육량 증가') {
-    const protein = formatNutrientValue(nutrition.protein)
-    return protein == null ? null : `단백질 ${protein}g`
-  }
-
-  if (goal === '체중 관리') {
-    const calories = formatNutrientValue(nutrition.calories)
-    return calories == null ? null : `${calories}kcal`
-  }
-
-  if (goal === '식단 영양 관리') {
-    const sodium = formatNutrientValue(nutrition.sodium)
-    return sodium == null ? null : `나트륨 ${sodium}mg`
-  }
-
-  // 영양제 탐색은 구조화된 실제 micronutrient 데이터가 있을 때만 표시한다.
-  return null
-}
-
 export default function CartDrawer() {
   const {
     drawerOpen, setDrawerOpen, cart, changeCartQty, removeFromCart,
     cartTotal, deliveryFee, cartCount, checkout, navigate,
-    cartLoading, cartPending, cartError, reloadCart, goal,
+    cartLoading, cartPending, cartError, reloadCart, goal, allergies,
   } = useStore()
 
   if (!drawerOpen) return null
@@ -76,6 +49,7 @@ export default function CartDrawer() {
                         {nutrientLabel}
                       </div>
                     )}
+                    <div className="di-allergens"><AllergenBadges product={product} allergies={allergies} /></div>
                   </div>
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div className="di-brand">{product.brand}</div>

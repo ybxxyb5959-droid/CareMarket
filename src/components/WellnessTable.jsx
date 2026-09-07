@@ -68,7 +68,24 @@ export default function WellnessTable() {
       return product ? { key: `${slot.id}-${product.id}`, product, slot, number: index + 1 } : null
     })
     .filter(Boolean), [products, theme, activeConfig?.rotation])
-  const selectedSpot = spots.find((spot) => spot.key === activeSpot)
+  const viewport = isMobile ? 'mobile' : 'desktop'
+  const hotspotGroups = []
+  for (const spot of spots) {
+    if (hotspotGroups.some(group => group.spots.includes(spot))) continue
+    const slotIds = theme.visual.hotspotGroups?.[viewport]?.find(ids => ids.includes(spot.slot.id)) || [spot.slot.id]
+    const members = spots.filter(item => slotIds.includes(item.slot.id))
+    hotspotGroups.push({
+      key: spot.key,
+      spots: members,
+      coordinates: {
+        x: members.reduce((sum, item) => sum + item.slot.coordinates[viewport].x, 0) / members.length,
+        y: members.reduce((sum, item) => sum + item.slot.coordinates[viewport].y, 0) / members.length,
+      },
+    })
+  }
+  const selectedGroup = hotspotGroups.find(group => group.spots.some(spot => spot.key === activeSpot))
+
+  useEffect(() => () => window.clearTimeout(timerRef.current), [])
 
   const reveal = (key) => {
     if (timerRef.current) window.clearTimeout(timerRef.current)
@@ -132,42 +149,50 @@ export default function WellnessTable() {
             aria-label={theme.visual.alt}
           >
           </div>
-          <div className="wtable-layer">
-            {spots.map((spot) => {
-              const coordinates = spot.slot.coordinates[isMobile ? 'mobile' : 'desktop']
+          <div className="wtable-layer" onKeyDown={event => {
+            if (event.key === 'Escape') { pinnedSpotRef.current = null; setActiveSpot(null) }
+          }}>
+            {hotspotGroups.map((group) => {
+              const coordinates = group.coordinates
               return (
               <button
-                key={spot.key}
-                className={`hotspot${activeSpot === spot.key ? ' on' : ''}`}
+                key={group.key}
+                className={`hotspot${selectedGroup === group ? ' on' : ''}`}
                 style={{ left: `${coordinates.x}%`, top: `${coordinates.y}%` }}
-                onMouseEnter={() => reveal(spot.key)}
+                onMouseEnter={() => reveal(group.key)}
                 onMouseLeave={hideLater}
-                onFocus={() => reveal(spot.key)}
-                onClick={() => toggleSpot(spot.key)}
-                aria-label={`${spot.product.name} 보기`}
+                onFocus={() => reveal(group.key)}
+                onClick={() => toggleSpot(group.key)}
+                aria-expanded={selectedGroup === group}
+                aria-controls={selectedGroup === group ? 'wellness-table-popover' : undefined}
+                aria-label={`${group.spots.map(spot => spot.product.name).join(', ')} 보기`}
               >
                 <Icon name="plus" size={16} strokeWidth={2.5} className="hotspot-ico" />
               </button>
               )
             })}
-            {selectedSpot && (
+            {selectedGroup && (
               (() => {
-                const coordinates = selectedSpot.slot.coordinates[isMobile ? 'mobile' : 'desktop']
+                const coordinates = selectedGroup.coordinates
                 return (
-              <button
-                className={`wpop${coordinates.y < 45 ? ' below' : ''}`}
+              <div
+                id="wellness-table-popover"
+                className={`wpop wpop-group${coordinates.y < 45 ? ' below' : ''}`}
                 style={{ left: `${Math.min(Math.max(coordinates.x, 25), 75)}%`, top: `${coordinates.y}%` }}
-                onMouseEnter={() => reveal(selectedSpot.key)}
+                onMouseEnter={() => reveal(selectedGroup.key)}
                 onMouseLeave={hideLater}
-                onClick={() => openProduct(selectedSpot.product)}
+                onFocus={() => reveal(selectedGroup.key)}
+                onBlur={event => { if (!event.currentTarget.contains(event.relatedTarget)) hideLater() }}
               >
-                <span className="wpop-media"><ProductImage src={selectedSpot.product.image} alt="" /></span>
+                {selectedGroup.spots.map(spot => <button type="button" className="wpop-product" key={spot.key} onClick={() => openProduct(spot.product)}>
+                <span className="wpop-media"><ProductImage src={spot.product.image} alt="" /></span>
                 <span className="wpop-copy">
-                  <span className="wpop-name">{selectedSpot.product.name}</span>
-                  <span className="wpop-price">{won(selectedSpot.product.price)}</span>
+                  <span className="wpop-name">{spot.product.name}</span>
+                  <span className="wpop-price">{won(spot.product.price)}</span>
                 </span>
                 <Icon name="chevron-right" size={16} />
-              </button>
+                </button>)}
+              </div>
                 )
               })()
             )}
@@ -179,7 +204,7 @@ export default function WellnessTable() {
             {spots.map((spot) => (
               <button
                 key={spot.key}
-                className={`wstrip-card${activeSpot === spot.key ? ' active' : ''}`}
+                className={`wstrip-card${selectedGroup?.spots.includes(spot) ? ' active' : ''}`}
                 onMouseEnter={() => reveal(spot.key)}
                 onMouseLeave={hideLater}
                 onFocus={() => reveal(spot.key)}

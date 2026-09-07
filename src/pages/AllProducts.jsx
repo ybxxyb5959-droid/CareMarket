@@ -15,13 +15,19 @@ export default function AllProducts() {
     goal, search, setSearch, sortBy, setSortBy,
     subFilters, toggleSub, setSubFilters, allergies,
     products, productsLoading, productsError, reloadProducts, navigate,
-    searchMode, aiResult: aiSearch, aiLoading, aiError, runAiSearch, clearAiSearch,
+    searchMode, setSearchMode, aiQuery, setAiQuery, aiResult: aiSearch, aiLoading, aiError, runAiSearch, clearAiSearch,
     shopCategory, shopSub, dealsOnly, setDealsOnly,
-    isLoggedIn, showToast,
+    showToast, authUserId,
   } = useStore()
-  const [compareIds, setCompareIds] = useState([])
+  const allergyKey = `${authUserId || 'anonymous'}:${[...allergies].sort().join('|')}`
+  const [shownAllergyKey, setShownAllergyKey] = useState(null)
+  const hideAllergens = shownAllergyKey !== allergyKey
+  const [compareSelection, setCompareSelection] = useState([])
+  const compareIds = compareSelection.map(product => product.id)
   const [compareOpen, setCompareOpen] = useState(false)
-  const availableIds = useMemo(() => availableFilterIds(shopCategory), [shopCategory])
+  const searchCategory = searchMode === 'ai' ? '전체상품' : shopCategory
+  const searchSub = searchMode === 'ai' ? '전체' : shopSub
+  const availableIds = useMemo(() => availableFilterIds(searchCategory), [searchCategory])
   const availableFilters = useMemo(
     () => availableIds.map(id => SUB_FILTERS.find(filter => filter.id === id)).filter(Boolean),
     [availableIds],
@@ -35,10 +41,17 @@ export default function AllProducts() {
   }, [availableTags, setSubFilters])
 
   const filtered = useMemo(
-    () => filterAndSort(products, { search: searchMode === 'ai' ? '' : search, subFilters, allergies, sortBy, goal, shopCategory, shopSub, dealsOnly }),
-    [products, search, searchMode, subFilters, allergies, sortBy, goal, shopCategory, shopSub, dealsOnly],
+    () => filterAndSort(products, {
+      search: searchMode === 'ai' ? '' : search,
+      subFilters, allergies, sortBy, goal,
+      shopCategory: searchCategory, shopSub: searchSub,
+      dealsOnly: searchMode === 'ai' ? false : dealsOnly,
+      hideAllergens,
+    }),
+    [products, search, searchMode, subFilters, allergies, sortBy, goal, searchCategory, searchSub, dealsOnly, hideAllergens],
   )
 
+  const supplementBrowse = searchMode === 'normal' && shopCategory === '영양제'
   const aiProducts = useMemo(() => {
     if (searchMode !== 'ai') return filtered
     if (aiLoading || aiError || !aiSearch) return []
@@ -48,26 +61,38 @@ export default function AllProducts() {
 
   const title = searchMode === 'ai' ? 'AI 검색 결과' : dealsOnly ? '특가 상품' : `${shopCategory}${shopSub !== '전체' ? ` · ${shopSub}` : ''}`
   const compareProducts = useMemo(
-    () => compareIds.map((id) => products.find((product) => product.id === id)).filter(Boolean),
-    [compareIds, products],
+    () => compareSelection.map((selected) => products.find((product) => product.id === selected.id) || selected),
+    [compareSelection, products],
   )
   const toggleCompare = (productId) => {
-    setCompareIds((current) => {
-      if (current.includes(productId)) return current.filter((id) => id !== productId)
-      if (current.length >= 3) {
-        showToast('상품은 최대 3개까지 비교할 수 있습니다.')
-        return current
-      }
-      return [...current, productId]
-    })
-  }
-  const openComparison = () => {
-    if (compareProducts.length < 2) return
-    if (!isLoggedIn) {
-      showToast('상품 비교는 로그인 후 이용할 수 있습니다.')
+    if (!compareIds.includes(productId) && compareIds.length >= 3) {
+      showToast('상품은 최대 3개까지 비교할 수 있습니다. 비교하기에서 상품을 빼주세요.')
       return
     }
+    const product = products.find(product => product.id === productId)
+    setCompareSelection(current => current.some(item => item.id === productId)
+      ? current.filter(item => item.id !== productId)
+      : product && current.length < 3 ? [...current, product] : current)
+  }
+  const openComparison = () => {
+    if (!compareProducts.length) return
     setCompareOpen(true)
+  }
+  const selectMobileSearchMode = (mode) => {
+    if (mode === 'normal') {
+      clearAiSearch()
+      return
+    }
+    setSearchMode('ai')
+    setSearch('')
+  }
+  const submitMobileSearch = (event) => {
+    event.preventDefault()
+    if (searchMode === 'ai') {
+      if (!aiLoading) void runAiSearch(aiQuery)
+      return
+    }
+    setSearch(search.trim())
   }
 
   return (
@@ -75,11 +100,32 @@ export default function AllProducts() {
       <div id="product-list" className="page-mid" style={{ margin: '0 auto' }}>
         <div className="page-head">
           <div>
-            <span className="eyebrow">{goal} 기준 영양 강조</span>
+            <span className="eyebrow">현재 구매 목적 · {goal}</span>
             <h1 className="page-title" style={{ marginTop: 6 }}>{title}</h1>
           </div>
           <button className="btn btn-text btn-sm" onClick={() => navigate('main')}>← 홈으로</button>
         </div>
+
+        {supplementBrowse && goal !== '영양제 탐색' && <div className="supplement-catalog-guide">
+          <p>현재 구매 목적과 연관된 영양제 상품을 먼저 보여드려요.</p>
+        </div>}
+        <section className="catalog-mobile-search" aria-label="상품 검색">
+          <div className="catalog-mobile-search-modes" role="tablist" aria-label="검색 방식">
+            <button type="button" role="tab" aria-selected={searchMode === 'normal'} className={searchMode === 'normal' ? 'on' : ''} onClick={() => selectMobileSearchMode('normal')}>일반검색</button>
+            <button type="button" role="tab" aria-selected={searchMode === 'ai'} className={searchMode === 'ai' ? 'on' : ''} onClick={() => selectMobileSearchMode('ai')}>자연어 조건 검색</button>
+          </div>
+          <form className={`catalog-mobile-search-form${searchMode === 'ai' ? ' ai' : ''}`} onSubmit={submitMobileSearch}>
+            <Icon name={searchMode === 'ai' ? 'sparkles' : 'search'} size={17} />
+            <input
+              type="search"
+              value={searchMode === 'ai' ? aiQuery : search}
+              onChange={(event) => searchMode === 'ai' ? setAiQuery(event.target.value) : setSearch(event.target.value)}
+              placeholder={searchMode === 'ai' ? '예: 당류 낮고 단백질 높은 간식' : '상품명 또는 카테고리 검색'}
+              aria-label={searchMode === 'ai' ? 'AI 자연어 검색' : '상품명 또는 카테고리 검색'}
+            />
+            <button type="submit" className="btn btn-primary btn-sm" disabled={searchMode === 'ai' && aiLoading}>{aiLoading && searchMode === 'ai' ? '검색 중…' : '검색'}</button>
+          </form>
+        </section>
 
         {searchMode === 'normal' && search.trim() && !productsLoading && !productsError && (
           <div className="search-result-summary" aria-live="polite">
@@ -92,7 +138,7 @@ export default function AllProducts() {
 
         {searchMode === 'ai' && !aiSearch && !aiLoading && !aiError && (
           <div className="ai-hint">
-            <span className="ai-hint-label"><Icon name="sparkles" size={14} /> AI 자연어 검색 예시</span>
+            <span className="ai-hint-label"><Icon name="sparkles" size={14} /> 이렇게 검색해보세요</span>
             {AI_EXAMPLES.map((ex) => (
               <button key={ex} type="button" className="chip" onClick={() => runAiSearch(ex)}>{ex}</button>
             ))}
@@ -150,12 +196,16 @@ export default function AllProducts() {
                 <button className="f-reset" onClick={() => setSubFilters([])}>초기화</button>
               )}
             </div>
+            {allergies.length > 0 && <div className="allergen-filter">
+              <label><input type="checkbox" checked={hideAllergens} onChange={event => setShownAllergyKey(event.target.checked ? null : allergyKey)} /> 내 알레르기 성분 포함 상품 숨기기</label>
+              <small>설정된 알레르기: {allergies.join(' · ')}</small>
+            </div>}
           </div>
           <div className="f-sort">
             <span>총 <b>{aiProducts.length}</b>개</span>
             <span className="divider-v" />
             <select value={sortBy} onChange={(e) => setSortBy(e.target.value)}>
-              <option value="recommend">{searchMode === 'ai' ? '관련도순' : '맞춤 추천순'}</option>
+              <option value="recommend">{searchMode === 'ai' ? '관련도순' : supplementBrowse ? goal === '영양제 탐색' ? '기본 정렬순' : '목적 연관순' : '맞춤 추천순'}</option>
               <option value="lowPrice">낮은 가격순</option>
               <option value="highPrice">높은 가격순</option>
               {searchMode === 'ai' && <>
@@ -167,10 +217,10 @@ export default function AllProducts() {
           </div>
         </div>
 
-        {!productsLoading && !productsError && aiProducts.length > 0 && (
+        {(compareProducts.length > 0 || (!productsLoading && !productsError && aiProducts.length > 0)) && (
           <div className="compare-toolbar">
             <div><Icon name="cart" size={15} /><span>비교할 상품을 선택하세요</span><b>{compareIds.length}/3</b></div>
-            <button type="button" className="btn btn-soft btn-sm" disabled={compareProducts.length < 2} onClick={openComparison}>비교하기</button>
+            <button type="button" className="btn btn-soft btn-sm" disabled={!compareProducts.length} onClick={openComparison}>비교하기</button>
           </div>
         )}
 
@@ -202,7 +252,7 @@ export default function AllProducts() {
           </div>
         )}
       </div>
-      {compareOpen && <ProductComparisonModal products={compareProducts} goal={goal} onClose={() => setCompareOpen(false)} />}
+      {compareOpen && <ProductComparisonModal products={compareProducts} goal={goal} onRemove={toggleCompare} onClear={() => setCompareSelection([])} onClose={() => setCompareOpen(false)} />}
     </div>
   )
 }

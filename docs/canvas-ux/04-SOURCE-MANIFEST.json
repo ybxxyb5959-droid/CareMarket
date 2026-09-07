@@ -1,0 +1,732 @@
+{
+  "date": "2026-09-07",
+  "basis": "current working tree, including uncommitted changes",
+  "validation": "static source analysis; no live API or browser verification",
+  "code": [
+    {
+      "file": "src/main.jsx",
+      "purpose": "앱 mount와 스타일 연결",
+      "sha256": "4b4b864dbe45253425d0c925337180ec07e204295179f80f59551216f466f618",
+      "ranges": [
+        {
+          "first": 1,
+          "last": 10
+        }
+      ]
+    },
+    {
+      "file": "src/App.jsx",
+      "purpose": "전체 view 매핑과 인증·OAuth·관리자 Shell 분기",
+      "sha256": "c2b335041b17e4559e3e74f136f8cb5fa2a1ad38a9feafcb8be9d3023168b4e3",
+      "ranges": [
+        {
+          "first": 1,
+          "last": 109
+        }
+      ]
+    },
+    {
+      "file": "src/lib/navigation.js",
+      "purpose": "route 해석과 URL 생성",
+      "sha256": "f57ff531a918dfdf71dfc7da7a02d388e0070a19523568e7dcb24be231f299f8",
+      "ranges": [
+        {
+          "first": 1,
+          "last": 92
+        }
+      ]
+    },
+    {
+      "file": "src/store.jsx",
+      "purpose": "공통 context와 히어로 자동 전환",
+      "sha256": "b8e4f84d55b988b93abe03f2558de9b5bed0e9475a0cc8688d85882e8d654890",
+      "ranges": [
+        {
+          "first": 1,
+          "last": 15
+        }
+      ]
+    },
+    {
+      "file": "src/StoreProvider.jsx",
+      "purpose": "전역 상태·라우팅·AI 검색·담기·주문 진입. 인증·DB 저장 구현 제외",
+      "sha256": "9dff861f4bf0f5e0ba0a590d1fb4ca02d41ca1df3f01e7bef39b5fdbf08ae13d",
+      "ranges": [
+        {
+          "first": 57,
+          "last": 106
+        },
+        {
+          "first": 438,
+          "last": 578
+        },
+        {
+          "first": 604,
+          "last": 661
+        }
+      ]
+    },
+    {
+      "file": "src/components/Header.jsx",
+      "purpose": "검색 초안/확정·자동완성·AI 모드·회원 메뉴·모바일 검색",
+      "sha256": "a235f3b3e0a35cdcf5414595579dc9010082d266ca9c17472763fececb8e981d",
+      "ranges": [
+        {
+          "first": 9,
+          "last": 471
+        }
+      ]
+    },
+    {
+      "file": "src/components/Footer.jsx",
+      "purpose": "서비스 링크와 홈 내부 스크롤",
+      "sha256": "e7581072ff48853a68854bd1b1365b9f38320fd49dc32c398e31d4d6e0da15f8",
+      "ranges": [
+        {
+          "first": 1,
+          "last": 64
+        }
+      ]
+    },
+    {
+      "file": "src/pages/Home.jsx",
+      "purpose": "히어로·목적 체험·추천·콘텐츠 진입",
+      "sha256": "002a79f6ac09d8f75ea9db2fcd4697855bcdd442e11c1456e1786de8b51aca38",
+      "ranges": [
+        {
+          "first": 1,
+          "last": 271
+        }
+      ]
+    },
+    {
+      "file": "src/pages/AllProducts.jsx",
+      "purpose": "빠른 조건·알레르기 OFF·AI 상태·비교 선택",
+      "sha256": "f8506ee9894de84f8f1226eb1508cfec03a2cbb68cd15f1c7c3f66e28295dbb7",
+      "ranges": [
+        {
+          "first": 11,
+          "last": 215
+        }
+      ]
+    },
+    {
+      "file": "src/pages/ProductCollection.jsx",
+      "purpose": "컬렉션 상태·알레르기 토글·목록. 데이터 조회 effect 제외",
+      "sha256": "75687b522f787d8ff68998b3e7570a17a206d49631c0d2e727c4d36f2d4049f2",
+      "ranges": [
+        {
+          "first": 8,
+          "last": 14
+        },
+        {
+          "first": 24,
+          "last": 37
+        }
+      ]
+    },
+    {
+      "file": "src/pages/CustomShop.jsx",
+      "purpose": "목적 없음과 맞춤 추천 행의 분기",
+      "sha256": "c0dba9d1f06c1d5e97a202cf27a8f05dc2ddb76ae04eeb85aef9a5c5e9d5b909",
+      "ranges": [
+        {
+          "first": 1,
+          "last": 149
+        }
+      ]
+    },
+    {
+      "file": "src/pages/GoalSetup.jsx",
+      "purpose": "목적 1개·조건/성분 다중 선택·저장 CTA",
+      "sha256": "6028d87fe24faecfa91eea5ed344cc31ad2dd77bf2aeaf99dc024a118d61b5f9",
+      "ranges": [
+        {
+          "first": 1,
+          "last": 100
+        }
+      ]
+    },
+    {
+      "file": "src/components/ProductCard.jsx",
+      "purpose": "상세 진입·찜·담기·비교",
+      "sha256": "e904a720c789d6ba930b8f01e4cca5613cfbd0f8786fa566f54584505a2aefc1",
+      "ranges": [
+        {
+          "first": 1,
+          "last": 69
+        }
+      ]
+    },
+    {
+      "file": "src/components/GoalBadge.jsx",
+      "purpose": "목적 영양 강조와 개인 알레르기 배지",
+      "sha256": "9715a5628ceb397f916535379990acc8b566c6b9d594ebdb6d5f187e9b998294",
+      "ranges": [
+        {
+          "first": 1,
+          "last": 45
+        }
+      ]
+    },
+    {
+      "file": "src/pages/ProductDetail.jsx",
+      "purpose": "수량·예상금액·알레르기 경고·정보 탭·모바일 CTA",
+      "sha256": "f7e204279da8adce9cb79ec41071052dfd12dd80fe45a08a8257f484c1138b37",
+      "ranges": [
+        {
+          "first": 1,
+          "last": 251
+        }
+      ]
+    },
+    {
+      "file": "src/components/CartDrawer.jsx",
+      "purpose": "Drawer 표시·닫기·수량·경고·주문",
+      "sha256": "9fff90544e7b386c22e85a915eaf68fd2d1f2d26ffd34e85c0d9f4fb30529285",
+      "ranges": [
+        {
+          "first": 1,
+          "last": 122
+        }
+      ]
+    },
+    {
+      "file": "src/pages/Cart.jsx",
+      "purpose": "낙관적 수량·전체금액·접힘·AI 분석",
+      "sha256": "2d4dbe0f03be215016cafc10b7e3b5aa0cbb1e2a91780d54f41dad24243f615a",
+      "ranges": [
+        {
+          "first": 1,
+          "last": 190
+        }
+      ]
+    },
+    {
+      "file": "src/components/CartAiInsight.jsx",
+      "purpose": "기본 분석/AI 요청/캐시/변경 상태와 상세·compact UI. 분석 함수 자체는 제외",
+      "sha256": "3ba346a70b84eb03b361fe366e12644de28b107ea0ca2b4396e4d12132860938",
+      "ranges": [
+        {
+          "first": 14,
+          "last": 286
+        }
+      ]
+    },
+    {
+      "file": "src/components/ProductComparisonModal.jsx",
+      "purpose": "모달 생명주기·실제 수치표·AI 비교·실패 상태",
+      "sha256": "f608649ee530e776b38e67955b9df2025f1f742c5758139e6a75c9e5e36ec9a6",
+      "ranges": [
+        {
+          "first": 1,
+          "last": 123
+        }
+      ]
+    },
+    {
+      "file": "src/pages/Checkout.jsx",
+      "purpose": "배송지·쿠폰·금액 변경 확인·결제 흐름; 서비스 호출은 인터페이스 참조",
+      "sha256": "3142fb82a6f84f01fac60ecf652087220a7db9403c4886c51a809d332cfbcbd7",
+      "ranges": [
+        {
+          "first": 19,
+          "last": 197
+        }
+      ]
+    },
+    {
+      "file": "src/components/checkout/CheckoutOrderItems.jsx",
+      "purpose": "주문 상품 읽기 전용 표시",
+      "sha256": "fd5108a055f06455a3367c1cc7788999d716dd061ca54e2aee42bc54687dd996",
+      "ranges": [
+        {
+          "first": 1,
+          "last": 34
+        }
+      ]
+    },
+    {
+      "file": "src/components/checkout/CheckoutBuyerInfo.jsx",
+      "purpose": "회원정보 동일 토글·배송지 접힘/편집",
+      "sha256": "bc7224364185f071fee4b0884843d6506fcd7cbe1b5c0589c6d826a310c5be1e",
+      "ranges": [
+        {
+          "first": 1,
+          "last": 94
+        }
+      ]
+    },
+    {
+      "file": "src/components/checkout/CheckoutSummary.jsx",
+      "purpose": "금액 요약·결제 중 상태·하단 고정 CTA",
+      "sha256": "df4ec3b700b2fbad3c594a0f7279d097650be144375e5a0c93526ab185711994",
+      "ranges": [
+        {
+          "first": 1,
+          "last": 40
+        }
+      ]
+    },
+    {
+      "file": "src/components/checkout/CheckoutPaymentMethods.jsx",
+      "purpose": "위젯 표시 상태. SDK 초기화와 환경 설정 제외",
+      "sha256": "4a4f8f76d4fe878af3334441ec66ac89c54666361b0dc38c777b66e1f56da976",
+      "ranges": [
+        {
+          "first": 5,
+          "last": 8
+        },
+        {
+          "first": 69,
+          "last": 84
+        }
+      ]
+    },
+    {
+      "file": "src/pages/PaymentSuccess.jsx",
+      "purpose": "승인 확인 loading/success/pending/error 분기",
+      "sha256": "6f419d9f7d33ef8b2449f2d18138558e4613e3f0a993466615d594e1917cc2ad",
+      "ranges": [
+        {
+          "first": 8,
+          "last": 68
+        }
+      ]
+    },
+    {
+      "file": "src/pages/PaymentFail.jsx",
+      "purpose": "실패 복귀·재결제",
+      "sha256": "c3d320aab3a0c3bb084d4f895fb6c943d5c552f485f3f6e5ef435f5cab5e4129",
+      "ranges": [
+        {
+          "first": 1,
+          "last": 19
+        }
+      ]
+    },
+    {
+      "file": "src/pages/Orders.jsx",
+      "purpose": "주문내역·조회 예외·배송 상세 펼침",
+      "sha256": "81438e4f71b028034e551c7f6320518a28b2eb76438d995ca972316006f3e04e",
+      "ranges": [
+        {
+          "first": 9,
+          "last": 99
+        }
+      ]
+    },
+    {
+      "file": "src/pages/Login.jsx",
+      "purpose": "일반 로그인·간편 로그인·미지원 기능",
+      "sha256": "46a31e1a0049d58082ed05adb3d1801029def8ce16ff0b1186f2039d898cc216",
+      "ranges": [
+        {
+          "first": 1,
+          "last": 128
+        }
+      ]
+    },
+    {
+      "file": "src/pages/Register.jsx",
+      "purpose": "약관 2단계·입력 검증·OAuth 추가 가입",
+      "sha256": "3c6963d1f8c6d3b62358f44af91dcdabe6730aa4a2b758c932d70348c9dea352",
+      "ranges": [
+        {
+          "first": 1,
+          "last": 256
+        }
+      ]
+    },
+    {
+      "file": "src/pages/MyPage.jsx",
+      "purpose": "회원정보 편집·최근 주문·설정·쿠폰·탈퇴 안내",
+      "sha256": "46d2405b4b3a7783d4d2a1026d3a7fb55e155f6c360e173cddec06db1ccd2d0b",
+      "ranges": [
+        {
+          "first": 11,
+          "last": 183
+        }
+      ]
+    },
+    {
+      "file": "src/pages/Wishlist.jsx",
+      "purpose": "찜 목록과 비회원·오류·빈 상태",
+      "sha256": "2603378d8dec33eb453740ba738def85635f486e9379a25bd5e01a2619f4023d",
+      "ranges": [
+        {
+          "first": 1,
+          "last": 58
+        }
+      ]
+    },
+    {
+      "file": "src/components/WishlistQuickPanel.jsx",
+      "purpose": "고정 찜 패널·담기·전체보기",
+      "sha256": "8191745b5b7933b1fd8dbaac3d887ed91ee5f41c6b3ddc1d6cce95e03eb33ceb",
+      "ranges": [
+        {
+          "first": 1,
+          "last": 56
+        }
+      ]
+    },
+    {
+      "file": "src/components/MyCoupons.jsx",
+      "purpose": "쿠폰 선택 초안과 실제 적용·사용완료. 데이터 조회 제외",
+      "sha256": "cfe00795fdf8dd79bcd427e9aba3e51fd95ce2de45c654c4566b918a817bd76f",
+      "ranges": [
+        {
+          "first": 4,
+          "last": 15
+        },
+        {
+          "first": 25,
+          "last": 50
+        }
+      ]
+    },
+    {
+      "file": "src/components/EventPopup.jsx",
+      "purpose": "세션 내 환영 팝업·native dialog",
+      "sha256": "d5156f526b56476c938cf09e48693a00c1c64e6e9bf8f6ce0cb338d3de31c166",
+      "ranges": [
+        {
+          "first": 1,
+          "last": 51
+        }
+      ]
+    },
+    {
+      "file": "src/components/CartLoginPrompt.jsx",
+      "purpose": "비회원 담기 dialog",
+      "sha256": "6018a2f14aacd9014c92841e06c11fd663f3492fc554297e121e424aea930da4",
+      "ranges": [
+        {
+          "first": 1,
+          "last": 27
+        }
+      ]
+    },
+    {
+      "file": "src/components/Toast.jsx",
+      "purpose": "토스트 메시지/액션 렌더링",
+      "sha256": "551d28dd5f3476a092e9fa066654226ce527d1b15c418c47fe0279af8bb73ec5",
+      "ranges": [
+        {
+          "first": 1,
+          "last": 20
+        }
+      ]
+    },
+    {
+      "file": "src/components/ProductImage.jsx",
+      "purpose": "상품 이미지 오류 fallback",
+      "sha256": "3e3d7a2dcf076ecbdb06ce155692a58a79924a544214d6f8492b5d03505282e6",
+      "ranges": [
+        {
+          "first": 1,
+          "last": 28
+        }
+      ]
+    },
+    {
+      "file": "src/components/Icon.jsx",
+      "purpose": "공통 SVG 아이콘",
+      "sha256": "f743b845a03e24926dfa87799897a77f9cebf0d09def4c7e6602ff880aa9811a",
+      "ranges": [
+        {
+          "first": 1,
+          "last": 61
+        }
+      ]
+    },
+    {
+      "file": "src/components/Stars.jsx",
+      "purpose": "별점·샘플 표시",
+      "sha256": "046469237c26be408f6324ba6405117ff4c5621f0a81f2dbcf3b4156bbf5c606",
+      "ranges": [
+        {
+          "first": 1,
+          "last": 20
+        }
+      ]
+    },
+    {
+      "file": "src/components/ProductReviews.jsx",
+      "purpose": "샘플 후기 펼침/접힘",
+      "sha256": "586e0b2f4df55b32fe010caf3a36ec5d783a385130ca3e94e0454cc3a28f387e",
+      "ranges": [
+        {
+          "first": 1,
+          "last": 30
+        }
+      ]
+    },
+    {
+      "file": "src/components/WellnessTable.jsx",
+      "purpose": "쇼퍼블 이미지·좌표 분기·팝오버·일괄 담기",
+      "sha256": "eccaddc08ab5087c37d5d70bca06870cdd505bba20f59390bd201c72de56ec71",
+      "ranges": [
+        {
+          "first": 1,
+          "last": 208
+        }
+      ]
+    },
+    {
+      "file": "src/components/DailyRoutine.jsx",
+      "purpose": "시간대 탭·자동 시각 갱신",
+      "sha256": "9e57159a9fa3d08a985afd313e566cb13e36df89fb6ad5a5d63dedf92678748d",
+      "ranges": [
+        {
+          "first": 1,
+          "last": 62
+        }
+      ]
+    },
+    {
+      "file": "src/pages/Deals.jsx",
+      "purpose": "특가 route shell",
+      "sha256": "8f52ddd7b63f1a84e37d6f46ce14da2886b1d3461bc4668726eb14ef08dd253b",
+      "ranges": [
+        {
+          "first": 1,
+          "last": 9
+        }
+      ]
+    },
+    {
+      "file": "src/components/TodayDealsSection.jsx",
+      "purpose": "일별 특가·카운트다운·로딩",
+      "sha256": "969060efb2ef378fa9d007c66f006cc46c78fa712e09c861aec07b1cdbb1456e",
+      "ranges": [
+        {
+          "first": 1,
+          "last": 57
+        }
+      ]
+    },
+    {
+      "file": "src/components/DealProductCard.jsx",
+      "purpose": "특가 카드 상세 진입",
+      "sha256": "12eb0f464290fb0e2a8fdf8c2aae9f7b4588ccd7460768886ee98e2ca26e534f",
+      "ranges": [
+        {
+          "first": 1,
+          "last": 33
+        }
+      ]
+    },
+    {
+      "file": "src/pages/ServiceInfo.jsx",
+      "purpose": "안내 route별 콘텐츠와 다음 CTA",
+      "sha256": "2457489e4cdf49529efaf8079f8478d218162d8a568fbc68e2c3a01b6db6e46a",
+      "ranges": [
+        {
+          "first": 1,
+          "last": 173
+        }
+      ]
+    },
+    {
+      "file": "src/pages/Support.jsx",
+      "purpose": "로컬 FAQ 검색·카테고리·단일 답변 펼침",
+      "sha256": "78b15298a797e8fbf925574685fde65cef7866508ce4f835609b714173f31d94",
+      "ranges": [
+        {
+          "first": 1,
+          "last": 125
+        }
+      ]
+    },
+    {
+      "file": "src/pages/SupportInquiry.jsx",
+      "purpose": "문의 폼·검증·접수 결과·작성/내역 탭",
+      "sha256": "809684b0a5323465457cc35da542d99c7bce8513d00512ab480e7580c52c5f3c",
+      "ranges": [
+        {
+          "first": 16,
+          "last": 193
+        }
+      ]
+    },
+    {
+      "file": "src/pages/SupportInquiries.jsx",
+      "purpose": "문의 내역·로컬 상세·답변 상태",
+      "sha256": "623abf23387691c973f4e5b76f1eafabbd556e5545c0b49ac550171730ccab8d",
+      "ranges": [
+        {
+          "first": 7,
+          "last": 132
+        }
+      ]
+    },
+    {
+      "file": "src/components/InquiryModeTabs.jsx",
+      "purpose": "작성/작성내역 탭",
+      "sha256": "40acbed6069750d86bd98c617a0a84a19e1cfaa349e88541f3892ecf42f4bf96",
+      "ranges": [
+        {
+          "first": 1,
+          "last": 24
+        }
+      ]
+    },
+    {
+      "file": "src/pages/PartnerProposal.jsx",
+      "purpose": "제휴 작성·검증·접수 완료",
+      "sha256": "034fad358870feca45069f5c7f50648418c3ac716aaf56ed36c4f2efc2508103",
+      "ranges": [
+        {
+          "first": 12,
+          "last": 110
+        }
+      ]
+    },
+    {
+      "file": "src/pages/NotFound.jsx",
+      "purpose": "404 복귀 동선",
+      "sha256": "db132e1d503a63e3c18072a0af6b34c2819b1b72acf906a953455167699787d4",
+      "ranges": [
+        {
+          "first": 1,
+          "last": 21
+        }
+      ]
+    },
+    {
+      "file": "src/components/AdminGate.jsx",
+      "purpose": "관리자 인증·권한 UI",
+      "sha256": "0fe16323df2969f5983ac6f447bd07d7a17b583911724065d336daa64eb1ccdd",
+      "ranges": [
+        {
+          "first": 1,
+          "last": 34
+        }
+      ]
+    },
+    {
+      "file": "src/components/AdminTopbar.jsx",
+      "purpose": "관리자 내비게이션",
+      "sha256": "bfd59f7f253c91e381a29e4caf6227ff47654f1b1dee7485218e3076155befda",
+      "ranges": [
+        {
+          "first": 1,
+          "last": 23
+        }
+      ]
+    },
+    {
+      "file": "src/pages/AdminDashboard.jsx",
+      "purpose": "관리 지표·기간 선택·운영 화면 이동. 데이터 로더는 제외",
+      "sha256": "f890ca43552c3cbb02245b743e9b763f718ade5d71e1990452547327e37c4868",
+      "ranges": [
+        {
+          "first": 31,
+          "last": 97
+        },
+        {
+          "first": 117,
+          "last": 231
+        },
+        {
+          "first": 262,
+          "last": 312
+        }
+      ]
+    },
+    {
+      "file": "src/pages/AdminProducts.jsx",
+      "purpose": "상품 편집·미저장 확인·검색·판매 상태. 서비스 구현은 제외",
+      "sha256": "ee1ce9fc9a1e7906e96475680c33576c333e6479238baf5b9fa6625dc74c3d8c",
+      "ranges": [
+        {
+          "first": 10,
+          "last": 332
+        }
+      ]
+    },
+    {
+      "file": "src/pages/AdminOrders.jsx",
+      "purpose": "주문 상세·상태 전환·선택 출고 확인",
+      "sha256": "c2b9734d542233b4320ddc2881c217f4cbf0d0142c5f66fc023403191044f2a3",
+      "ranges": [
+        {
+          "first": 17,
+          "last": 293
+        }
+      ]
+    },
+    {
+      "file": "src/pages/AdminPartnerships.jsx",
+      "purpose": "제안 필터·상세·메모·저장·미저장 확인",
+      "sha256": "78a87a5e300ef22df6bac80f8f569ae043284bf4b3db5f88320a5d454969d8f5",
+      "ranges": [
+        {
+          "first": 8,
+          "last": 212
+        }
+      ]
+    },
+    {
+      "file": "src/pages/AdminInquiries.jsx",
+      "purpose": "문의 필터·답변 입력·등록후 읽기전용",
+      "sha256": "f44ee3878c21d93fe4f6953f7197db8c65c8bf55998660114314dffd415048d0",
+      "ranges": [
+        {
+          "first": 8,
+          "last": 163
+        }
+      ]
+    },
+    {
+      "file": "src/lib/catalog.js",
+      "purpose": "순수 목록 필터·목적 점수·재고·성분 매칭",
+      "sha256": "17ddacfafeeff88b1f8800fe8f5e62666fc2b0264b8a859c1ae4ab6b105e3f44",
+      "ranges": [
+        {
+          "first": 1,
+          "last": 193
+        }
+      ]
+    },
+    {
+      "file": "src/lib/ai-search.js",
+      "purpose": "AI 결과가 실제 상품 목록으로 변환되는 로컬 UI 로직",
+      "sha256": "16f3120846e77cd767d5d3a5196794a570cf9715d936dd554bbec48a57859f9f",
+      "ranges": [
+        {
+          "first": 30,
+          "last": 77
+        }
+      ]
+    },
+    {
+      "file": "src/lib/payments.js",
+      "purpose": "회원 배송지 토글·완성 조건·결제 오류 문구",
+      "sha256": "3b77eda15b4c45e631580f9fdeb71b51d7c7267e7514184228e94153af86e7b1",
+      "ranges": [
+        {
+          "first": 1,
+          "last": 41
+        }
+      ]
+    },
+    {
+      "file": "src/data/mock.js",
+      "purpose": "목적·보조 조건·알레르기·히어로·카테고리의 공개 UI 설정. 샘플 상품 덤프 제외",
+      "sha256": "acc9695e319b55d4fb8becded98d092e4ace622a5f42b9e8ccadb530ebd922dc",
+      "ranges": [
+        {
+          "first": 6,
+          "last": 158
+        }
+      ]
+    }
+  ],
+  "styles": {
+    "file": "src/index.css",
+    "sha256": "f27d2f802c4be77fa6a9e712eb229fc6a7fdad447f445e7e61ad64d24b8e491c"
+  }
+}

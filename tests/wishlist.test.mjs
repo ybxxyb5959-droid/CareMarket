@@ -38,7 +38,7 @@ test('wishlist migration keeps RLS enabled with owner-scoped write policies', ()
 
 test('orders query includes the purchase-time shipping snapshot', () => {
   const source = fs.readFileSync(new URL('../src/lib/orders.js', import.meta.url), 'utf8')
-  for (const field of ['recipient_name', 'recipient_phone', 'postal_code', 'address', 'address_detail', 'delivery_request']) {
+  for (const field of ['discount_amount', 'recipient_name', 'recipient_phone', 'postal_code', 'address', 'address_detail', 'delivery_request']) {
     assert.match(source, new RegExp(`\\b${field}\\b`))
   }
 })

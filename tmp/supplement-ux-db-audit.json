@@ -1,0 +1,112 @@
+[
+  {
+    "product_id": 72,
+    "name": "퓨어 rTG 알티지 오메가3 1000mg 60캡슐",
+    "category": "영양제·비타민",
+    "main_ingredients": [
+      "정제어유 (EPA 및 DHA 함유유지 1,000mg)",
+      "비타민E"
+    ],
+    "serving_size": "1일 1캡슐"
+  },
+  {
+    "product_id": 71,
+    "name": "데일리 올인원 활력 멀티비타민 & 미네랄 60정",
+    "category": "영양제·비타민",
+    "main_ingredients": [
+      "비타민B군 복합체",
+      "비타민C",
+      "비타민D3",
+      "아연",
+      "셀레늄"
+    ],
+    "serving_size": "1일 1정 (1,000mg)"
+  },
+  {
+    "product_id": 74,
+    "name": "간 편한 밀크씨슬 실리마린 & 비타민B 60정",
+    "category": "영양제·비타민",
+    "main_ingredients": [
+      "밀크씨슬추출물 (실리마린 130mg)",
+      "비타민B1",
+      "비타민B2",
+      "나이아신"
+    ],
+    "serving_size": "1일 1정"
+  },
+  {
+    "product_id": 75,
+    "name": "고함량 마그네슘 비타민B6 릴렉스 60정",
+    "category": "영양제·비타민",
+    "main_ingredients": [
+      "쌀발효마그네슘 315mg",
+      "비타민B6염산염"
+    ],
+    "serving_size": "1일 1정"
+  },
+  {
+    "product_id": 80,
+    "name": "이뮨 아연 비타민C 츄어블 90정",
+    "category": "영양제·비타민",
+    "main_ingredients": [
+      "글루콘산아연 12mg",
+      "영국산 비타민C 500mg"
+    ],
+    "serving_size": "1일 1정"
+  },
+  {
+    "product_id": 73,
+    "name": "100억 생유산균 신바이오틱스 포스트바이오틱스 30포",
+    "category": "영양제·비타민",
+    "main_ingredients": [
+      "17종 혼합유산균 (보장균수 100억)",
+      "프락토올리고당"
+    ],
+    "serving_size": "1일 1포 (2g)"
+  },
+  {
+    "product_id": 76,
+    "name": "햇살 비타민D3 4000IU + 비타민K2 60캡슐",
+    "category": "영양제·비타민",
+    "main_ingredients": [
+      "스위스산 비타민D3오일 4000IU",
+      "메나퀴논-7 (비타민K2)",
+      "MCT오일"
+    ],
+    "serving_size": "1일 1캡슐"
+  },
+  {
+    "product_id": 77,
+    "name": "루테인 지아잔틴 아스타잔틴 아이케어 30캡슐",
+    "category": "영양제·비타민",
+    "main_ingredients": [
+      "루테인지아잔틴복합추출물 20mg",
+      "헤마토코쿠스추출물 (아스타잔틴 4mg)"
+    ],
+    "serving_size": "1일 1캡슐"
+  },
+  {
+    "product_id": 78,
+    "name": "저분자 피쉬 콜라겐 펩타이드 3270mg 30포",
+    "category": "영양제·비타민",
+    "main_ingredients": [
+      "어린콜라겐펩타이드 3,270mg",
+      "히알루론산",
+      "엘라스틴",
+      "복숭아과즙분말"
+    ],
+    "serving_size": "1일 1포 (3g)"
+  },
+  {
+    "product_id": 79,
+    "name": "옥타코사놀 아르기닌 맥스 활력환 30포",
+    "category": "영양제·비타민",
+    "main_ingredients": [
+      "L-아르기닌",
+      "옥타코사놀함유유지",
+      "마카추출분말",
+      "아연"
+    ],
+    "serving_size": "1일 1포 (4g)"
+  }
+]

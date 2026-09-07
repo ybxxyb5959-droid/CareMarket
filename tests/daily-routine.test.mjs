@@ -8,8 +8,8 @@ test('Korean midnight changes the day and all four time boundaries select their 
   assert.equal(after.day, before.day + 1)
   assert.equal(after.dateKey, '2026-09-07')
   assert.equal(after.slotId, 'morning')
-  for (const [time, slotId] of [['07:59', 'morning'], ['08:00', 'morning'], ['12:29', 'morning'], ['12:30', 'lunch'], ['15:59', 'lunch'], ['16:00', 'afternoon'], ['19:29', 'afternoon'], ['19:30', 'evening']]) {
-    assert.equal(getRoutineClock(new Date(`2026-09-06T${time}:00+09:00`)).slotId, slotId)
+  for (const [time, slotId] of [['00:00:00', 'morning'], ['11:59:59', 'morning'], ['12:00:00', 'lunch'], ['14:59:59', 'lunch'], ['15:00:00', 'afternoon'], ['18:00:59', 'afternoon'], ['18:01:00', 'evening'], ['23:59:59', 'evening']]) {
+    assert.equal(getRoutineClock(new Date(`2026-09-06T${time}+09:00`)).slotId, slotId)
   }
 })
 

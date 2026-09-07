@@ -80,7 +80,7 @@ export default function GoalSetup() {
               })}
             </div>
             <p style={{ fontSize: 12, color: 'var(--faint)', marginTop: 10 }}>
-              선택한 성분은 ‘알레르기 제외’ 보조 조건과 함께 상품 목록에서 자동으로 걸러집니다.
+              선택한 성분이 포함된 상품은 목록에서 기본적으로 숨겨집니다. 목록의 숨김 옵션을 해제하면 경고와 함께 확인할 수 있습니다.
             </p>
           </div>
 

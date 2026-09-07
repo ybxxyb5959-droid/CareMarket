@@ -61,23 +61,22 @@ function CheckoutContent() {
   )
   const [sameAsMember, setSameAsMember] = useState(true)
   const [shipping, setShipping] = useState(memberShipping)
-  const [buyerInfoOpen, setBuyerInfoOpen] = useState(() => !isCheckoutShippingComplete(memberShipping))
+  const [buyerInfoOpen, setBuyerInfoOpen] = useState(true)
   const [widgets, setWidgets] = useState(null)
   const [submitting, setSubmitting] = useState(false)
   const [serverTotal, setServerTotal] = useState(null)
-  const [userCouponId, setUserCouponId] = useState('')
-  const discountAmount = userCouponId ? Math.floor(cartTotal * 20 / 100) : 0
+  const [selectedCoupon, setSelectedCoupon] = useState(null)
+  const userCouponId = selectedCoupon?.id || ''
+  const discountAmount = selectedCoupon ? Math.floor(cartTotal * Number(selectedCoupon.coupons?.percent || 0) / 100) : 0
   const estimatedTotal = cartTotal + deliveryFee - discountAmount
   const [paymentError, setPaymentError] = useState('')
   const submittingRef = useRef(false)
   const onWidgetsReady = useCallback((next) => setWidgets(next), [])
 
   const applyShipping = (nextShipping) => {
-    const wasComplete = isCheckoutShippingComplete(shipping)
     const complete = isCheckoutShippingComplete(nextShipping)
     setShipping(nextShipping)
     if (!complete) setBuyerInfoOpen(true)
-    else if (!wasComplete) setBuyerInfoOpen(false)
   }
   const updateShipping = (name, value) => applyShipping({ ...shipping, [name]: value })
   const toggleSameAsMember = (checked) => {
@@ -94,6 +93,7 @@ function CheckoutContent() {
     }
   }
   const submitCheckout = async () => {
+    if (cart.some(item => item.product.isDemoProduct)) { setPaymentError('시연용 상품을 제외하면 실제 주문을 진행할 수 있습니다.'); return }
     if (!isLoggedIn || !cart.length || cartLoading || cartPending || cartError || !widgets || submittingRef.current) return
     if (!isCheckoutShippingComplete(shipping)) {
       setBuyerInfoOpen(true)
@@ -187,7 +187,7 @@ function CheckoutContent() {
             complete={isCheckoutShippingComplete(shipping)}
             onExpandedToggle={() => setBuyerInfoOpen((current) => !current)}
           />
-          <MyCoupons userId={authUserId} selected={userCouponId} disabled={submitting} onSelect={id => { setUserCouponId(id); setServerTotal(null) }} />
+          <MyCoupons userId={authUserId} selected={userCouponId} disabled={submitting} onSelect={(_id, coupon) => { setSelectedCoupon(coupon || null); setServerTotal(null) }} />
           <CheckoutPaymentMethods customerKey={authUserId} amount={serverTotal ?? estimatedTotal} onReady={onWidgetsReady} />
         </div>
         <CheckoutSummary cartTotal={cartTotal} deliveryFee={deliveryFee} discountAmount={discountAmount} cartCount={cart.reduce((sum, item) => sum + item.quantity, 0)} totalOverride={serverTotal} disabled={cartLoading || cartPending > 0 || Boolean(cartError) || !widgets || submitting} submitting={submitting} onPay={submitCheckout} />

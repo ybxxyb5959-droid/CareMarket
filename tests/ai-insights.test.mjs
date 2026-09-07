@@ -128,7 +128,7 @@ test('cart summary uses only the authenticated user server snapshot', async () =
     const prompt = JSON.parse(payload.contents[0].parts[0].text)
     assert.deepEqual(prompt.goal, '근육량 증가')
     assert.deepEqual(prompt.selected_conditions, ['고단백'])
-    assert.deepEqual(prompt.cart_scope, { item_count: 1, total_quantity: 2, single_product: true })
+    assert.deepEqual(prompt.cart_scope, { item_count: 1, single_product: true })
     assert.equal(prompt.analysis.dominant.includes('protein'), true)
     assert.equal(prompt.analysis.balance_items.some((item) => item.key === 'protein' && item.status === 'good'), true)
     assert.equal(JSON.stringify(prompt).includes('상품 6'), false)
@@ -145,7 +145,7 @@ test('cart summary uses only the authenticated user server snapshot', async () =
   assert.equal(response.status, 200)
   assert.equal(requestedUser, 'user-a')
   const insight = (await response.json()).insight
-  assert.equal(insight.headline, cartNarrative.headline)
+  assert.equal(insight.headline, '근육량 증가 기준 장바구니 분석')
   assert.equal(insight.aiExplanationAvailable, true)
   assert.equal(insight.balanceItems.some((item) => item.key === 'protein' && item.status === 'good'), true)
   assert.deepEqual(insight.basis, {
@@ -156,23 +156,16 @@ test('cart summary uses only the authenticated user server snapshot', async () =
   })
 })
 
-test('cart quantity changes update exact totals and deterministic composition', () => {
-  const highProtein = product(6)
-  const regular = product(1)
-  const one = analyzeCartNutrition([
-    { quantity: 1, product: highProtein },
-    { quantity: 2, product: regular },
-  ])
-  const four = analyzeCartNutrition([
-    { quantity: 4, product: highProtein },
-    { quantity: 2, product: regular },
-  ])
-  assert.equal(one.totalQuantity, 3)
-  assert.equal(four.totalQuantity, 6)
-  assert.equal(four.totals.protein, highProtein.protein * 4 + regular.protein * 2)
-  assert.equal(four.totals.sodium, highProtein.sodium * 4 + regular.sodium * 2)
-  assert.equal(one.dominant.includes('protein'), false)
-  assert.equal(four.dominant.includes('protein'), true)
+test('cart quantities never change composition and duplicate IDs count once', () => {
+  const rows = [{ quantity: 1, product: product(6) }, { quantity: 2, product: product(1) }]
+  const context = { primaryGoal: '근육량 증가' }
+  const one = analyzeCartNutrition(rows, context)
+  const twenty = analyzeCartNutrition([{ ...rows[0], quantity: 20 }, rows[1], rows[0]], context)
+  assert.deepEqual(one, twenty)
+  assert.equal(one.itemCount, 2)
+  assert.equal(one.balanceItems.find(item => item.key === 'protein').text, '1 / 2종')
+  assert.equal('totals' in one, false)
+  assert.equal('totalQuantity' in one, false)
 })
 
 test('missing preferences stays a general analysis without fake personalization', async () => {
@@ -284,7 +277,7 @@ test('cart analysis keeps deterministic results when Gemini is unavailable', asy
   assert.equal(response.status, 200)
   const insight = (await response.json()).insight
   assert.equal(insight.aiExplanationAvailable, false)
-  assert.match(insight.explanationNotice, /계산된 분석 결과/)
+  assert.match(insight.explanationNotice, /계산한 기본 분석/)
   assert.ok(insight.currentFeatures.length > 0)
 })
 
@@ -294,9 +287,9 @@ test('deterministic cart analysis reuses catalog thresholds and avoids unsupport
     { quantity: 2, product: { ...product(1), protein: 20, sugar: 2, sodium: 320 } },
     { quantity: 1, product: { ...product(2), protein: 18, sugar: 3, sodium: 310 } },
   ], { primaryGoal: '식단 영양 관리' })
-  assert.deepEqual(analysis.dominant, ['protein'])
+  assert.deepEqual(analysis.dominant, ['sugar'])
   assert.ok(analysis.good.includes('sugar'))
-  assert.ok(analysis.needsAttention.includes('sodium'))
+  assert.equal(analysis.balanceItems.find(item => item.key === 'attention').count, 2)
   assert.equal(analysis.availableNutrients.includes('fiber'), false)
   assert.equal(analysis.balanceItems.some((item) => item.key === 'fiber'), false)
 })
@@ -308,7 +301,7 @@ test('a varied combination is not automatically labeled as needing balance', () 
     { quantity: 1, product: { ...product(3, '견과·건과류'), protein: 6, sugar: 8, sodium: 280 } },
   ])
   assert.deepEqual(varied.needsBalance, [])
-  assert.deepEqual(varied.needsAttention, [])
+  assert.equal(varied.balanceItems.find(item => item.key === 'attention').text, '1 / 3종')
   assert.ok(varied.good.includes('sugar'))
   assert.ok(varied.good.includes('sodium'))
   assert.equal(varied.compositionSignals.includes('category_concentrated'), false)
@@ -324,7 +317,8 @@ test('single product wording is conservative and supplement food zeroes are not 
     product: { ...product(9, '영양제·비타민'), calories: 0, protein: 0, sugar: 0, sodium: 0 },
   }], { primaryGoal: '영양제 탐색' })
   assert.deepEqual(supplement.availableNutrients, [])
-  assert.deepEqual(supplement.balanceItems, [])
+  assert.equal(supplement.balanceItems.find(item => item.key === 'supplement').text, '1 / 1종')
+  assert.equal(supplement.balanceItems.some(item => ['sugar', 'sodium', 'protein'].includes(item.key)), false)
 })
 
 test('old and incomplete cart responses are rejected instead of rendering an empty card', () => {
@@ -337,28 +331,21 @@ test('old and incomplete cart responses are rejected instead of rendering an emp
   assert.equal(isCartInsight({ ...current, actions: [] }), false)
 })
 
-test('repeated protein SKU fallback explains composition without inventing fiber measurements', async () => {
-  const rows = [{ quantity: 3, product: { ...product(1), protein: 20 } }]
-  const analysis = analyzeCartNutrition(rows)
-  assert.deepEqual(analysis.dominant, ['protein'])
-  assert.ok(analysis.needsBalance.includes('diversity'))
-  assert.ok(analysis.balanceItems.some((item) => item.key === 'diversity' && item.status === 'balance'))
-  assert.equal(analysis.availableNutrients.includes('fiber'), false)
-  assert.equal(analysis.balanceItems.some((item) => item.key === 'fiber'), false)
-  assert.equal(analyzeCartNutrition([{ ...rows[0], quantity: 1 }]).needsBalance.includes('diversity'), false)
-  const explained = composeCartInsight(analysis, cartAnalysisBasis(), cartNarrative, true)
-  assert.ok(explained.actions.some((action) => action.includes('채소·통곡물·견과류')))
+test('one protein SKU x20 remains one type, including API failures', async () => {
+  const rows = [{ quantity: 20, product: { ...product(1), protein: 20 } }]
+  const context = { primaryGoal: '근육량 증가' }
+  const analysis = analyzeCartNutrition(rows, context)
+  assert.equal(analysis.balanceItems.find(item => item.key === 'protein').text, '1 / 1종')
+  assert.deepEqual(analysis, analyzeCartNutrition([{ ...rows[0], quantity: 1 }], context))
+  assert.doesNotMatch(JSON.stringify(analysis), /식이섬유|반복|totalQuantity|totals/)
   for (const failure of [async () => new Response('', { status: 500 }), async () => { throw new DOMException('timed out', 'TimeoutError') }]) {
-    const handler = makeHandler(failure, { getCartSnapshot: async () => ({ items: rows }) })
+    const handler = makeHandler(failure, { getCartSnapshot: async () => ({ profile: { primary_goal: 'muscle_gain' }, items: rows }) })
     const response = await handler(request({ mode: 'cart_summary' }))
     const { insight } = await response.json()
     assert.equal(response.status, 200)
     assert.equal(isCartInsight(insight), true)
     assert.equal(insight.aiExplanationAvailable, false)
-    assert.equal(insight.headline, '한 종류의 단백질 식품에 구성이 집중되어 있어요.')
-    assert.match(insight.summary, /식이섬유를 보완할 수 있는 식품군/)
-    assert.match(insight.actions.join(' '), /채소·통곡물·견과류/)
-    assert.doesNotMatch(JSON.stringify(insight), /식이섬유가 부족|fiber/)
+    assert.equal(insight.balanceItems.find(item => item.key === 'protein').text, '1 / 1종')
   }
 })
 
@@ -386,4 +373,30 @@ test('countdown targets the next local midnight', () => {
   const now = new Date(2026, 8, 5, 15, 38, 16, 0)
   assert.equal(getLocalDateKey(now), '2026-09-05')
   assert.equal(getCountdown(now), '08:21:44')
+})
+
+test('comparison allows DB-backed numeric ingredient names but rejects invented measurements', async () => {
+  const output = { summary: '오메가3와 비타민B12 성분을 비교했습니다.', highlights: [{ product_id: 1, reason: '오메가3 성분이 등록되어 있습니다.' }, { product_id: 2, reason: '비타민B12 성분이 등록되어 있습니다.' }], goal_fit_summary: '등록 성분을 기준으로 비교했습니다.', recommendation: { product_id: 1, reason: '현재 목적의 상품군에 해당합니다.' } }
+  const overrides = { getProducts: async () => [{ ...product(1), name: '오메가3', main_ingredients: ['오메가3'] }, { ...product(2), name: '비타민B12', main_ingredients: ['비타민B12'] }] }
+  const valid = await makeHandler(async () => geminiResponse(output), overrides)(request({ mode: 'compare', product_ids: [1, 2] }))
+  assert.equal(valid.status, 200)
+  for (const summary of ['오메가3 단백질 20g입니다.', '비타민D9가 있습니다.']) {
+    const invalid = await makeHandler(async () => geminiResponse({ ...output, summary }), overrides)(request({ mode: 'compare', product_ids: [1, 2] }))
+    assert.equal(invalid.status, 502)
+  }
+})
+
+test('three types select different metrics by purpose and omit unavailable food data', () => {
+  const rows = [{ quantity: 20, product: { ...product(1), protein: 24, calories: 100 } }, { quantity: 1, product: { ...product(2), protein: 20, calories: 120 } }, { quantity: 1, product: { ...product(3), protein: 5, calories: 400 } }]
+  const weight = analyzeCartNutrition(rows, { primaryGoal: 'weight_control' })
+  assert.equal(weight.balanceItems.find(item => item.key === 'calories').text, '2 / 3종')
+  assert.equal(weight.balanceItems.find(item => item.key === 'protein').text, '2 / 3종')
+  const diet = analyzeCartNutrition(rows, { primaryGoal: 'nutrition_management' })
+  assert.equal(diet.balanceItems.some(item => item.key === 'calories'), false)
+  assert.equal(diet.balanceItems.find(item => item.key === 'sodium').text, '3 / 3종')
+  const lowSugar = analyzeCartNutrition(rows, { selectedConditions: ['저당'] })
+  assert.deepEqual(lowSugar.balanceItems.map(item => item.key), ['sugar', 'attention'])
+  const unknown = analyzeCartNutrition([{ quantity: 1, product: { ...product(1), protein: null } }], { primaryGoal: 'muscle_gain' })
+  assert.equal(unknown.balanceItems.find(item => item.key === 'protein').count, 0)
+  assert.match(unknown.productReasons[0].checks.join(' '), /판정을 보류/)
 })

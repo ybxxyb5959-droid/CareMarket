@@ -16,6 +16,16 @@ const products = JSON.parse(
 
 const menuCategories = CATEGORIES.filter((category) => category.name !== '전체상품')
 
+test('supplement other menu is the complement of existing subcategories', () => {
+  const subs = CATEGORIES.find(c => c.name === '영양제').subs
+  assert.equal(subs.at(-1).name, '기타')
+  for (const product of products.filter(p => p.category === PRODUCT_CATEGORY.SUPPLEMENT)) {
+    assert.equal(matchCategory(product, '영양제', '기타'), !subs.filter(s => !s.other).some(s => matchCategory(product, '영양제', s.name)))
+  }
+  for (const name of ['크레아틴 모노', '카테킨 데일리', '바나바잎 데일리']) assert.equal(matchCategory({name, category: PRODUCT_CATEGORY.SUPPLEMENT}, '영양제', '기타'), true)
+  assert.equal(matchCategory({name: '비타민C', category: PRODUCT_CATEGORY.SUPPLEMENT}, '영양제', '기타'), false)
+})
+
 test('every catalog product is reachable from at least one category menu', () => {
   const uncategorized = products.filter((product) => (
     !menuCategories.some((category) => matchCategory(product, category.name, '전체'))

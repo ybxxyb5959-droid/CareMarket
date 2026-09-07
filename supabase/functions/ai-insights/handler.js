@@ -1,3 +1,4 @@
+import { comparisonPolicy, comparisonFallback } from '../_shared/product-type.js'
 import {
   GEMINI_CART_SCHEMA,
   GEMINI_COMPARE_SCHEMA,
@@ -13,7 +14,7 @@ import {
 export const GEMINI_MODEL = 'gemini-3.5-flash-lite'
 const MAX_BODY_BYTES = 4096
 const MAX_CART_ITEMS = 50
-const FORBIDDEN_LANGUAGE = /(질병|질환|진단|처방|치료|완치|예방|효능|의학적|의료적)/
+const FORBIDDEN_LANGUAGE = /(질병|질환|진단|처방|치료|완치|예방|효능|의학적|의료적|근육\s*성장|피로\s*회복|심혈관|면역력)/
 const FORBIDDEN_CART_LANGUAGE = /(권장\s*섭취량|과다|부족|위험|초과|불균형|반드시|하루\s*섭취)/
 const SYSTEM_PROMPT = `너는 CareMarket의 상품 비교 및 장바구니 영양 구성 분석 도우미다.
 제공된 상품 데이터만 사용한다.
@@ -115,31 +116,39 @@ const validNarrative = (value, maxLength) => (
   && !FORBIDDEN_LANGUAGE.test(value)
 )
 
-function validateCompareOutput(value, productIds) {
+function validateCompareOutput(value, productIds, products = []) {
+  // Numeric ingredient names (e.g. 오메가3, 비타민B12) are registered labels,
+  // not generated nutrition measurements. Only allow exact DB-backed tokens.
+  const terms = [...new Set(products.flatMap(p => [p.name, ...p.main_ingredients])
+    .flatMap(text => text.match(/[가-힣a-zA-Z][가-힣a-zA-Z0-9]*[0-9][가-힣a-zA-Z0-9]*/g) || []))]
+  const validComparisonText = (text, max) => typeof text === 'string' && text.length <= max
+    && !FORBIDDEN_LANGUAGE.test(text)
+    && validNarrative(terms.reduce((copy, term) => copy.replaceAll(term, '등록성분'), text), max + 100)
+
   if (!value || typeof value !== 'object' || Array.isArray(value)
-    || !validNarrative(value.summary, 180)
-    || !validNarrative(value.goal_fit_summary, 180)
+    || !validComparisonText(value.summary, 180)
+    || !validComparisonText(value.goal_fit_summary, 180)
     || !Array.isArray(value.highlights)
     || value.highlights.length !== productIds.length
-    || !value.recommendation
+    || (value.recommendation !== null && (!value.recommendation
     || typeof value.recommendation !== 'object'
     || Array.isArray(value.recommendation)
     || !productIds.includes(value.recommendation.product_id)
-    || !validNarrative(value.recommendation.reason, 140)) throw new InsightError('INVALID_RESPONSE', 502)
+    || !validComparisonText(value.recommendation.reason, 140)))) throw new InsightError('INVALID_RESPONSE', 502)
 
   const ids = new Set()
   for (const highlight of value.highlights) {
     if (!highlight || typeof highlight !== 'object'
       || !productIds.includes(highlight.product_id)
       || ids.has(highlight.product_id)
-      || !validNarrative(highlight.reason, 140)) throw new InsightError('INVALID_RESPONSE', 502)
+      || !validComparisonText(highlight.reason, 140)) throw new InsightError('INVALID_RESPONSE', 502)
     ids.add(highlight.product_id)
   }
   return {
     summary: value.summary.trim(),
     highlights: value.highlights.map(({ product_id, reason }) => ({ product_id, reason: reason.trim() })),
     goal_fit_summary: value.goal_fit_summary.trim(),
-    recommendation: {
+    recommendation: value.recommendation === null ? null : {
       product_id: value.recommendation.product_id,
       reason: value.recommendation.reason.trim(),
     },
@@ -166,12 +175,11 @@ function validateCartOutput(value) {
 async function callGemini({ apiKey, input, mode, fetchImpl, timeoutMs }) {
   const schema = mode === 'compare' ? GEMINI_COMPARE_SCHEMA : GEMINI_CART_SCHEMA
   const instruction = mode === 'compare'
-    ? '선택된 각 상품을 빠짐없이 해석하되 숫자는 되풀이하지 말고 상대적 특징만 설명해라. 비교 상품 중 현재 구매 목적에 가장 잘 맞는 상품 한 가지만 recommendation으로 선택하고, 제공된 상품 정보에 근거해 이유를 설명해라. 구매 목적이 없으면 영양 구성과 가격을 함께 고려해 한 가지를 선택해라.'
-    : `입력은 이미 코드가 수량까지 반영해 판정한 장바구니 분석 결과다.
+    ? '선택된 각 상품의 등록 정보 차이를 설명해라. 숫자를 생성하거나 건강 효과를 추론하지 마라. 동일 역할로 직접 비교할 근거가 충분할 때만 recommendation에 조건부 선택 이유를 적어라. 역할이 다르거나 구매 목적에 직접 관련이 없거나 판단 근거가 부족하면 recommendation은 null이다. 특정 Winner를 반드시 선택하지 마라.'
+    : `입력은 이미 코드가 서로 다른 상품 종류별로 판정한 장바구니 분석 결과다.
 analysis의 dominant, good, needs_attention, needs_balance, composition_signals, balance_items, confirmed_facts를 변경하거나 새로 판정하지 말고 쉽게 문장화해라.
 제안은 allowed_action_directions 범위 안에서만 하고, 특정 상품이나 상품 ID를 만들지 마라.
-single_product가 true여도 repeated_protein_product 신호가 있으면 한 종류의 단백질 식품에 구성이 집중된 점과 상품 다양성을 설명해라. 이 신호가 없으면 해당 상품의 특징만 보수적으로 설명해라.
-vary_fiber_food_groups 방향이 있으면 식이섬유를 보완할 수 있는 식품군이라는 구성 관점으로 설명하고 채소·통곡물·견과류 계열 상품을 제안해라. 식이섬유 수치나 결핍 판정을 만들지 마라.
+수량 가중치나 영양 합계를 해석하지 마라. 상품 정보에 없는 특성을 추가하지 마라.
 권장섭취량, 과다, 부족, 위험, 초과, 의무적 표현을 쓰지 마라.`
   let response
   try {
@@ -266,6 +274,12 @@ export function createAiInsightsHandler({
         input = cartAnalysisForGemini(cartAnalysis, basis)
       }
 
+      // Supplement facts and role decisions are deterministic. No free-form model
+      // output can add ingredients, health effects, or a forced winner.
+      if (checked.mode === 'compare' && comparisonPolicy(input.products, input.primary_goal).hasSupplements) {
+        return reply(200, { insight: comparisonFallback(input.products, input.primary_goal) })
+      }
+      if (cartAnalysis?.hasSupplements) return reply(200, { insight: composeCartInsight(cartAnalysis, basis) })
       const apiKey = getApiKey()
       if (!apiKey) {
         if (cartAnalysis) return reply(200, { insight: composeCartInsight(cartAnalysis, basis) })
@@ -275,7 +289,7 @@ export function createAiInsightsHandler({
       try {
         const output = await callGemini({ apiKey, input, mode: checked.mode, fetchImpl, timeoutMs })
         if (checked.mode === 'compare') {
-          return reply(200, { insight: validateCompareOutput(output, checked.productIds) })
+          return reply(200, { insight: validateCompareOutput(output, checked.productIds, input.products) })
         }
         return reply(200, { insight: composeCartInsight(cartAnalysis, basis, validateCartOutput(output), true) })
       } catch (error) {

@@ -1,6 +1,6 @@
 import { supabase } from './supabase'
 import { validateInsightInput } from '../../supabase/functions/_shared/ai-insights-contract.js'
-import { isCartInsight } from '../../supabase/functions/_shared/cart-nutrition-analysis.js'
+import { isCartInsight, isCompatibleCartInsight, reconcileCartInsight } from '../../supabase/functions/_shared/cart-nutrition-analysis.js'
 
 const ERROR_MESSAGES = {
   AUTH_REQUIRED: '로그인 후 AI 기능을 이용해 주세요.',
@@ -38,7 +38,7 @@ async function invoke(body, signal) {
   if (!data?.insight || typeof data.insight !== 'object' || Array.isArray(data.insight)) {
     throw new Error(ERROR_MESSAGES.INVALID_RESPONSE)
   }
-  if (body.mode === 'cart_summary' && !isCartInsight(data.insight)) {
+  if (body.mode === 'cart_summary' && !isCompatibleCartInsight(data.insight)) {
     throw new Error(ERROR_MESSAGES.INVALID_RESPONSE)
   }
   return data.insight
@@ -65,7 +65,7 @@ export const setCachedCartSummary = (cartSignature, insight) => {
   }
 }
 
-export const requestCartSummary = (cartSignature) => {
+export const requestCartSummary = (cartSignature, currentInsight) => {
   if (cartSummaryRequest?.cartSignature === cartSignature) return cartSummaryRequest.promise
   cartSummaryRequest?.controller.abort()
 
@@ -76,7 +76,9 @@ export const requestCartSummary = (cartSignature) => {
     promise: null,
   }
   request.promise = invoke({ mode: 'cart_summary' }, controller.signal)
-    .then((insight) => {
+    .then((response) => {
+      const insight = reconcileCartInsight(response, currentInsight)
+      if (!insight) throw new Error(ERROR_MESSAGES.INVALID_RESPONSE)
       setCachedCartSummary(cartSignature, insight)
       return insight
     })

@@ -10,6 +10,7 @@ export default function AdminTopbar() {
           <button className={['adminDashboard', 'adminHistory'].includes(view) ? 'on' : ''} onClick={() => navigate('adminDashboard')}>대시보드</button>
           <button className={view === 'adminProducts' ? 'on' : ''} onClick={() => navigate('adminProducts')}>상품 관리</button>
           <button className={view === 'adminOrders' ? 'on' : ''} onClick={() => navigate('adminOrders')}>주문 · 출고 관리</button>
+          <button className={view === 'adminReviews' ? 'on' : ''} onClick={() => navigate('adminReviews')}>구매후기 관리</button>
           <button className={view === 'adminPartnerships' ? 'on' : ''} onClick={() => navigate('adminPartnerships')}>협업 제안</button>
           <button className={view === 'adminInquiries' ? 'on' : ''} onClick={() => navigate('adminInquiries')}>1:1 문의 관리</button>
         </nav>

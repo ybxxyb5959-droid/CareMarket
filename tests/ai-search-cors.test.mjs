@@ -68,3 +68,16 @@ test('OPTIONS, successful POST and every error response share CORS headers', asy
     assert.equal(blocked.headers.get('vary'), 'Origin')
   }
 })
+
+ test('search and quick recommendations allow only the canonical storefront by default', async () => {
+  const { resolveInsightOrigins } = await import('../supabase/functions/ai-insights/origins.js')
+  const { createAiSearchHandler } = await import('../supabase/functions/ai-search/handler.js')
+  const { createAiFilterRecommendationHandler } = await import('../supabase/functions/ai-filter-recommendation/handler.js')
+  for (const factory of [createAiSearchHandler, createAiFilterRecommendationHandler]) {
+    const handler = factory({ getApiKey: () => '', allowedOrigins: resolveInsightOrigins(), logger: { error() {} } })
+    for (const [origin, expected] of [['https://caremarket.vercel.app', 204], ['https://other.vercel.app', 403]]) {
+      const response = await handler(new Request('https://example.test', { method: 'OPTIONS', headers: { origin } }))
+      assert.equal(response.status, expected)
+    }
+  }
+})

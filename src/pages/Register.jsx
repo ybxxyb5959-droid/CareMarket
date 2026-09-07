@@ -28,7 +28,7 @@ const AGREEMENTS = [
 
 export default function Register() {
   const { navigate, register, checkEmailExists, user, profile, oauthRegistrationRequired, completeOAuthRegistration, logout } = useStore()
-  const oauthSignup = Boolean(user?.oauth && oauthRegistrationRequired)
+  const oauthSignup = Boolean(user?.oauth)
   const [step, setStep] = useState(1)
 
   // STEP 1 — 약관
@@ -47,6 +47,10 @@ export default function Register() {
   const [isSubmitting, setIsSubmitting] = useState(false)
 
   const emailDebounce = useRef(null)
+
+  useEffect(() => {
+    if (oauthSignup && oauthRegistrationRequired === false) navigate('main')
+  }, [oauthSignup, oauthRegistrationRequired, navigate])
 
   // 이메일 입력이 멈추면(디바운스) 이미 가입된 이메일인지 실시간 확인
   useEffect(() => {
@@ -85,6 +89,7 @@ export default function Register() {
 
   const submit = async (e) => {
     e.preventDefault()
+    if (isSubmitting || (oauthSignup && oauthRegistrationRequired !== true)) return
     setError('')
     setEmailError('')
     if (!requiredDone) return setError('필수 약관에 동의해 주세요.')
@@ -106,6 +111,7 @@ export default function Register() {
     setIsSubmitting(false)
     if (!result.ok) {
       if (result.reason === 'duplicate-email') setEmailError('가입되어 있는 이메일입니다.')
+      else if (oauthSignup) setError('추가정보를 저장하지 못했습니다. 입력한 정보를 확인하고 다시 시도해 주세요.')
       else setError('회원가입에 실패했습니다. 잠시 후 다시 시도해 주세요.')
     }
   }

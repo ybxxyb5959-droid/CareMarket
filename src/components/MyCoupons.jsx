@@ -1,14 +1,16 @@
 import { useEffect, useId, useState } from 'react'
 import { supabase } from '../lib/supabase'
+import { useStore } from '../store'
 
 const couponDate = value => new Date(value).toLocaleDateString('ko-KR', { timeZone: 'Asia/Seoul' })
 
 export default function MyCoupons({ userId, selected = '', onSelect, disabled = false }) {
+  const { reviewRevision } = useStore()
   const titleId = useId()
   const [state, setState] = useState({ rows: [], error: false, key: '' })
   const [revision, setRevision] = useState(0)
   const [choice, setChoice] = useState(selected)
-  const key = `${userId}:${revision}`
+  const key = `${userId}:${revision}:${reviewRevision}`
   const loading = state.key !== key
   const rows = loading ? [] : state.rows
   const available = rows.filter(coupon => !coupon.used_at)
@@ -35,9 +37,9 @@ export default function MyCoupons({ userId, selected = '', onSelect, disabled = 
               <option value="">{available.length ? '쿠폰을 선택해 주세요' : '선택 가능한 쿠폰 없음'}</option>
               {available.map(coupon => <option key={coupon.id} value={coupon.id}>{coupon.coupons.name} · 상품금액 {coupon.coupons.percent}% 할인</option>)}
             </select></label>
-            <button type="button" className="btn btn-soft btn-sm" disabled={disabled || !choice || choice === selected || !available.some(c => c.id === choice)} onClick={() => onSelect(choice)}>쿠폰 적용</button>
+            <button type="button" className="btn btn-soft btn-sm" disabled={disabled || !choice || choice === selected || !available.some(c => c.id === choice)} onClick={() => onSelect(choice, available.find(coupon => coupon.id === choice))}>쿠폰 적용</button>
           </div>
-          {applied && <div className="coupon-applied" role="status"><span><strong>{applied.coupons.name}</strong> 쿠폰이 적용되었습니다.</span><button type="button" className="btn btn-text" disabled={disabled} onClick={() => { setChoice(''); onSelect('') }}>적용 취소</button></div>}
+          {applied && <div className="coupon-applied" role="status"><span><strong>{applied.coupons.name}</strong> 쿠폰이 적용되었습니다.</span><button type="button" className="btn btn-text" disabled={disabled} onClick={() => { setChoice(''); onSelect('', null) }}>적용 취소</button></div>}
           {available.length > 0 && <p className="cart-summary-note">상품금액에만 할인 적용 · 배송비 제외 · 주문당 쿠폰 1장</p>}
       </> : !rows.length ? <p>보유한 쿠폰이 없습니다.</p> : <>
         <div className="coupon-list">{rows.map(coupon => <article className="coupon-row" key={coupon.id}>

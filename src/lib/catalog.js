@@ -1,3 +1,4 @@
+import { supplementGoalMatch } from '../../supabase/functions/_shared/product-type.js'
 import {
   canonicalProductCategory,
   matchCategory,
@@ -124,6 +125,9 @@ export function goalScore(product, goal) {
 }
 
 function compareRecommendation(a, b, goal) {
+  if (canonicalProductCategory(a.category) === PRODUCT_CATEGORY.SUPPLEMENT && canonicalProductCategory(b.category) === PRODUCT_CATEGORY.SUPPLEMENT) {
+    return Number(supplementGoalMatch(b, goal)) - Number(supplementGoalMatch(a, goal)) || a.id - b.id
+  }
   return goalScore(b, goal) - goalScore(a, goal) || a.id - b.id
 }
 
@@ -163,7 +167,7 @@ function isSellable(product) {
 }
 
 // 상품 목록 필터 + 정렬 (Home 프리뷰 / 맞춤 상품 / 전체상품 페이지 공용)
-export function filterAndSort(products, { search, subFilters, allergies, sortBy, goal, shopCategory, shopSub, dealsOnly = false }) {
+export function filterAndSort(products, { search, subFilters, allergies, sortBy, goal, shopCategory, shopSub, dealsOnly = false, hideAllergens = true }) {
   let list = products.filter((p) => {
     if (!isSellable(p)) return false
     if (dealsOnly && !(p.originalPrice > p.price)) return false
@@ -178,12 +182,16 @@ export function filterAndSort(products, { search, subFilters, allergies, sortBy,
       if (tag === '저염' && p.nutrition.sodium > 250) return false
       if (tag === '카페인 제외' && p.caffeine) return false
     }
-    // 알레르기: 선택된 개별 성분 기준으로 항상 제외
-    if (allergies.length && p.allergens.some((a) => allergies.includes(a))) return false
+    // 목록에서만 임시 해제하며 저장된 선호 설정은 변경하지 않는다.
+    if (hideAllergens && matchingAllergens(p, allergies).length) return false
     return true
   })
   if (sortBy === 'lowPrice') list = [...list].sort((a, b) => a.price - b.price || a.id - b.id)
   else if (sortBy === 'highPrice') list = [...list].sort((a, b) => b.price - a.price || a.id - b.id)
   else list = diversifyTopRecommendations([...list].sort((a, b) => compareRecommendation(a, b, goal)), goal)
   return list
+}
+
+export function matchingAllergens(product, allergies = []) {
+  return [...new Set(allergies)].filter(allergen => (product.allergens || []).includes(allergen))
 }

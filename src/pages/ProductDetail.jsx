@@ -1,9 +1,11 @@
+import SupplementIngredients from '../components/SupplementIngredients'
+import { isSupplement, supplementGoalMatch } from '../../supabase/functions/_shared/product-type.js'
+import { matchingAllergens } from '../lib/catalog'
 import { useState } from 'react'
 import { useStore } from '../store'
 import Icon from '../components/Icon'
 import ProductImage from '../components/ProductImage'
 import ProductReviews from '../components/ProductReviews'
-import { SampleRating } from '../components/Stars'
 import { discountRate, won } from '../lib/format'
 
 const FREE_DELIVERY_THRESHOLD = 40000
@@ -39,8 +41,10 @@ export default function ProductDetail() {
     )
   }
 
+  const allergenMatches = matchingAllergens(p, allergies)
   const wished = wishlist.includes(p.id)
   const n = p.nutrition
+  const supplement = isSupplement(p)
   const maxQuantity = Math.max(1, Math.min(Math.floor(p.stock), MAX_PURCHASE_QUANTITY))
   const unavailable = p.stock < 1
   const itemTotal = p.price * quantity
@@ -54,7 +58,7 @@ export default function ProductDetail() {
     '카페인 제외': !p.caffeine,
     '알레르기 제외': !allergies.some((allergen) => p.allergens.includes(allergen)),
   }
-  const activeConditions = subFilters.filter((filter) => matches[filter] !== undefined)
+  const activeConditions = subFilters.filter((filter) => matches[filter] !== undefined && (!supplement || !['고단백', '저당', '저염'].includes(filter)))
   const matchedCount = activeConditions.filter((filter) => matches[filter]).length
   const conditionText = (condition) => {
     if (condition === '알레르기 제외' && allergies.length === 0) return '선택한 제외 성분 정보 없음'
@@ -108,7 +112,6 @@ export default function ProductDetail() {
             </button>
           </div>
           <h1 id="product-title" className="detail-title">{p.name}</h1>
-          <SampleRating productId={p.id} />
 
           <div className="detail-price" aria-label="상품 가격">
             {rate > 0 && <span className="disc">{rate}% 할인</span>}
@@ -124,6 +127,11 @@ export default function ProductDetail() {
             </div>
           </div>
 
+          {allergenMatches.length > 0 && <div className="allergen-warning" role="note">
+            <strong>⚠ 설정하신 알레르기 성분이 포함된 상품입니다.</strong>
+            <p>이 상품에는 '{allergenMatches.join(', ')}' 성분이 포함되어 있습니다. 회원님이 제외하도록 설정한 성분입니다. 상품의 원재료 및 알레르기 정보를 확인한 후 선택해주세요.</p>
+            <button type="button" className="btn btn-text btn-sm" onClick={() => { setTab('info'); document.getElementById('product-information')?.scrollIntoView({ behavior: 'smooth', block: 'start' }) }}>알레르기 정보 확인</button>
+          </div>}
           <div className="detail-order-box">
             <div className="detail-quantity-row">
               <div>
@@ -157,22 +165,36 @@ export default function ProductDetail() {
       <section className="detail-description" aria-labelledby="detail-description-title">
         <span>상품 설명</span>
         <h2 id="detail-description-title">{p.name}</h2>
-        <p>{p.summary || '등록된 상품 설명이 없습니다.'}</p>
+        <p>{supplement ? supplementGoalMatch(p, goal) ? `현재 ${goal} 구매 목적과 연관된 영양제 상품입니다. 주요 성분을 기준으로 비교할 수 있습니다.` : '등록된 주요 성분과 함량을 기준으로 상품을 비교할 수 있습니다.' : p.summary || '등록된 상품 설명이 없습니다.'}</p>
       </section>
 
-      <div className="tabs">
+      <div className="tabs" id="product-information">
         <div className="tab-nav no-scrollbar">
           {[
             { id: 'nutrition', label: '영양정보' },
             { id: 'info', label: '원재료 및 알레르기' },
             { id: 'qna', label: '배송 · 교환 · 반품' },
+            { id: 'reviews', label: '구매후기' },
           ].map((t) => (
-            <button key={t.id} className={tab === t.id ? 'on' : ''} onClick={() => setTab(t.id)}>{t.label}</button>
+            <button key={t.id} className={t.id !== 'reviews' && tab === t.id ? 'on' : ''} onClick={() => {
+              if (t.id === 'reviews') document.getElementById('product-reviews')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+              else setTab(t.id)
+            }}>{t.label}</button>
           ))}
         </div>
 
         <div className="tab-panel">
           {tab === 'nutrition' && (
+            supplement ? <div className="supplement-facts-layout">
+              <SupplementIngredients product={p} />
+              <section className="nutri-card" aria-label="영양성분">
+                <div className="nutri-head"><div><h4>영양성분</h4><div className="serv">등록 섭취 기준 · {n.servingSize}</div></div></div>
+                <div className="nutri-grid">
+                  {[['열량', n.calories, 'kcal'], ['단백질', n.protein, 'g'], ['탄수화물', n.carbs, 'g'], ['지방', n.fat, 'g'], ['당류', n.sugar, 'g'], ['나트륨', n.sodium, 'mg']].map(([label, value, unit]) =>
+                    <div className="nutri-cell" key={label}><div className="k">{label}</div><div className="v">{value}{unit}</div></div>)}
+                </div>
+              </section>
+            </div> :
             <div className="nutri-card">
               <div className="nutri-head">
                 <div>
@@ -218,6 +240,7 @@ export default function ProductDetail() {
         <div className="top">
           <span id="personal-analysis-title" className="t"><Icon name="sparkles" size={16} /> 내 목표 기준 분석</span>
         </div>
+        {supplement && <p>{goal === '영양제 탐색' ? '영양제 구성' : '보조 영양 상품'} · 주요 성분과 등록 섭취 기준을 확인해주세요.</p>}
         {activeConditions.length ? (
           <>
             <div className="detail-match-settings">현재 설정 · {goal} · {activeConditions.join(' · ')}</div>

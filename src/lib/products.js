@@ -1,3 +1,5 @@
+import { appendDemoSupplements } from '../data/demo-supplements.js'
+import { usesCatalogDemoActives } from '../../supabase/functions/_shared/product-type.js'
 import { supabase } from './supabase'
 import { canonicalProductCategory, PRODUCT_CATEGORY } from '../data/mock.js'
 import { resolveProductImage } from './product-images'
@@ -45,6 +47,11 @@ export function adaptProductRow(row) {
     origin: mainIngredients.slice(0, 2).join(' · ') || '상품 원재료 정보 참조',
     tags: deriveTags({ protein, sugar, sodium, caffeine, category }),
     image: resolveProductImage(id, row.image_url),
+    // Preserve missing registration data for cart analysis without changing
+    // the numeric values consumed by existing catalog and purchase screens.
+    nutritionAvailability: Object.fromEntries(['protein', 'sugar', 'sodium', 'calories'].map(key => [key,
+      row[key] !== null && row[key] !== undefined && row[key] !== '' && Number.isFinite(Number(row[key])) && Number(row[key]) >= 0,
+    ])),
     nutrition: {
       servingSize: row.serving_size || '1회 제공량 정보 없음',
       calories: asNumber(row.calories),
@@ -58,6 +65,7 @@ export function adaptProductRow(row) {
     allergens: asTextArray(row.allergens),
     caffeine,
     mainIngredients,
+    isDemoIngredientData: usesCatalogDemoActives(row),
     delivery: '기본 배송 정책에 따라 배송',
     isActive: Boolean(row.is_active),
   }
@@ -71,5 +79,5 @@ export async function fetchActiveProducts() {
     .order('product_id', { ascending: true })
 
   if (error) throw error
-  return (data || []).map(adaptProductRow)
+  return appendDemoSupplements((data || []).map(adaptProductRow))
 }

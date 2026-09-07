@@ -6,6 +6,7 @@ import ProductCard from '../components/ProductCard'
 import WellnessTable from '../components/WellnessTable'
 import DailyRoutine from '../components/DailyRoutine'
 import { filterAndSort } from '../lib/catalog'
+import HomeReviewPrompt from '../components/HomeReviewPrompt'
 
 // 주목표별 강조 안내문
 const GOAL_GUIDE = {
@@ -44,7 +45,7 @@ export default function Home() {
   }
   const goToProducts = (opts = {}) => {
     setDealsOnly(false)
-    setShopCategory('전체상품')
+    setShopCategory(opts.recommend && goal === '영양제 탐색' ? '영양제' : '전체상품')
     setShopSub('전체')
     if (opts.recommend) setSortBy('recommend')
     navigate('products')
@@ -105,6 +106,8 @@ export default function Home() {
         </div>
       </section>
 
+      <HomeReviewPrompt />
+
       {isLoggedIn ? (
         /* ── (로그인) 나의 맞춤 쇼핑 기준 — 히어로 하단 흰 배경 구획 ── */
         <section className="home-personalization home-personalization-member home-personalization-hero">
@@ -122,7 +125,7 @@ export default function Home() {
                     </span>
                   )}
                 </div>
-                <p style={{ fontSize: 13.5, color: 'var(--muted)', marginTop: 8 }}>{GOAL_GUIDE[goal]}</p>
+                <p style={{ fontSize: 13.5, color: 'var(--muted)', marginTop: 8 }}>{goal === '근육량 증가' ? <><strong>근육량 증가</strong>에 맞춘 추천이에요. 단백질 식품을 우선하고 단백질 정보를 함께 반영해요.</> : goal === '영양제 탐색' ? '특정 상품을 우선하기보다 주요 성분과 함량을 기준으로 상품을 비교할 수 있습니다.' : GOAL_GUIDE[goal]}</p>
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 16, flexShrink: 0 }}>
                 <button
@@ -219,11 +222,11 @@ export default function Home() {
           <div className="home-section-heading">
             <div className="section-head">
               <span className="eyebrow">맞춤 추천</span>
-              <h2 className="serif">{goal}에 맞춘 추천 상품</h2>
-              <p>{GOAL_GUIDE[goal]}</p>
+              <h2 className="serif">{goal === '영양제 탐색' ? '주요 성분으로 살펴보는 영양제' : `${goal}에 맞춘 추천 상품`}</h2>
+              <p>{goal === '근육량 증가' ? <><strong>근육량 증가</strong>에 맞춘 추천이에요. 단백질 식품을 우선하고 단백질 정보를 함께 반영해요.</> : GOAL_GUIDE[goal]}</p>
             </div>
             <button type="button" className="more-link" onClick={() => goToProducts({ recommend: true })}>
-              추천 상품 더보기 <Icon name="chevron-right" size={15} />
+              {goal === '영양제 탐색' ? '영양제 전체 보기' : '추천 상품 더보기'} <Icon name="chevron-right" size={15} />
             </button>
           </div>
           {productsLoading ? (

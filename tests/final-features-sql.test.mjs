@@ -67,6 +67,7 @@ test('final feature SQL contracts', { skip: !process.env.PGLITE_MODULE }, async 
   await db.exec(migration('20260906000700_welcome_coupon'))
   await db.exec(migration('20260906001200_google_registration_completion'))
   await db.exec(migration('20260906001300_kakao_oauth_profile_support'))
+  await db.exec(migration('20260906001400_resume_oauth_registration'))
   await t.test('OAuth signup creates one profile and coupon; completion is atomic and repeat-safe', async () => {
     const googleId = '00000000-0000-4000-8000-000000000009'
     await db.query('insert into auth.users(id,email,raw_user_meta_data) values ($1,$2,$3)', [googleId, 'google@example.test', { full_name: 'Google Test' }])
@@ -117,6 +118,50 @@ test('final feature SQL contracts', { skip: !process.env.PGLITE_MODULE }, async 
     await db.query("select set_config('request.jwt.claim.sub',$1,false)", [a])
     await assert.rejects(db.query("select complete_google_registration('Other','01012345678',null,'서울',null,true,true,false)"), /Supported OAuth account required/)
     await db.exec('reset role')
+  })
+  await t.test('interrupted Kakao signup resumes with the same auth user, preserving existing profile and coupon', async () => {
+    const id = '00000000-0000-4000-8000-000000000011'
+    await db.query('insert into auth.users(id,raw_app_meta_data) values ($1,$2)', [id, { provider: 'kakao' }])
+    const original = (await db.query('select * from profiles where user_id=$1', [id])).rows[0]
+    assert.equal(original.phone, null)
+    // Leaving the page and logging back in does not insert another auth user.
+    await db.exec('set role authenticated')
+    await db.query("select set_config('request.jwt.claim.sub',$1,false)", [id])
+    const complete = () => db.query("select complete_google_registration('재로그인 회원','01012345678',null,'서울',null,true,true,false)")
+    await complete()
+    await db.exec('reset role')
+    const saved = (await db.query('select * from profiles where user_id=$1', [id])).rows[0]
+    assert.deepEqual(saved.created_at, original.created_at)
+    assert.ok(saved.terms_agreed_at && saved.privacy_agreed_at)
+    await db.exec('set role authenticated')
+    await complete()
+    await db.exec('reset role')
+    assert.deepEqual((await db.query('select * from profiles where user_id=$1', [id])).rows[0], saved)
+    assert.equal((await db.query('select count(*)::int n from auth.users where id=$1', [id])).rows[0].n, 1)
+    assert.equal((await db.query('select count(*)::int n from user_coupons where user_id=$1', [id])).rows[0].n, 1)
+  })
+  await t.test('missing OAuth profile is recovered only after validated completion and never duplicates on retry', async () => {
+    const id = '00000000-0000-4000-8000-000000000012'
+    // Reproduce a legacy auth user for whom the profile trigger never ran.
+    await db.exec('alter table auth.users disable trigger user')
+    await db.query('insert into auth.users(id,raw_app_meta_data) values ($1,$2)', [id, { provider: 'kakao' }])
+    await db.exec('alter table auth.users enable trigger user; set role authenticated')
+    await db.query("select set_config('request.jwt.claim.sub',$1,false)", [id])
+    await assert.rejects(db.query("select complete_google_registration('','01012345678',null,'서울',null,true,true,false)"), error => error.code === '22023')
+    await db.exec('reset role')
+    assert.equal((await db.query('select count(*)::int n from profiles where user_id=$1', [id])).rows[0].n, 0)
+    await db.exec('set role authenticated')
+    for (let retry = 0; retry < 2; retry++) {
+      await db.query("select complete_google_registration('복구 회원','01012345678',null,'서울',null,true,true,false)")
+    }
+    await db.exec('reset role')
+    const rows = (await db.query('select * from profiles where user_id=$1', [id])).rows
+    assert.equal(rows.length, 1)
+    assert.equal(rows[0].role, 'user')
+    assert.equal(rows[0].primary_goal, null)
+    assert.ok(rows[0].terms_agreed_at && rows[0].privacy_agreed_at)
+    // The existing profile-created coupon trigger still runs once on recovery.
+    assert.equal((await db.query('select count(*)::int n from user_coupons where user_id=$1', [id])).rows[0].n, 1)
   })
   await t.test('signup coupon is single-use, server priced, atomic and idempotent', async () => {
     const c = '00000000-0000-4000-8000-000000000003'

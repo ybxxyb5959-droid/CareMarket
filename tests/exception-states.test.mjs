@@ -35,9 +35,19 @@ test('customer exception states expose separate retryable error and successful e
   assert.match(catalog, /aiProducts\.length === 0/)
   assert.match(orders, /주문 내역을 불러오지 못했어요[\s\S]*다시 시도/)
   assert.match(orders, /아직 주문 내역이 없어요/)
-  assert.match(cart, /cartLoading \?[\s\S]*cartError \?[\s\S]*(?:cart|previewCart)\.length === 0/)
+  assert.match(cart, /cartLoading && cart\.length === 0 \?[\s\S]*cartError \?[\s\S]*(?:cart|previewCart)\.length === 0/)
   assert.match(mypage, /recentOrdersState\.error[\s\S]*profileError/)
   assert.doesNotMatch(mypage, /mypage-wishlist-title/)
+})
+
+test('AI search always uses the full catalog even when started inside a category', () => {
+  const provider = readSource('../src/StoreProvider.jsx')
+  const catalog = readSource('../src/pages/AllProducts.jsx')
+
+  assert.match(provider, /setShopCategory\('전체상품'\)[\s\S]*setShopSub\('전체'\)[\s\S]*navigate\('products', \{[\s\S]*preserveAiSearch: true/)
+  assert.match(provider, /catalog:[\s\S]*shopCategory: '전체상품', shopSub: '전체'/)
+  assert.match(catalog, /searchCategory = searchMode === 'ai' \? '전체상품' : shopCategory/)
+  assert.match(catalog, /shopCategory: searchCategory, shopSub: searchSub/)
 })
 
 test('admin exception states hide raw errors and distinguish base empty from filtered empty', () => {

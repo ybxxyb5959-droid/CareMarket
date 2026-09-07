@@ -1,3 +1,4 @@
+import { isSupplement } from '../../supabase/functions/_shared/product-type.js'
 // 장바구니 영양 계산 (mock 데이터 기반, 단순 합산 · 의료 판정 없음)
 
 export const NUTRIENT_META = {
@@ -28,6 +29,7 @@ export const fmtNutrient = (key, value) => {
 export const cartNutritionTotals = (cart) =>
   cart.reduce(
     (acc, { product, quantity }) => {
+      if (isSupplement(product)) return acc
       const n = product.nutrition
       acc.calories += (n.calories || 0) * quantity
       acc.protein += (n.protein || 0) * quantity

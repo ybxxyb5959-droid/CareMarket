@@ -1,9 +1,15 @@
+import { isSupplement, supplementCardDescription } from '../../supabase/functions/_shared/product-type.js'
+import { matchingAllergens } from '../lib/catalog'
 import Icon from './Icon'
 import { dailyPct } from '../lib/format'
 
 // 사용자의 주목표에 따라 카드에서 강조되는 영양정보가 달라진다
 export default function GoalBadge({ goal, product }) {
   const n = product.nutrition
+  if (isSupplement(product)) return <div className="goal-badge gb-supp supplement-card-actives">
+    <span className="gb-label"><Icon name="pill" size={15} /> {goal === '영양제 탐색' ? '주요 성분' : '보조 영양 상품'}</span>
+    <span className="gb-value" title={supplementCardDescription(product)}>{supplementCardDescription(product)}</span>
+  </div>
   switch (goal) {
     case '근육량 증가':
       return (
@@ -35,4 +41,10 @@ export default function GoalBadge({ goal, product }) {
         </div>
       )
   }
+}
+
+export function AllergenBadges({ product, allergies }) {
+  return matchingAllergens(product, allergies).map(allergen => (
+    <span className="tag allergen-badge" key={allergen}>⚠ {allergen} 포함</span>
+  ))
 }

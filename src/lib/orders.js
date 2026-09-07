@@ -5,6 +5,7 @@ export async function fetchMyOrders(client, userId) {
       order_id,
       toss_order_id,
       total_price,
+      discount_amount,
       status,
       created_at,
       recipient_name,
@@ -14,6 +15,7 @@ export async function fetchMyOrders(client, userId) {
       address_detail,
       delivery_request,
       items:order_items (
+        order_item_id,
         product_id,
         quantity,
         price_at_order,

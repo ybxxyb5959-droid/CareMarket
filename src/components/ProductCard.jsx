@@ -1,3 +1,4 @@
+import { AllergenBadges } from './GoalBadge'
 import { useStore } from '../store'
 import Icon from './Icon'
 import GoalBadge from './GoalBadge'
@@ -6,7 +7,7 @@ import { SampleRating } from './Stars'
 import { discountRate, won } from '../lib/format'
 
 export default function ProductCard({ product, compareSelected = false, onCompareToggle = null }) {
-  const { goal, wishlist, toggleWish, addToCart, openProduct } = useStore()
+  const { goal, allergies, wishlist, toggleWish, addToCart, openProduct } = useStore()
   const wished = wishlist.includes(product.id)
 
   return (
@@ -38,7 +39,7 @@ export default function ProductCard({ product, compareSelected = false, onCompar
         <div className="card-top"><span className="card-brand">{product.brand}</span></div>
 
         <h3 className="card-name" onClick={() => openProduct(product)}>{product.name}</h3>
-        <SampleRating productId={product.id} showSampleLabel={false} />
+        <SampleRating productId={product.id} />
 
         <span className="card-origin">
           <Icon name="leaf" size={13} />
@@ -46,14 +47,15 @@ export default function ProductCard({ product, compareSelected = false, onCompar
         </span>
 
         <div className="card-price">
-          <div className="orig">{won(product.originalPrice)}</div>
+          {!product.isDemoProduct && <div className="orig">{won(product.originalPrice)}</div>}
           <div className="now">
-            <span className="disc">{discountRate(product.originalPrice, product.price)}%</span>
+            {!product.isDemoProduct && <span className="disc">{discountRate(product.originalPrice, product.price)}%</span>}
             <span className="amt">{won(product.price)}</span>
           </div>
         </div>
 
         <GoalBadge goal={goal} product={product} />
+                      <div><AllergenBadges product={product} allergies={allergies} /></div>
 
         <div className="card-actions">
           <button className="card-add" disabled={product.stock < 1} onClick={() => addToCart(product, 1)} aria-label={product.stock < 1 ? '품절' : '장바구니 담기'}>

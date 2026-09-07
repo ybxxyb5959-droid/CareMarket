@@ -143,3 +143,14 @@ test('unavailable products stay out and equal-score products retain id order', (
 
   assert.deepEqual(result.map((product) => product.id), [201, 202])
 })
+
+test('temporary allergy reveal preserves saved settings and other filters', () => {
+  const products = [{ id: 1, name: '우유 상품', brand: 'test', category: '음료·프로틴음료', stock: 10, nutrition: { protein: 20, sugar: 2, sodium: 10, calories: 100 }, allergens: ['우유'] }, { id: 2, name: '일반 상품', brand: 'test', category: '음료·프로틴음료', stock: 10, nutrition: { protein: 1, sugar: 20, sodium: 10, calories: 100 }, allergens: [] }]
+  const allergies = ['우유']
+  const options = { search: '', subFilters: [], allergies, sortBy: 'lowPrice', goal: '체중 관리', shopCategory: '전체상품', shopSub: '전체' }
+  assert.deepEqual(filterAndSort(products, options).map(p => p.id), [2])
+  assert.equal(filterAndSort(products, { ...options, hideAllergens: false }).length, 2)
+  assert.deepEqual(filterAndSort(products, { ...options, hideAllergens: false, subFilters: ['고단백'] }).map(p => p.id), [1])
+  assert.deepEqual(allergies, ['우유'])
+  assert.equal(filterAndSort(products, { ...options, allergies: [] }).length, 2)
+})

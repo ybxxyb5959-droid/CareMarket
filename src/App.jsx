@@ -7,6 +7,7 @@ import Toast from './components/Toast'
 import CartDrawer from './components/CartDrawer'
 import CartLoginPrompt from './components/CartLoginPrompt'
 import EventPopup from './components/EventPopup'
+import ReviewModal from './components/ReviewModal'
 import Home from './pages/Home'
 import Deals from './pages/Deals'
 import ProductCollection from './pages/ProductCollection'
@@ -28,6 +29,7 @@ import AdminDashboard from './pages/AdminDashboard'
 import AdminOrders from './pages/AdminOrders'
 import AdminPartnerships from './pages/AdminPartnerships'
 import AdminInquiries from './pages/AdminInquiries'
+import AdminReviews from './pages/AdminReviews'
 import ServiceInfo from './pages/ServiceInfo'
 import PartnerProposal from './pages/PartnerProposal'
 import Support from './pages/Support'
@@ -59,6 +61,7 @@ const PAGES = {
   adminOrders: AdminOrders,
   adminPartnerships: AdminPartnerships,
   adminInquiries: AdminInquiries,
+  adminReviews: AdminReviews,
   about: ServiceInfo,
   principles: ServiceInfo,
   partners: ServiceInfo,
@@ -77,7 +80,7 @@ function Shell() {
   const pendingOAuthProfile = user?.oauth && oauthRegistrationRequired === null
   const completingOAuth = user?.oauth && oauthRegistrationRequired === true
   const Page = completingOAuth ? Register : PAGES[view] || NotFound
-  const isAdmin = ['adminDashboard', 'adminHistory', 'adminProducts', 'adminOrders', 'adminPartnerships', 'adminInquiries'].includes(view)
+  const isAdmin = ['adminDashboard', 'adminHistory', 'adminProducts', 'adminOrders', 'adminReviews', 'adminPartnerships', 'adminInquiries'].includes(view)
   return (
     <div className="app">
       {isAdmin ? <AdminTopbar /> : <Header />}
@@ -96,6 +99,7 @@ function Shell() {
       <Toast />
       {loginPromptOpen && <CartLoginPrompt />}
       {!isAdmin && !pendingOAuthProfile && !completingOAuth && <EventPopup />}
+      {!isAdmin && !pendingOAuthProfile && !completingOAuth && <ReviewModal />}
     </div>
   )
 }

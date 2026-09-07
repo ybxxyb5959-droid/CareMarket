@@ -24,7 +24,7 @@ export const GEMINI_COMPARE_SCHEMA = {
     },
     goal_fit_summary: textField(180),
     recommendation: {
-      type: 'object',
+      type: ['object', 'null'],
       properties: {
         product_id: { type: 'integer', minimum: 1 },
         reason: textField(140),

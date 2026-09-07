@@ -19,6 +19,7 @@ const VIEW_PATHS = {
   adminOrders: '/admin/orders',
   adminPartnerships: '/admin/partnerships',
   adminInquiries: '/admin/inquiries',
+  adminReviews: '/admin/reviews',
   about: '/about',
   principles: '/principles',
   partners: '/partners',

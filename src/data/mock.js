@@ -1,3 +1,4 @@
+import { SUPPLEMENT_CATEGORY } from '../../supabase/functions/_shared/product-type.js'
 // ============================================================
 // CareMarket — 목업 데이터 (실제 DB/API 없이 프론트 시연용)
 // ============================================================
@@ -100,7 +101,7 @@ export const PRODUCT_CATEGORY = Object.freeze({
   MEAL: '도시락·간편식',
   SAUCE: '소스·조미료',
   CEREAL: '시리얼·그래놀라',
-  SUPPLEMENT: '영양제·비타민',
+  SUPPLEMENT: SUPPLEMENT_CATEGORY,
   DAIRY_ALTERNATIVE: '유제품·대체유',
   DRINK: '음료·프로틴음료',
   PROTEIN_SNACK: '프로틴바·건강간식',
@@ -149,6 +150,7 @@ export const CATEGORIES = [
     { name: '비타민', kw: ['비타민'] },
     { name: '오메가3', kw: ['오메가'] },
     { name: '유산균', kw: ['유산균', '바이오틱스'] },
+    { name: '기타', other: true },
   ] },
   { id: 'sauce', name: PRODUCT_CATEGORY.SAUCE, group: PRODUCT_CATEGORY.SAUCE },
   { id: 'health-food', name: '건강식품', group: '건강식품' },
@@ -190,6 +192,8 @@ export function matchCategory(product, catName, subName) {
   if (cat.subs && subKey && subKey !== normalizeCategoryName('전체')) {
     const sub = cat.subs.find((item) => normalizeCategoryName(item.name) === subKey)
     if (!sub) return false
+    if (sub.other) return !cat.subs.some(item => item.kw?.some(keyword =>
+      normalizeCategoryName(product.name).includes(normalizeCategoryName(keyword))))
     if (sub.db) return sub.db.some((category) => (
       normalizeCategoryName(category) === normalizeCategoryName(product.category)
     ))
