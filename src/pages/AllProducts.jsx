@@ -25,6 +25,13 @@ export default function AllProducts() {
   const [compareSelection, setCompareSelection] = useState([])
   const compareIds = compareSelection.map(product => product.id)
   const [compareOpen, setCompareOpen] = useState(false)
+  const [detailsOpen, setDetailsOpen] = useState(false)
+  const [selectedBrand, setSelectedBrand] = useState('')
+  const [maxPrice, setMaxPrice] = useState(null)
+  const priceCeiling = useMemo(() => Math.max(10000, Math.ceil(Math.max(0, ...products.map(p => p.price)) / 1000) * 1000), [products])
+  const brands = useMemo(() => [...new Set(products.map(p => p.brand).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'ko')), [products])
+  const detailCount = Number(Boolean(selectedBrand)) + Number(maxPrice !== null)
+  const resetDetails = () => { setSelectedBrand(''); setMaxPrice(null) }
   const searchCategory = searchMode === 'ai' ? '전체상품' : shopCategory
   const searchSub = searchMode === 'ai' ? '전체' : shopSub
   const availableIds = useMemo(() => availableFilterIds(searchCategory), [searchCategory])
@@ -47,8 +54,8 @@ export default function AllProducts() {
       shopCategory: searchCategory, shopSub: searchSub,
       dealsOnly: searchMode === 'ai' ? false : dealsOnly,
       hideAllergens,
-    }),
-    [products, search, searchMode, subFilters, allergies, sortBy, goal, searchCategory, searchSub, dealsOnly, hideAllergens],
+    }).filter(product => (!selectedBrand || product.brand === selectedBrand) && (maxPrice === null || product.price <= maxPrice)),
+    [products, search, searchMode, subFilters, allergies, sortBy, goal, searchCategory, searchSub, dealsOnly, hideAllergens, selectedBrand, maxPrice],
   )
 
   const supplementBrowse = searchMode === 'normal' && shopCategory === '영양제'
@@ -185,7 +192,10 @@ export default function AllProducts() {
         <div className="filterbar" style={{ marginBottom: 26 }}>
           <div className="filterbar-main">
             <div className="f-tags">
-              <span className="f-label"><Icon name="sliders" size={15} /> 빠른 조건</span>
+              <button type="button" className={`chip detail-filter-toggle${detailsOpen || detailCount ? ' on' : ''}`} aria-expanded={detailsOpen} aria-controls="catalog-detail-filters" onClick={() => setDetailsOpen(open => !open)}>
+                <Icon name="sliders" size={15} /> 상세 필터{detailCount > 0 && <span>{detailCount}</span>}
+                <span aria-hidden="true">{detailsOpen ? '−' : '+'}</span>
+              </button>
               {availableFilters.map((f) => (
                 <button key={f.id} className={`chip${subFilters.includes(f.tag) ? ' on' : ''}`} onClick={() => toggleSub(f.tag)} title={f.hint}>
                   {subFilters.includes(f.tag) && <Icon name="check" size={13} strokeWidth={2.6} />}
@@ -217,6 +227,28 @@ export default function AllProducts() {
           </div>
         </div>
 
+        <section id="catalog-detail-filters" className="catalog-detail-filters" aria-label="상세 필터" hidden={!detailsOpen}>
+          <div className="detail-brand-filter">
+            <h2>브랜드</h2>
+            <div className="detail-brand-options">
+              {['', ...brands].map(brand => <button type="button" key={brand} className={`detail-brand-option${selectedBrand === brand ? ' on' : ''}`} aria-pressed={selectedBrand === brand} onClick={() => setSelectedBrand(brand)}>{brand || '전체 브랜드'}</button>)}
+            </div>
+          </div>
+          <div className="detail-price-filter">
+            <div className="detail-price-heading">
+              <label htmlFor="catalog-max-price">최대 가격</label>
+              <output htmlFor="catalog-max-price">{maxPrice === null ? '전체 (제한 없음)' : `${maxPrice.toLocaleString('ko-KR')}원 이하`}</output>
+            </div>
+            <input id="catalog-max-price" type="range" min="0" max={priceCeiling} step="1000" value={maxPrice === null ? priceCeiling : Math.min(maxPrice, priceCeiling)} aria-valuetext={maxPrice === null ? '제한 없음' : `${maxPrice.toLocaleString('ko-KR')}원 이하`} onChange={event => { const value = Number(event.target.value); setMaxPrice(value === priceCeiling ? null : value) }} />
+            <div className="detail-price-ticks" aria-hidden="true"><span>0원</span><span>{(priceCeiling / 2).toLocaleString('ko-KR')}원</span><span>제한 없음</span></div>
+            <button type="button" className="detail-filter-reset" disabled={!detailCount} onClick={resetDetails}>상세 필터 초기화</button>
+          </div>
+        </section>
+        {detailCount > 0 && <div className="detail-active-filters" aria-label="적용 중인 상세 필터">
+          {selectedBrand && <button type="button" className="chip on" onClick={() => setSelectedBrand('')} aria-label={`${selectedBrand} 브랜드 필터 해제`}>{selectedBrand}<Icon name="x" size={13} /></button>}
+          {maxPrice !== null && <button type="button" className="chip on" onClick={() => setMaxPrice(null)} aria-label="최대 가격 필터 해제">{maxPrice.toLocaleString('ko-KR')}원 이하<Icon name="x" size={13} /></button>}
+        </div>}
+
         {(compareProducts.length > 0 || (!productsLoading && !productsError && aiProducts.length > 0)) && (
           <div className="compare-toolbar">
             <div><Icon name="cart" size={15} /><span>비교할 상품을 선택하세요</span><b>{compareIds.length}/3</b></div>
@@ -241,8 +273,8 @@ export default function AllProducts() {
           <div className="empty">
             <Icon name="alert-circle" size={44} />
             <h3>선택하신 조건에 맞는 상품이 없습니다.</h3>
-            <p>저당·저염·고단백 등 보조 조건을 조정하거나 검색어를 초기화해 보세요.</p>
-            <button className="btn btn-primary" onClick={() => { setSubFilters([]); setSearch(''); setDealsOnly(false); clearAiSearch() }}>조건 전체 초기화</button>
+            <p>가격·브랜드·보조 조건을 조정하거나 검색어를 초기화해 보세요.</p>
+            <button className="btn btn-primary" onClick={() => { resetDetails(); setSubFilters([]); setSearch(''); setDealsOnly(false); clearAiSearch() }}>조건 전체 초기화</button>
           </div>
         ) : (
           <div className="product-grid">

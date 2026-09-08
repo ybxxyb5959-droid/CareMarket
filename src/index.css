@@ -5577,6 +5577,14 @@ button.service-cta:hover { border-color: var(--brand-500); background: var(--sur
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+.admin-dashboard-order-main .admin-dashboard-order-number,
+.admin-order-number {
+  font-family: var(--sans);
+  font-size: 12px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: .01em;
+}
 .admin-dashboard-order-main small {
   color: var(--faint);
   font-size: 10px;
@@ -6237,6 +6245,12 @@ button.service-cta:hover { border-color: var(--brand-500); background: var(--sur
   font-size: 28px;
   font-weight: 500;
 }
+.deal-head-note {
+  margin-top: 7px;
+  color: var(--ink-2);
+  font-size: 12px;
+  font-weight: 650;
+}
 .deal-countdown {
   display: inline-flex;
   align-items: center;
@@ -6247,10 +6261,10 @@ button.service-cta:hover { border-color: var(--brand-500); background: var(--sur
 }
 .deal-countdown time {
   padding: 4px 8px;
-  border: 1px solid var(--brand-tint-border);
+  border: 1px solid color-mix(in srgb, var(--danger) 24%, transparent);
   border-radius: var(--r-xs);
-  background: var(--brand-tint);
-  color: var(--brand-ink);
+  background: color-mix(in srgb, var(--danger) 7%, var(--surface));
+  color: var(--danger);
   font-size: 12px;
   font-weight: 750;
   font-variant-numeric: tabular-nums;
@@ -6285,8 +6299,8 @@ button.service-cta:hover { border-color: var(--brand-500); background: var(--sur
   padding: 4px 9px;
   border: 1px solid color-mix(in srgb, var(--danger) 24%, transparent);
   border-radius: var(--r-pill);
-  background: color-mix(in srgb, var(--surface) 92%, transparent);
-  color: var(--danger);
+  background: color-mix(in srgb, var(--danger) 91%, #7f1f15);
+  color: #fff;
   box-shadow: var(--sh-xs);
   font-size: 10.5px;
   font-weight: 800;
@@ -6323,43 +6337,76 @@ button.service-cta:hover { border-color: var(--brand-500); background: var(--sur
   overflow: hidden;
 }
 .deal-product-price {
-  min-height: 52px;
+  min-height: 74px;
   margin-top: 10px;
 }
-.deal-original {
+.deal-price-history {
   display: flex;
   align-items: baseline;
-  gap: 5px;
+  flex-wrap: wrap;
+  gap: 3px 7px;
   color: var(--faint);
-  font-size: 11px;
+  font-size: 10px;
   line-height: 1.35;
 }
-.deal-original span { font-size: 10px; }
-.deal-original del {
+.deal-price-history span {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 4px;
+}
+.deal-price-history i {
+  color: color-mix(in srgb, var(--danger) 65%, var(--faint));
+  font-size: 10px;
+  font-style: normal;
+  font-weight: 800;
+}
+.deal-price-history del {
   text-decoration-color: currentColor;
   text-decoration-thickness: 1px;
 }
 .deal-price-now {
   display: flex;
-  align-items: baseline;
+  align-items: center;
   flex-wrap: nowrap;
-  gap: 8px;
-  margin-top: 3px;
+  gap: 7px;
+  margin-top: 4px;
   white-space: nowrap;
 }
 .deal-discount {
   flex: 0 0 auto;
   color: var(--danger);
-  font-size: 14px;
-  font-weight: 850;
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: -.035em;
 }
 .deal-product-price strong {
   min-width: 0;
-  color: var(--ink);
+  color: var(--danger);
+  font-family: var(--sans);
   font-size: 21px;
+  font-style: normal;
   font-weight: 850;
+  font-variant-numeric: tabular-nums;
   letter-spacing: -.035em;
   line-height: 1.2;
+}
+.deal-product-price strong small {
+  margin-left: 2px;
+  font-family: var(--sans);
+  font-size: 12px;
+  font-style: normal;
+  font-weight: 850;
+  letter-spacing: -.04em;
+}
+.deal-extra-cut {
+  margin-top: 6px;
+  color: var(--muted);
+  font-size: 10px;
+  line-height: 1.35;
+}
+.deal-extra-cut b {
+  color: var(--danger);
+  font-weight: 850;
 }
 .today-deals-status {
   padding: 42px 0;
@@ -6631,10 +6678,11 @@ button.service-cta:hover { border-color: var(--brand-500); background: var(--sur
   .deal-product-media { aspect-ratio: 1 / .9; }
   .deal-product h3 { font-size: 13px; }
   .deal-badge { top: 9px; left: 9px; min-height: 23px; padding-inline: 8px; font-size: 10px; }
-  .deal-product-price { min-height: 49px; margin-top: 9px; }
+  .deal-product-price { min-height: 70px; margin-top: 9px; }
   .deal-price-now { gap: 6px; }
-  .deal-discount { font-size: 13px; }
-  .deal-product-price strong { font-size: 18px; }
+  .deal-price-history { gap: 2px 5px; font-size: 9.5px; }
+  .deal-discount { font-size: 10px; }
+  .deal-product-price strong { font-size: 21px; }
   .compare-overlay { align-items: end; padding: 0; }
   .compare-modal { max-height: min(760px, 85dvh); border-radius: var(--r-lg) var(--r-lg) 0 0; }
   .compare-head, .compare-ai-summary { padding-inline: 18px; }
@@ -10828,18 +10876,21 @@ button.service-cta:hover { border-color: var(--brand-500); background: var(--sur
 
 /* ---------- Admin dashboard editorial refinements ---------- */
 .admin-dashboard-metrics {
+  grid-template-columns: repeat(7, minmax(0, 1fr));
   gap: 0;
   margin-bottom: 32px;
   border-top: 1px solid var(--line);
   border-bottom: 1px solid var(--line);
 }
 .admin-dashboard-metric {
+  width: 100%;
   min-height: 106px;
   padding: 17px 20px;
   border: 0;
   border-left: 1px solid var(--line-2);
   border-radius: 0;
   background: transparent;
+  text-align: left;
 }
 .admin-dashboard-metric:first-child {
   border-left: 0;
@@ -10953,17 +11004,40 @@ button.service-cta:hover { border-color: var(--brand-500); background: var(--sur
 .admin-dashboard-operation-grid .admin-dashboard-card-head {
   margin-bottom: 13px;
 }
+.admin-dashboard-operation-column {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  border-left: 1px solid var(--line);
+}
+.admin-dashboard-operation-column > .admin-dashboard-card {
+  padding-right: 0;
+  padding-left: 28px;
+  border-left: 0;
+}
+.admin-dashboard-operation-column > .admin-dashboard-card + .admin-dashboard-card {
+  border-top: 1px solid var(--line);
+  border-left: 0;
+}
+.admin-dashboard-review-card > .admin-dashboard-empty {
+  min-height: 0;
+  padding: 14px 0;
+  place-items: start;
+  text-align: left;
+}
 .admin-dashboard-attention-list,
 .admin-dashboard-orders-list {
   border-top: 1px solid var(--line-2);
 }
 
 @media (max-width: 1100px) {
-  .admin-dashboard-metric:nth-child(4) {
-    border-left: 0;
-    border-top: 1px solid var(--line-2);
+  .admin-dashboard-metrics {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
-  .admin-dashboard-metric:nth-child(n + 5) {
+  .admin-dashboard-metric:nth-child(3n + 1) {
+    border-left: 0;
+  }
+  .admin-dashboard-metric:nth-child(n + 4) {
     border-top: 1px solid var(--line-2);
   }
 }
@@ -10977,23 +11051,25 @@ button.service-cta:hover { border-color: var(--brand-500); background: var(--sur
     padding-left: 0;
     padding-right: 0;
   }
+  .admin-dashboard-operation-column {
+    border-top: 1px solid var(--line);
+    border-left: 0;
+  }
+  .admin-dashboard-operation-column > .admin-dashboard-card {
+    padding-right: 0;
+    padding-left: 0;
+  }
 }
 @media (max-width: 480px) {
   .admin-dashboard-metrics {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     margin-bottom: 24px;
   }
   .admin-dashboard-metric {
     min-height: 91px;
     padding: 14px 12px;
   }
-  .admin-dashboard-metric:nth-child(4),
-  .admin-dashboard-metric:nth-child(n + 5) {
-    border-top: 0;
-  }
-  .admin-dashboard-metric:nth-child(3),
-  .admin-dashboard-metric:nth-child(4),
-  .admin-dashboard-metric:nth-child(5),
-  .admin-dashboard-metric:nth-child(6) {
+  .admin-dashboard-metric:nth-child(n + 3) {
     border-top: 1px solid var(--line-2);
   }
   .admin-dashboard-metric:nth-child(odd) {
@@ -11655,4 +11731,75 @@ button.service-cta:hover { border-color: var(--brand-500); background: var(--sur
   .supplement-facts-layout { gap: 16px; }
   .supplement-facts-layout .nutri-head h4 { font-size: 14px; }
   .supplement-facts-layout .nutri-grid { grid-template-columns: minmax(0, 1fr); }
+}
+
+.review-row { position: relative; }
+.review-row > div:first-child { padding-right: 42px; }
+.review-report-button { position: absolute; top: 20px; right: 0; border: 0; background: transparent; color: #929792; font: inherit; font-size: 12px; font-weight: 400; padding: 4px 0 4px 16px; cursor: pointer; }
+.review-report-button:hover { color: var(--ink); }
+.review-report-button:focus-visible { outline: 2px solid var(--ink); outline-offset: 3px; }
+.review-report-dialog form { display: grid; gap: 14px; padding: 24px; }
+.review-report-dialog fieldset { display: grid; gap: 12px; border: 1px solid var(--line); border-radius: 10px; padding: 16px; }
+.review-report-dialog legend, .review-report-detail { font-size: 13px; }
+.review-report-dialog fieldset label { display: flex; align-items: center; gap: 8px; font-size: 13px; }
+.review-report-detail { display: grid; gap: 8px; }
+.review-report-detail textarea { width: 100%; padding: 12px; resize: vertical; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); color: var(--ink); font: inherit; }
+.review-report-dialog small { color: var(--muted); text-align: right; }
+.review-report-actions, .admin-report-actions { display: flex; justify-content: flex-end; gap: 8px; }
+
+/* Expandable catalog details; quick conditions stay in the toolbar. */
+.catalog-detail-filters {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 32px;
+  padding: 24px;
+  margin: -10px 0 26px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-lg);
+  background: var(--surface);
+  box-shadow: 0 8px 24px rgb(45 40 30 / 4%);
+}
+.catalog-detail-filters[hidden] { display: none; }
+.catalog-detail-filters h2, .detail-price-heading label { margin: 0; font-size: 12.5px; font-weight: 700; color: var(--muted); }
+.detail-brand-filter { min-width: 0; }
+.detail-brand-options { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0; margin-top: 12px; }
+.detail-brand-option {
+  position: relative;
+  min-height: 40px;
+  padding: 10px 12px;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.5;
+  text-align: left;
+  overflow-wrap: anywhere;
+  cursor: pointer;
+  transition: color .18s ease;
+}
+.detail-brand-option:nth-child(3n + 1) { padding-left: 0; }
+.detail-brand-option:not(:nth-child(3n + 1))::before { content: ''; position: absolute; left: 0; top: 50%; transform: translateY(-50%); height: 12px; width: 1px; background: var(--line); }
+.detail-brand-option:hover, .detail-brand-option:focus-visible { color: var(--brand); }
+.detail-brand-option.on { color: var(--brand); font-weight: 700; text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 5px; }
+.detail-price-filter { min-width: 0; }
+.detail-price-heading { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+.detail-price-heading output { font-size: 12px; font-weight: 700; color: var(--ink); }
+.detail-price-filter input[type="range"] { display: block; width: 100%; margin: 18px 0 8px; accent-color: var(--brand); cursor: pointer; }
+.detail-price-ticks { display: flex; justify-content: space-between; font-size: 11px; color: var(--muted); }
+.detail-filter-reset { margin-top: 20px; font-size: 12px; color: var(--muted); text-decoration: underline; text-underline-offset: 3px; }
+.detail-filter-reset:disabled { opacity: .45; cursor: default; }
+.detail-active-filters { display: flex; flex-wrap: wrap; gap: 8px; margin: -10px 0 22px; }
+.detail-filter-toggle { flex-shrink: 0; }
+.catalog-detail-filters button:focus-visible, .detail-filter-toggle:focus-visible, .detail-active-filters button:focus-visible, .detail-price-filter input:focus-visible { outline: 2px solid var(--brand); outline-offset: 3px; }
+@media (max-width: 720px) {
+  .catalog-detail-filters { grid-template-columns: 1fr; gap: 24px; padding: 20px; }
+}
+@media (max-width: 400px) {
+  .detail-brand-options { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .detail-brand-option:nth-child(3n + 1) { padding-left: 12px; }
+  .detail-brand-option:nth-child(odd) { padding-left: 0; }
+  .detail-brand-option::before { display: none; }
+  .detail-brand-option:nth-child(even)::before { display: block; content: ''; position: absolute; left: 0; top: 50%; transform: translateY(-50%); height: 12px; width: 1px; background: var(--line); }
 }

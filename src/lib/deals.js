@@ -14,6 +14,11 @@ const hash = (value) => {
   return result >>> 0
 }
 
+export const DAILY_DEAL_MIN = 8
+export const DAILY_DEAL_MAX = 16
+
+const dailyDealCounts = [DAILY_DEAL_MIN, 12, DAILY_DEAL_MAX]
+
 const dayIndex = (dateKey) => {
   const [year, month, day] = dateKey.split('-').map(Number)
   return Math.floor(Date.UTC(year, month - 1, day) / 86400000)
@@ -33,9 +38,14 @@ export const isDiscountProduct = (product) => (
 
 export const getLocalDateKey = (date = new Date()) => localDateKey(date)
 
-export function selectDailyDeals(products, dateKey, limit = 4) {
+export function getDailyDealCount(dateKey) {
+  return dailyDealCounts[hash(`count:${dateKey}`) % dailyDealCounts.length]
+}
+
+export function selectDailyDeals(products, dateKey, limit) {
   const candidates = products.filter(isDiscountProduct)
   const rotation = dayIndex(dateKey)
+  const targetCount = Number.isInteger(limit) ? Math.max(0, limit) : getDailyDealCount(dateKey)
   const byCategory = new Map()
 
   for (const product of candidates) {
@@ -52,26 +62,46 @@ export function selectDailyDeals(products, dateKey, limit = 4) {
 
   // First pass takes one item per category so a single category cannot dominate.
   for (const category of categories) {
-    if (selected.length >= limit) break
+    if (selected.length >= targetCount) break
     const items = byCategory.get(category).sort((a, b) => (
-      hash(`product:${a.id}`) - hash(`product:${b.id}`)
+      hash(`${dateKey}:product:${a.id}`) - hash(`${dateKey}:product:${b.id}`)
       || a.id - b.id
     ))
     selected.push(items[(rotation + hash(category)) % items.length])
   }
 
-  if (selected.length < limit) {
+  if (selected.length < targetCount) {
     const selectedIds = new Set(selected.map((product) => product.id))
-    const remaining = rotate(candidates
+    const remaining = candidates
       .filter((product) => !selectedIds.has(product.id))
       .sort((a, b) => (
-        hash(`remaining:${a.id}`) - hash(`remaining:${b.id}`)
+        hash(`${dateKey}:remaining:${a.id}`) - hash(`${dateKey}:remaining:${b.id}`)
         || a.id - b.id
-      )), rotation)
-    selected.push(...remaining.slice(0, limit - selected.length))
+      ))
+    selected.push(...remaining.slice(0, targetCount - selected.length))
   }
 
   return selected
+}
+
+export function getDailyDealPricing(product, dateKey) {
+  const originalPrice = Math.max(0, Number(product?.originalPrice) || 0)
+  const regularPrice = Math.max(0, Number(product?.price) || 0)
+  const plannedExtraRate = 8 + (hash(`${dateKey}:extra:${product?.id}`) % 10)
+  const roundingUnit = regularPrice >= 1000 ? 100 : regularPrice >= 100 ? 10 : 1
+  const rawDealPrice = regularPrice * (100 - plannedExtraRate) / 100
+  const todayPrice = regularPrice > 0
+    ? Math.max(roundingUnit, Math.min(regularPrice - roundingUnit, Math.floor(rawDealPrice / roundingUnit) * roundingUnit))
+    : 0
+
+  return {
+    originalPrice,
+    regularPrice,
+    todayPrice,
+    regularRate: originalPrice > 0 ? Math.round((originalPrice - regularPrice) / originalPrice * 100) : 0,
+    extraRate: regularPrice > 0 ? Math.round((regularPrice - todayPrice) / regularPrice * 100) : 0,
+    totalRate: originalPrice > 0 ? Math.round((originalPrice - todayPrice) / originalPrice * 100) : 0,
+  }
 }
 
 export function getCountdown(now = new Date()) {

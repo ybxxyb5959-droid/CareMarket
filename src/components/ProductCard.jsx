@@ -39,7 +39,7 @@ export default function ProductCard({ product, compareSelected = false, onCompar
         <div className="card-top"><span className="card-brand">{product.brand}</span></div>
 
         <h3 className="card-name" onClick={() => openProduct(product)}>{product.name}</h3>
-        <SampleRating productId={product.id} />
+        <SampleRating product={product} />
 
         <span className="card-origin">
           <Icon name="leaf" size={13} />

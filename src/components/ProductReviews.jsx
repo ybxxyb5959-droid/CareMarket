@@ -1,9 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { getSampleReviews, getSampleReviewSummary } from '../data/mock'
+import { getSampleReviews } from '../data/mock'
 import { useStore } from '../store'
 import { supabase } from '../lib/supabase'
-import { deleteMyReview, fetchMyReviewItems, fetchPublicProductReviews } from '../lib/reviews'
+import { combineReviewSummary, deleteMyReview, fetchMyReviewItems, fetchPublicProductReviews } from '../lib/reviews'
 import Stars from './Stars'
+import ReviewReportDialog from './ReviewReportDialog'
+import { fetchDeletedSampleReviews } from '../lib/reviews'
 
 const PAGE_SIZE = 5
 const reviewDate = value => new Intl.DateTimeFormat('ko-KR', {
@@ -28,6 +30,17 @@ function DeleteReviewDialog({ busy, onCancel, onConfirm }) {
 
 export default function ProductReviews({ product }) {
   const { authUserId, reviewRevision, openReviewForm, reviewCompleted, showToast } = useStore()
+  const [reportTarget, setReportTarget] = useState(null)
+  const [deletedSamples, setDeletedSamples] = useState([])
+  const report = review => {
+    if (!authUserId) { showToast('로그인 후 리뷰를 신고할 수 있습니다.'); return }
+    setReportTarget(review)
+  }
+  useEffect(() => {
+    let active = true
+    fetchDeletedSampleReviews(supabase, product.id).then(rows => { if (active) setDeletedSamples(rows) }).catch(() => { if (active) setDeletedSamples([]) })
+    return () => { active = false }
+  }, [product.id, reviewRevision])
   const [sampleExpanded, setSampleExpanded] = useState(false)
   const [limit, setLimit] = useState(PAGE_SIZE)
   const [actual, setActual] = useState({ key: '', reviews: [], count: null, average: null, error: null })
@@ -35,8 +48,7 @@ export default function ProductReviews({ product }) {
   const [selectedItemId, setSelectedItemId] = useState('')
   const [deleteTarget, setDeleteTarget] = useState(null)
   const [deleting, setDeleting] = useState(false)
-  const { averageRating: sampleAverage, reviewCount: sampleCount } = getSampleReviewSummary(product.id)
-  const sampleReviews = getSampleReviews(product)
+  const sampleReviews = getSampleReviews(product).filter(review => !deletedSamples.includes(review.id))
 
   useEffect(() => {
     let active = true
@@ -97,10 +109,7 @@ export default function ProductReviews({ product }) {
   const actualKey = `${product.id}:${limit}:${reviewRevision}`
   const loadedActual = actual.key === actualKey ? { ...actual, loading: false } : { reviews: [], count: null, average: null, loading: true, error: null }
   const actualCount = loadedActual.count || 0
-  const combinedCount = sampleCount + actualCount
-  const combinedAverage = combinedCount > 0
-    ? ((sampleAverage * sampleCount + (loadedActual.average || 0) * actualCount) / combinedCount)
-    : 0
+  const { count: combinedCount, average: combinedAverage } = combineReviewSummary(sampleReviews, loadedActual)
   const hasMoreActual = loadedActual.reviews.length < actualCount
   const visibleSamples = hasMoreActual ? [] : sampleExpanded ? sampleReviews : sampleReviews.slice(0, 3)
 
@@ -112,7 +121,7 @@ export default function ProductReviews({ product }) {
 
     <div className="actual-review-toolbar">
       <div>
-        <Stars rating={combinedAverage} /><strong>{combinedAverage.toFixed(1)}</strong><span>후기 {combinedCount}개</span>
+        <Stars rating={combinedAverage.toFixed(1)} /><strong>{combinedAverage.toFixed(1)}</strong><span>후기 {combinedCount}개</span>
         {loadedActual.loading && <span className="review-load-status" role="status">새 후기를 불러오는 중입니다.</span>}
         {loadedActual.error && <span className="review-load-status" role="alert">{loadedActual.error}</span>}
       </div>
@@ -126,14 +135,14 @@ export default function ProductReviews({ product }) {
 
     <div id="review-list" className="review-list">
       {!loadedActual.loading && !loadedActual.error && loadedActual.reviews.map(review => <article className="review-row actual-review-row" key={review.id}>
-        <div><b>{review.author_name}</b>{review.is_mine && <span className="my-review-badge">내가 작성한 후기</span>}<span className="verified-review-badge">구매 확인</span><span className="sample-review-stars" aria-label={`5점 만점에 ${review.rating}점`}>{'★'.repeat(review.rating)}{'☆'.repeat(5 - review.rating)}</span></div>
+        <div><button type="button" className="review-report-button" onClick={() => report(review)}>신고</button><b>{review.author_name}</b>{review.is_mine && <span className="my-review-badge">내가 작성한 후기</span>}<span className="verified-review-badge">구매 확인</span><span className="sample-review-stars" aria-label={`5점 만점에 ${review.rating}점`}>{'★'.repeat(review.rating)}{'☆'.repeat(5 - review.rating)}</span></div>
         <p>{review.content}</p>
         <div className="actual-review-meta"><small><time dateTime={review.created_at}>{reviewDate(review.created_at)}</time>{review.updated_at && review.updated_at !== review.created_at ? ' · 수정됨' : ''}</small>
           {review.is_mine && <span className="my-review-actions"><button type="button" className="btn btn-text btn-sm" onClick={() => editReview(review)}>수정</button><button type="button" className="btn btn-text btn-sm" onClick={() => setDeleteTarget(review)}>삭제</button></span>}
         </div>
       </article>)}
       {visibleSamples.map(review => <article className="review-row" key={review.id}>
-          <div><b>{review.author}</b><span className="sample-review-stars" aria-label={`5점 만점에 ${review.rating}점`}>{'★'.repeat(review.rating)}{'☆'.repeat(5 - review.rating)}</span></div>
+          <div><button type="button" className="review-report-button" onClick={() => report(review)}>신고</button><b>{review.author}</b><span className="sample-review-stars" aria-label={`5점 만점에 ${review.rating}점`}>{'★'.repeat(review.rating)}{'☆'.repeat(5 - review.rating)}</span></div>
           <p>{review.content}</p>
           <small><time dateTime={review.date}>{review.date.replaceAll('-', '.')}</time></small>
         </article>)}
@@ -144,6 +153,7 @@ export default function ProductReviews({ product }) {
       }}>
         {hasMoreActual ? '후기 더보기' : sampleExpanded ? '후기 접기' : '후기 더보기'}
       </button>
+    {reportTarget && <ReviewReportDialog review={reportTarget} productId={product.id} onClose={() => setReportTarget(null)} />}
     {deleteTarget && <DeleteReviewDialog busy={deleting} onCancel={() => setDeleteTarget(null)} onConfirm={() => void confirmDelete()} />}
   </section>
 }

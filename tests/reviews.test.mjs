@@ -78,7 +78,7 @@ test('review update and soft delete send only the authenticated review id and ed
   assert.deepEqual(calls[1].params, { p_review_id: 'review-1' })
 })
 
-test('migration enforces delivered ownership, one review per item and one reward per order in one RPC transaction', () => {
+test('migration enforces delivered ownership, one review per item and the historical order lock reused by the account reward guard', () => {
   assert.match(migration, /where oi\.order_item_id = p_order_item_id and o\.user_id = v_user_id[\s\S]*for update of o, oi/i)
   assert.match(migration, /if v_order_status <> 'delivered'/i)
   assert.match(migration, /rating[^;]*between 1 and 5/i)

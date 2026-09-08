@@ -1,7 +1,7 @@
 import Icon from '../Icon'
 import { won } from '../../lib/format'
 
-export default function CheckoutSummary({ cartTotal, deliveryFee, cartCount, discountAmount = 0, totalOverride = null, disabled, submitting, onPay }) {
+export default function CheckoutSummary({ cartTotal, deliveryFee, cartCount, discountAmount = 0, couponName = '쿠폰 할인', totalOverride = null, disabled, submitting, onPay }) {
   const total = totalOverride ?? cartTotal + deliveryFee - discountAmount
   return (
     <>
@@ -12,7 +12,7 @@ export default function CheckoutSummary({ cartTotal, deliveryFee, cartCount, dis
         </div>
         <div className="sum-row"><span>상품금액</span><b>{won(cartTotal)}</b></div>
         <div className="sum-row"><span>배송비</span><b>{deliveryFee === 0 ? '무료' : won(deliveryFee)}</b></div>
-        {discountAmount > 0 && <div className="sum-row"><span>신규회원 20% 할인</span><b>−{won(discountAmount)}</b></div>}
+        {discountAmount > 0 && <div className="sum-row"><span>{couponName}</span><b>−{won(discountAmount)}</b></div>}
         <div className={`checkout-delivery-note${deliveryFee === 0 ? ' complete' : ''}`}>
           <Icon name={deliveryFee === 0 ? 'check' : 'truck'} size={14} />
           {deliveryFee === 0 ? '무료배송이 적용됐어요' : '상품금액 40,000원 이상 무료배송'}

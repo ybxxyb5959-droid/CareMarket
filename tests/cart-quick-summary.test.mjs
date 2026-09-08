@@ -8,15 +8,15 @@ const result = (cart, context = { primaryGoal: 'nutrition_management' }) => {
   const insight = composeCartInsight(analyzeCartNutrition(cart, context), cartAnalysisBasis(context))
   return { insight, quick: cartQuickSummary(insight) }
 }
-test('legacy AI wording is retained only for matching current facts and criteria', () => {
+test('legacy AI wording cannot replace the current composition conclusion', () => {
   const { insight } = result([food(1)])
   const legacy = { ...insight, compositionVersion: 3, summary: '당류와 나트륨 기준에 맞는 구성이에요.', aiExplanationAvailable: true }
   assert.equal(isCartInsight(legacy), false)
   const accepted = reconcileCartInsight(legacy, insight)
   assert.equal(isCartInsight(accepted), true)
-  assert.equal(accepted.summary, legacy.summary)
-  assert.equal(accepted.aiExplanationAvailable, true)
-  assert.equal(accepted.explanationNotice, undefined)
+  assert.equal(accepted.summary, insight.summary)
+  assert.equal(accepted.aiExplanationAvailable, false)
+  assert.ok(accepted.explanationNotice)
   assert.deepEqual(accepted.productReasons, insight.productReasons)
   assert.equal(reconcileCartInsight({ ...legacy, basis: { primary_goal: '근육량 증가' } }, insight), insight)
   assert.equal(reconcileCartInsight({ ...legacy, balanceItems: [] }, insight), insight)
@@ -30,7 +30,8 @@ test('food metrics and first good point are copied exactly from detailed analysi
   assert.equal(quick.itemCount, 2)
   assert.equal(quick.attentionCount, 0)
   assert.deepEqual(quick.checks, [])
-  assert.match(quick.summary, /전반적으로 잘 맞아요/)
+  assert.equal(quick.summary, insight.composition.shortSummary)
+  assert.match(quick.summary, /단백질 중심/)
 })
 test('one and three warnings retain real reasons, prioritize allergies and cap at two', () => {
   const context = { primaryGoal: 'nutrition_management', excludedAllergens: ['우유'] }

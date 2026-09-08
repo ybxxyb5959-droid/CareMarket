@@ -1,5 +1,22 @@
 const normalizeRows = data => Array.isArray(data) ? data : []
 
+export function combineReviewSummary(samples, actual = {}) {
+  const count = samples.length + (actual.count || 0)
+  return {
+    count,
+    average: count > 0
+      ? (samples.reduce((sum, review) => sum + review.rating, 0) + (actual.average || 0) * (actual.count || 0)) / count
+      : 0,
+  }
+}
+
+export async function fetchProductReviewSummary(client, productId) {
+  const { data, error } = await client.rpc('get_product_review_summary', { p_product_id: Number(productId) })
+  if (error) throw error
+  if (!data || !Number.isFinite(Number(data.count))) throw new Error('INVALID_REVIEW_RESPONSE')
+  return { count: Number(data.count), average: data.average == null ? null : Number(data.average) }
+}
+
 export async function fetchMyReviewItems(client) {
   const { data, error } = await client.rpc('get_my_review_items')
   if (error) throw error
@@ -85,4 +102,28 @@ export async function moderateReview(client, reviewId, hidden, reason = '') {
   })
   if (error) throw error
   return data
+}
+
+export const REVIEW_REPORT_REASONS = ['비방하는 행위', '광고성', '제품과 관련이 없음', '기타']
+export async function submitReviewReport(client, { review, productId, reason, detail }) {
+  const content = reason === '기타' ? String(detail || '').trim() : ''
+  if (!REVIEW_REPORT_REASONS.includes(reason) || content.length > 1000 || (reason === '기타' && content.length < 2)) throw new Error('INVALID_REPORT')
+  const { data, error } = await client.rpc('submit_review_report', { p_target: String(review.id), p_product_id: Number(productId), p_reason: reason, p_detail: content, p_content: review.content })
+  if (error) throw error
+  return data
+}
+export async function fetchAdminReviewReports(client) {
+  const { data, error } = await client.rpc('get_admin_review_reports')
+  if (error) throw error
+  return normalizeRows(data)
+}
+export async function resolveReviewReport(client, reportId, action) {
+  const { data, error } = await client.rpc('resolve_review_report', { p_report_id: reportId, p_action: action })
+  if (error) throw error
+  return data
+}
+export async function fetchDeletedSampleReviews(client, productId) {
+  const { data, error } = await client.from('deleted_sample_reviews').select('target').eq('product_id', Number(productId))
+  if (error) throw error
+  return normalizeRows(data).map(row => row.target)
 }

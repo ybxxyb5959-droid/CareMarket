@@ -44,6 +44,7 @@ export default function ProductDetail() {
   const allergenMatches = matchingAllergens(p, allergies)
   const wished = wishlist.includes(p.id)
   const n = p.nutrition
+  const amount = (value, unit) => Number.isFinite(value) ? `${value}${unit}` : '정보 없음'
   const supplement = isSupplement(p)
   const maxQuantity = Math.max(1, Math.min(Math.floor(p.stock), MAX_PURCHASE_QUANTITY))
   const unavailable = p.stock < 1
@@ -191,7 +192,7 @@ export default function ProductDetail() {
                 <div className="nutri-head"><div><h4>영양성분</h4><div className="serv">등록 섭취 기준 · {n.servingSize}</div></div></div>
                 <div className="nutri-grid">
                   {[['열량', n.calories, 'kcal'], ['단백질', n.protein, 'g'], ['탄수화물', n.carbs, 'g'], ['지방', n.fat, 'g'], ['당류', n.sugar, 'g'], ['나트륨', n.sodium, 'mg']].map(([label, value, unit]) =>
-                    <div className="nutri-cell" key={label}><div className="k">{label}</div><div className="v">{value}{unit}</div></div>)}
+                    <div className="nutri-cell" key={label}><div className="k">{label}</div><div className="v">{amount(value, unit)}</div></div>)}
                 </div>
               </section>
             </div> :
@@ -199,15 +200,15 @@ export default function ProductDetail() {
               <div className="nutri-head">
                 <div>
                   <h4>영양성분 정보</h4>
-                  <div className="serv">1회 섭취 기준 · {n.servingSize} · 지방 {n.fat}g</div>
+                  <div className="serv">1회 섭취 기준 · {n.servingSize} · 지방 {amount(n.fat, 'g')}</div>
                 </div>
-                <span className="kcal">{n.calories} kcal</span>
+                <span className="kcal">{amount(n.calories, ' kcal')}</span>
               </div>
               <div className="nutri-grid">
-                <div className="nutri-cell"><div className="k">단백질</div><div className="v">{n.protein}g</div></div>
-                <div className="nutri-cell"><div className="k">탄수화물</div><div className="v">{n.carbs}g</div></div>
-                <div className="nutri-cell"><div className="k">당류</div><div className="v">{n.sugar}g</div></div>
-                <div className="nutri-cell"><div className="k">나트륨</div><div className="v">{n.sodium}mg</div></div>
+                <div className="nutri-cell"><div className="k">단백질</div><div className="v">{amount(n.protein, 'g')}</div></div>
+                <div className="nutri-cell"><div className="k">탄수화물</div><div className="v">{amount(n.carbs, 'g')}</div></div>
+                <div className="nutri-cell"><div className="k">당류</div><div className="v">{amount(n.sugar, 'g')}</div></div>
+                <div className="nutri-cell"><div className="k">나트륨</div><div className="v">{amount(n.sodium, 'mg')}</div></div>
               </div>
             </div>
           )}

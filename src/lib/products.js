@@ -1,3 +1,4 @@
+import { nutrientNumber, LOW_SUGAR_MAX, LOW_SODIUM_MAX, HIGH_PROTEIN_MIN } from '../../supabase/functions/_shared/nutrition-policy.js'
 import { appendDemoSupplements } from '../data/demo-supplements.js'
 import { usesCatalogDemoActives } from '../../supabase/functions/_shared/product-type.js'
 import { supabase } from './supabase'
@@ -17,9 +18,9 @@ function deriveTags({ protein, sugar, sodium, caffeine, category }) {
   const tags = []
   const hasComparableFoodNutrition = canonicalProductCategory(category) !== PRODUCT_CATEGORY.SUPPLEMENT
 
-  if (hasComparableFoodNutrition && protein >= 15) tags.push('고단백')
-  if (hasComparableFoodNutrition && sugar <= 5) tags.push('저당')
-  if (hasComparableFoodNutrition && sodium <= 250) tags.push('저염')
+  if (hasComparableFoodNutrition && Number.isFinite(protein) && protein >= HIGH_PROTEIN_MIN) tags.push('고단백')
+  if (hasComparableFoodNutrition && Number.isFinite(sugar) && sugar <= LOW_SUGAR_MAX) tags.push('저당')
+  if (hasComparableFoodNutrition && Number.isFinite(sodium) && sodium <= LOW_SODIUM_MAX) tags.push('저염')
   if (!caffeine && /(영양제|음료)/.test(category) && tags.length < 3) tags.push('카페인 제외')
 
   return tags.slice(0, 3)
@@ -28,9 +29,9 @@ function deriveTags({ protein, sugar, sodium, caffeine, category }) {
 export function adaptProductRow(row) {
   const id = asNumber(row.product_id)
   const price = asNumber(row.price)
-  const protein = asNumber(row.protein)
-  const sugar = asNumber(row.sugar)
-  const sodium = asNumber(row.sodium)
+  const protein = nutrientNumber(row.protein)
+  const sugar = nutrientNumber(row.sugar)
+  const sodium = nutrientNumber(row.sodium)
   const caffeine = Boolean(row.contains_caffeine)
   const category = row.category || ''
   const mainIngredients = asTextArray(row.main_ingredients)
@@ -47,17 +48,16 @@ export function adaptProductRow(row) {
     origin: mainIngredients.slice(0, 2).join(' · ') || '상품 원재료 정보 참조',
     tags: deriveTags({ protein, sugar, sodium, caffeine, category }),
     image: resolveProductImage(id, row.image_url),
-    // Preserve missing registration data for cart analysis without changing
-    // the numeric values consumed by existing catalog and purchase screens.
+    // Missing registered nutrition stays null throughout the shopping flow.
     nutritionAvailability: Object.fromEntries(['protein', 'sugar', 'sodium', 'calories'].map(key => [key,
       row[key] !== null && row[key] !== undefined && row[key] !== '' && Number.isFinite(Number(row[key])) && Number(row[key]) >= 0,
     ])),
     nutrition: {
       servingSize: row.serving_size || '1회 제공량 정보 없음',
-      calories: asNumber(row.calories),
+      calories: nutrientNumber(row.calories),
       protein,
-      carbs: asNumber(row.carbs),
-      fat: asNumber(row.fat),
+      carbs: nutrientNumber(row.carbs),
+      fat: nutrientNumber(row.fat),
       sugar,
       sodium,
       special: mainIngredients.slice(0, 3).join(' · ') || `${category} 상품`,

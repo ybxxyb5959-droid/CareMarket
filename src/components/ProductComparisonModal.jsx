@@ -8,6 +8,7 @@ import { won } from '../lib/format'
 import { requestProductComparison } from '../lib/ai-insights'
 
 const number = (value, unit) => {
+  if (value == null || value === '') return '정보 없음'
   const parsed = Number(value)
   return Number.isFinite(parsed) ? `${parsed.toLocaleString('ko-KR', { maximumFractionDigits: 1 })}${unit}` : '정보 없음'
 }

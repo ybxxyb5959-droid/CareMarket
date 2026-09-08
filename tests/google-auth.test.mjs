@@ -109,7 +109,7 @@ test('profile restoration routes interrupted OAuth users back to completion and 
           window: { location: { pathname: '/' }, history: { state: {}, replaceState: next => { route = next.view } } },
           DB_TO_GOAL: {}, toPreferenceState: () => ({ subFilters: [], allergies: [] }),
           needsGoogleRegistration, parseAppLocation: () => ({ view: route }), viewUrl: view => `/${view}`,
-          scrollTop: () => {}, showToast: () => {},
+          scrollTop: () => {}, showToast: () => {}, returnAfterLogin: () => false,
         }
         for (const [, setter] of body.matchAll(/\b(set\w+)\(/g)) scope[setter] = value => { state[setter] = value }
         await new Function(...Object.keys(scope), `return (async () => {${body}})()`)(...Object.values(scope))

@@ -1,3 +1,6 @@
+import { LOW_SUGAR_MAX, LOW_SODIUM_MAX, HIGH_PROTEIN_MIN } from './nutrition-policy.js'
+export { LOW_SUGAR_MAX, LOW_SODIUM_MAX, HIGH_PROTEIN_MIN } from './nutrition-policy.js'
+
 export const QUERY_MAX_LENGTH = 250
 export const SEARCH_CATEGORIES = [
   '닭가슴살·고단백 식품', '도시락·간편식', '프로틴바·건강간식', '시리얼·그래놀라',
@@ -6,11 +9,6 @@ export const SEARCH_CATEGORIES = [
 export const SEARCH_ALLERGENS = ['우유', '대두', '계란', '견과류', '밀', '갑각류', '복숭아', '쇠고기', '닭고기']
 export const SEARCH_SORTS = ['relevance', 'price_asc', 'price_desc', 'protein_desc', 'sugar_asc', 'sodium_asc']
 
-// AI-only demo search thresholds per registered serving, NOT medical/labeling standards.
-// Existing manually selected preference filters keep their current thresholds.
-export const LOW_SUGAR_MAX = 2
-export const HIGH_PROTEIN_MIN = 15
-export const LOW_SODIUM_MAX = 250
 export const NUMBER_LIMITS = { protein_min: 1000, sugar_max: 1000, sodium_max: 100000, calories_max: 10000, price_max: 10000000 }
 
 export function emptyConditions() {

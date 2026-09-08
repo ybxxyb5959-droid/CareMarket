@@ -17,7 +17,7 @@ export function cartQuickSummary(insight) {
   const summary = count ? `현재 구성에서 ${count}종은 확인이 필요해요.`
     : allCriteriaMet ? '현재 구성은 분석한 영양 기준에 전반적으로 잘 맞아요.'
       : '등록 정보에서 추가 확인 사항은 없어요. 상품별 구성도 살펴보세요.'
-  return { summary, metrics: selectedMetrics, goodPoint: insight?.goodPoints?.[0] || null,
+  return { summary: insight?.shortSummary || summary, metrics: selectedMetrics, goodPoint: insight?.goodPoints?.[0] || null,
     checks: checks.slice(0, 2), remaining: Math.max(0, checks.length - 2), attentionCount: count,
     basis: insight?.basis?.primary_goal || '일반 구성', itemCount: products.length }
 }

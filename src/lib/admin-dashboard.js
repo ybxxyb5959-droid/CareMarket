@@ -37,10 +37,11 @@ export function maskDashboardName(value) {
   return `${name[0]}${'○'.repeat(Math.min(name.length - 1, 2))}`
 }
 
-export function getDashboardMetrics({ products = [], orders = [], partnerships = [], inquiries = [] } = {}) {
+export function getDashboardMetrics({ products = [], orders = [], partnerships = [], inquiries = [], reviewReports = [] } = {}) {
   const fulfillmentOrders = orders.filter(isFulfillmentOrder)
   const todayOrders = fulfillmentOrders.filter((order) => dateIsToday(order.paid_at || order.created_at))
   return {
+    waitingReviewReports: reviewReports.filter(report => report.status === 'received').length,
     todayOrders: todayOrders.length,
     todayPayment: todayOrders.reduce((total, order) => total + Number(order.total_price || 0), 0),
     preparingOrders: orders.filter((order) => order.status === 'preparing').length,

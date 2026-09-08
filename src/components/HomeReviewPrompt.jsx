@@ -48,9 +48,9 @@ export default function HomeReviewPrompt() {
           {[1, 2, 3, 4, 5].map(value => <button key={value} type="button" aria-label={`${value}점으로 리뷰 작성`} onClick={() => openReviewForm(target, value)}>☆</button>)}
         </div>
         <p>리뷰를 남겨주세요.</p>
-        {target.reward_issued ? <small>이 주문의 리뷰 혜택은 이미 지급되었습니다.</small> : <>
-          <small>리뷰를 남겨주시면 {rewardPercent > 0 ? `${rewardPercent}% ` : ''}쿠폰을 드립니다.</small>
-          <small>이 주문의 첫 리뷰 작성 시, 별점과 관계없이 지급됩니다.</small>
+        {!target.reward_issued && <>
+          <small>{rewardPercent > 0 ? `리뷰를 남겨주시면 ${rewardPercent}% 쿠폰을 드립니다.` : '리뷰 작성은 가능하며, 쿠폰 추가 지급 대상은 아닙니다.'}</small>
+          <small>첫 구매 주문의 최초 리뷰에 별점과 관계없이 계정당 한 번 지급됩니다.</small>
         </>}
         {eligible.length > 1 && <button type="button" className="btn btn-text home-review-more" onClick={() => navigate('orders')}>나머지 {eligible.length - 1}개 상품은 주문내역에서 보기</button>}
       </div>

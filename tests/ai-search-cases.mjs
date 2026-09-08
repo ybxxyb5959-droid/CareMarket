@@ -2,7 +2,7 @@ import { emptyConditions } from '../supabase/functions/_shared/ai-search-contrac
 
 // Parser fixtures are only used by tests; production always calls Gemini.
 export const searchCases = [
-  { query: '당류 낮고 단백질 높은 간식 보여줘', parsed: { category: '프로틴바·건강간식', qualitative_filters: ['low_sugar', 'high_protein'] }, expected: { category: '프로틴바·건강간식', sugar_max: 2, protein_min: 15 } },
+  { query: '당류 낮고 단백질 높은 간식 보여줘', parsed: { category: '프로틴바·건강간식', qualitative_filters: ['low_sugar', 'high_protein'] }, expected: { category: '프로틴바·건강간식', sugar_max: 5, protein_min: 15 } },
   { query: '2만원 이하 프로틴 제품', parsed: { price_max: 20000, keywords: ['프로틴'] }, expected: { price_max: 20000, keywords: ['프로틴'] } },
   { query: '카페인 없는 음료', parsed: { category: '음료·프로틴음료', exclude_caffeine: true }, expected: { category: '음료·프로틴음료', exclude_caffeine: true } },
   { query: '우유랑 견과류 없는 간식', parsed: { category: '프로틴바·건강간식', excluded_allergens: ['우유', '견과류'] }, expected: { category: '프로틴바·건강간식', excluded_allergens: ['우유', '견과류'] } },

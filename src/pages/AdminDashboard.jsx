@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState } from 'react'
 import AdminGate from '../components/AdminGate'
 import Icon from '../components/Icon'
+import { supabase } from '../lib/supabase'
+import { fetchAdminReviewReports } from '../lib/reviews'
 import { useStore } from '../store'
 import { won } from '../lib/format'
 import {
@@ -15,6 +17,7 @@ import {
 import { getDashboardMetrics, maskDashboardName, salesDateRange, validSalesRange, salesChange } from '../lib/admin-dashboard'
 
 const DASHBOARD_VIEWS = {
+  reviews: 'adminReviews',
   products: 'adminProducts',
   orders: 'adminOrders',
   partnerships: 'adminPartnerships',
@@ -22,6 +25,7 @@ const DASHBOARD_VIEWS = {
 }
 
 const initialResources = {
+  reviews: { data: [], error: false },
   products: { data: [], error: false },
   orders: { data: [], error: false },
   partnerships: { data: [], error: false },
@@ -34,15 +38,17 @@ function MetricValue({ value, loading, error, unit = '' }) {
   return <>{value.toLocaleString('ko-KR')}<small>{unit}</small></>
 }
 
-function DashboardMetric({ icon, label, value, unit, loading, error, tone = '', comparison }) {
-  return <article className={`admin-dashboard-metric ${tone}`}>
+function DashboardMetric({ icon, label, value, unit, loading, error, tone = '', comparison, onClick }) {
+  const content = <>
     <div className="admin-dashboard-metric-icon"><Icon name={icon} size={18} /></div>
     <div className="admin-dashboard-metric-copy">
       <span>{label}</span>
       <strong><MetricValue value={value} loading={loading} error={error} unit={unit} /></strong>
       {!loading && !error && comparison && <small>{comparison}</small>}
     </div>
-  </article>
+  </>
+  if (onClick) return <button type="button" className={`admin-dashboard-metric ${tone}`} onClick={onClick}>{content}</button>
+  return <article className={`admin-dashboard-metric ${tone}`}>{content}</article>
 }
 
 function PaymentChart({ data }) {
@@ -199,6 +205,7 @@ function AdminHistoryContent() {
 
 function NeedsAttention({ metrics, loading, errors, navigate }) {
   const items = [
+    { key: 'waitingReviewReports', label: '리뷰 신고 접수', unit: '건', view: 'reviews', icon: 'message-circle', tone: metrics.waitingReviewReports > 0 ? 'warning' : '' },
     { key: 'lowStockProducts', label: '재고 부족 상품', unit: '개', view: 'products', icon: 'package', tone: metrics.lowStockProducts > 0 ? 'warning' : '' },
     { key: 'waitingInquiries', label: '답변 대기 문의', unit: '건', view: 'inquiries', icon: 'message-circle', tone: metrics.waitingInquiries > 0 ? 'warning' : '' },
     { key: 'newPartnerships', label: '신규 협업 제안', unit: '건', view: 'partnerships', icon: 'leaf', tone: metrics.newPartnerships > 0 ? 'warning' : '' },
@@ -222,7 +229,7 @@ function RecentOrders({ orders, loading, error, navigate }) {
   if (recentOrders.length === 0) return <div className="admin-dashboard-empty">최근 주문이 없습니다.</div>
   return <div className="admin-dashboard-orders-list">
     {recentOrders.map((order) => <button type="button" className="admin-dashboard-order-row" key={order.order_id} onClick={() => navigate('adminOrders')}>
-      <span className="admin-dashboard-order-main"><b>{order.toss_order_id || order.order_id}</b><small>{maskDashboardName(order.buyerName)}</small></span>
+      <span className="admin-dashboard-order-main"><b className="admin-dashboard-order-number">{order.toss_order_id || order.order_id}</b><small>{maskDashboardName(order.buyerName)}</small></span>
       <strong>{won(order.total_price)}</strong>
       <span className={`status ${order.status === 'delivered' ? 'status-done' : 'status-active'}`}>{ORDER_STATUS_LABELS[order.status] || order.status}</span>
       <Icon name="chevron-right" size={15} />
@@ -243,8 +250,9 @@ function AdminDashboardContent() {
       fetchAdminOrders(),
       fetchAdminPartnerships(),
       fetchAdminCustomerInquiries(),
+      fetchAdminReviewReports(supabase),
     ])
-    const keys = ['products', 'orders', 'partnerships', 'inquiries']
+    const keys = ['products', 'orders', 'partnerships', 'inquiries', 'reviews']
     const nextResources = Object.fromEntries(keys.map((key, index) => {
       const result = results[index]
       return [key, result.status === 'fulfilled'
@@ -259,12 +267,24 @@ function AdminDashboardContent() {
   // eslint-disable-next-line react/set-state-in-effect
   useEffect(() => { void load({ initial: true }) }, [])
 
+  useEffect(() => {
+    let active = true
+    const refreshReports = () => {
+      fetchAdminReviewReports(supabase).then(data => { if (active) setResources(current => ({ ...current, reviews: { data, error: false } })) })
+        .catch(() => { if (active) setResources(current => ({ ...current, reviews: { ...current.reviews, error: true } })) })
+    }
+    const timer = window.setInterval(refreshReports, 15000)
+    window.addEventListener('focus', refreshReports)
+    return () => { active = false; window.clearInterval(timer); window.removeEventListener('focus', refreshReports) }
+  }, [])
+  const reviewReports = resources.reviews.data
   const products = resources.products.data
   const orders = resources.orders.data
   const partnerships = resources.partnerships.data
   const inquiries = resources.inquiries.data
-  const metrics = useMemo(() => getDashboardMetrics({ products, orders, partnerships, inquiries }), [inquiries, orders, partnerships, products])
+  const metrics = useMemo(() => getDashboardMetrics({ products, orders, partnerships, inquiries, reviewReports }), [inquiries, orders, partnerships, products, reviewReports])
   const metricErrors = {
+    waitingReviewReports: resources.reviews.error,
     todayOrders: sales.error,
     todayPayment: sales.error,
     preparingOrders: resources.orders.error,
@@ -283,12 +303,13 @@ function AdminDashboardContent() {
 
     {loading ? <div className="empty" role="status"><p>대시보드 운영 데이터를 불러오는 중입니다.</p></div> : <>
       <section className="admin-dashboard-metrics" aria-label="주요 운영 현황">
-        <DashboardMetric icon="package" label="오늘 주문" value={sales.data?.daily.at(-1)?.orders || 0} unit="건" loading={sales.loading} error={metricErrors.todayOrders} />
-        <DashboardMetric icon="credit-card" label="오늘 결제금액" value={sales.data?.daily.at(-1)?.value || 0} unit="원" loading={sales.loading} error={metricErrors.todayPayment} />
-        <DashboardMetric icon="clock" label="상품 준비중" value={metrics.preparingOrders} unit="건" loading={false} error={metricErrors.preparingOrders} tone={metrics.preparingOrders > 0 ? 'accent' : ''} />
-        <DashboardMetric icon="message-circle" label="답변 대기 문의" value={metrics.waitingInquiries} unit="건" loading={false} error={metricErrors.waitingInquiries} tone={metrics.waitingInquiries > 0 ? 'warning' : ''} />
-        <DashboardMetric icon="leaf" label="신규 협업 제안" value={metrics.newPartnerships} unit="건" loading={false} error={metricErrors.newPartnerships} tone={metrics.newPartnerships > 0 ? 'warning' : ''} />
-        <DashboardMetric icon="alert-circle" label="재고 부족 상품" value={metrics.lowStockProducts} unit="개" loading={false} error={metricErrors.lowStockProducts} tone={metrics.lowStockProducts > 0 ? 'warning' : ''} />
+        <DashboardMetric icon="package" label="오늘 주문" value={sales.data?.daily.at(-1)?.orders || 0} unit="건" loading={sales.loading} error={metricErrors.todayOrders} onClick={() => navigate('adminOrders')} />
+        <DashboardMetric icon="credit-card" label="오늘 결제금액" value={sales.data?.daily.at(-1)?.value || 0} unit="원" loading={sales.loading} error={metricErrors.todayPayment} onClick={() => navigate('adminHistory')} />
+        <DashboardMetric icon="clock" label="상품 준비중" value={metrics.preparingOrders} unit="건" loading={false} error={metricErrors.preparingOrders} tone={metrics.preparingOrders > 0 ? 'accent' : ''} onClick={() => navigate('adminOrders')} />
+        <DashboardMetric icon="message-circle" label="답변 대기 문의" value={metrics.waitingInquiries} unit="건" loading={false} error={metricErrors.waitingInquiries} tone={metrics.waitingInquiries > 0 ? 'warning' : ''} onClick={() => navigate('adminInquiries')} />
+        <DashboardMetric icon="leaf" label="신규 협업 제안" value={metrics.newPartnerships} unit="건" loading={false} error={metricErrors.newPartnerships} tone={metrics.newPartnerships > 0 ? 'warning' : ''} onClick={() => navigate('adminPartnerships')} />
+        <DashboardMetric icon="alert-circle" label="재고 부족 상품" value={metrics.lowStockProducts} unit="개" loading={false} error={metricErrors.lowStockProducts} tone={metrics.lowStockProducts > 0 ? 'warning' : ''} onClick={() => navigate('adminProducts')} />
+        <DashboardMetric icon="message-circle" label="리뷰 관리" value={metrics.waitingReviewReports} unit="건" loading={false} error={metricErrors.waitingReviewReports} tone={metrics.waitingReviewReports > 0 ? 'warning' : ''} onClick={() => navigate('adminReviews')} />
       </section>
 
       <SalesCharts sales={sales} navigate={navigate} />
@@ -297,9 +318,20 @@ function AdminDashboardContent() {
         <DashboardCard title="확인이 필요한 항목" kicker="NEEDS ATTENTION">
           <NeedsAttention metrics={metrics} loading={false} errors={metricErrors} navigate={navigate} />
         </DashboardCard>
-        <DashboardCard title="최근 주문" kicker="LATEST ORDERS" action="전체 보기" onAction={() => navigate('adminOrders')}>
-          <RecentOrders orders={orders} loading={false} error={resources.orders.error} navigate={navigate} />
-        </DashboardCard>
+        <div className="admin-dashboard-operation-column">
+          <DashboardCard title="최근 주문" kicker="LATEST ORDERS" action="전체 보기" onAction={() => navigate('adminOrders')}>
+            <RecentOrders orders={orders} loading={false} error={resources.orders.error} navigate={navigate} />
+          </DashboardCard>
+          <DashboardCard title="리뷰 관리 내역" kicker="REVIEW REPORTS" action="전체 보기" onAction={() => navigate('adminReviews')} className="admin-dashboard-review-card">
+            {resources.reviews.error ? <div className="admin-dashboard-empty" role="alert">신고 내역을 불러오지 못했습니다.</div> : <>
+              <div className="admin-dashboard-empty">접수 대기 {metrics.waitingReviewReports}건 · 전체 신고 {reviewReports.length}건</div>
+              <div className="admin-dashboard-orders-list">{reviewReports.slice(0, 5).map(report => <button className="admin-dashboard-order-row" key={report.id} onClick={() => navigate('adminReviews')}>
+                <span className="admin-dashboard-order-main"><b>{report.product_name}</b><small>{report.reason} · {new Date(report.created_at).toLocaleDateString('ko-KR', { timeZone: 'Asia/Seoul' })}</small></span>
+                <span className={'status ' + (report.status === 'received' ? 'status-active' : 'status-done')}>{report.status === 'received' ? '접수 대기' : report.status === 'deleted' ? '삭제 완료' : '리뷰 유지'}</span><Icon name="chevron-right" size={15} />
+              </button>)}</div>
+            </>}
+          </DashboardCard>
+        </div>
       </div>
       {hasError && <div className="admin-dashboard-refresh" role="status"><span>일부 운영 데이터를 불러오지 못했습니다.</span><button type="button" className="btn btn-ghost btn-sm" onClick={() => void load()}>다시 시도</button></div>}
     </>}

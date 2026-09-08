@@ -24,6 +24,7 @@ function dateText(value) {
 export default function Orders() {
   const { authUserId, authLoading, navigate, products, openProduct, openReviewForm, reviewRevision } = useStore()
   const [state, setState] = useState({ ownerId: null, rows: [], loading: false, error: null })
+  const [reviews, setReviews] = useState({ ownerId: null, rows: [], error: null })
   const [reloadKey, setReloadKey] = useState(0)
   const visible = state.ownerId === authUserId ? state : { rows: [], loading: Boolean(authUserId), error: null }
 
@@ -34,15 +35,7 @@ export default function Orders() {
     const load = async () => {
       setState({ ownerId: authUserId, rows: [], loading: true, error: null })
       try {
-        const [orders, reviewItems] = await Promise.all([
-          fetchMyOrders(supabase, authUserId),
-          fetchMyReviewItems(supabase),
-        ])
-        const reviewByItem = new Map(reviewItems.map(item => [item.order_item_id, item]))
-        const rows = orders.map(order => ({
-          ...order,
-          items: order.items.map(item => ({ ...item, review: reviewByItem.get(item.order_item_id) || null })),
-        }))
+        const rows = await fetchMyOrders(supabase, authUserId)
         if (active) setState({ ownerId: authUserId, rows, loading: false, error: null })
       } catch (error) {
         console.error('Supabase orders fetch failed:', { code: error?.code || 'ORDERS_FETCH_FAILED' })
@@ -50,6 +43,19 @@ export default function Orders() {
       }
     }
     void load()
+    return () => { active = false }
+  }, [authUserId, reloadKey])
+
+  useEffect(() => {
+    let active = true
+    setReviews({ ownerId: authUserId, rows: [], error: null })
+    if (!authUserId) return undefined
+    fetchMyReviewItems(supabase)
+      .then(rows => { if (active) setReviews({ ownerId: authUserId, rows, error: null }) })
+      .catch(error => {
+        console.error('Order review status fetch failed:', { code: error?.code || 'REVIEW_ELIGIBILITY_FAILED' })
+        if (active) setReviews({ ownerId: authUserId, rows: [], error: '리뷰 상태를 불러오지 못했습니다.' })
+      })
     return () => { active = false }
   }, [authUserId, reloadKey, reviewRevision])
 
@@ -84,7 +90,8 @@ export default function Orders() {
               <span className={`status ${order.status === 'delivered' ? 'status-done' : 'status-active'}`}>{STATUS_LABELS[order.status] || order.status}</span>
             </div>
             <div className="order-lines">
-              {order.items.map((item) => {
+              {order.items.map((orderItem) => {
+                const item = { ...orderItem, review: reviews.ownerId === authUserId ? reviews.rows.find(row => row.order_item_id === orderItem.order_item_id) : null }
                 const activeProduct = products.find(product => Number(product.id) === Number(item.product_id))
                 const image = <ProductImage src={item.product?.image_url || item.product?.image} alt="" />
                 const name = <>{item.product?.name || '판매 종료 상품'} <span>기본 옵션 · 수량 {item.quantity}개</span></>

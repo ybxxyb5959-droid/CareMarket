@@ -4,7 +4,7 @@ import { createAiInsightsHandler, GEMINI_MODEL } from '../supabase/functions/ai-
 import { resolveInsightOrigins, STOREFRONT_ORIGIN } from '../supabase/functions/ai-insights/origins.js'
 import { GEMINI_CART_SCHEMA, GEMINI_COMPARE_SCHEMA } from '../supabase/functions/_shared/ai-insights-contract.js'
 import { analyzeCartNutrition, CART_NUTRITION_THRESHOLDS, composeCartInsight, cartAnalysisBasis, isCartInsight } from '../supabase/functions/_shared/cart-nutrition-analysis.js'
-import { getCountdown, getLocalDateKey, isDiscountProduct, selectDailyDeals } from '../src/lib/deals.js'
+import { getCountdown, getDailyDealCount, getDailyDealPricing, getLocalDateKey, isDiscountProduct, selectDailyDeals } from '../src/lib/deals.js'
 
 const origin = 'http://127.0.0.1:5173'
 const product = (id, category = `카테고리 ${id}`) => ({
@@ -124,17 +124,18 @@ test('cart summary uses only the authenticated user server snapshot', async () =
   let requestedUser
   const handler = makeHandler(async (_url, options) => {
     const payload = JSON.parse(options.body)
-    assert.deepEqual(payload.generationConfig.responseJsonSchema, GEMINI_CART_SCHEMA)
+    assert.deepEqual(payload.generationConfig.responseJsonSchema.required, GEMINI_CART_SCHEMA.required)
     const prompt = JSON.parse(payload.contents[0].parts[0].text)
     assert.deepEqual(prompt.goal, '근육량 증가')
     assert.deepEqual(prompt.selected_conditions, ['고단백'])
     assert.deepEqual(prompt.cart_scope, { item_count: 1, single_product: true })
     assert.equal(prompt.analysis.dominant.includes('protein'), true)
     assert.equal(prompt.analysis.balance_items.some((item) => item.key === 'protein' && item.status === 'good'), true)
-    assert.equal(JSON.stringify(prompt).includes('상품 6'), false)
+    assert.equal(prompt.products[0].name, '상품 6')
+    assert.deepEqual(payload.generationConfig.responseJsonSchema.properties.summary.enum, prompt.allowed_summaries)
     assert.equal('nutrition_totals' in prompt, false)
     assert.equal('cart_items' in prompt, false)
-    return geminiResponse(cartNarrative)
+    return geminiResponse({ ...cartNarrative, summary: prompt.allowed_summaries[0], actions: prompt.allowed_actions })
   }, {
     getCartSnapshot: async (userId) => {
       requestedUser = userId
@@ -173,7 +174,7 @@ test('missing preferences stays a general analysis without fake personalization'
     const prompt = JSON.parse(JSON.parse(options.body).contents[0].parts[0].text)
     assert.equal(prompt.goal, null)
     assert.deepEqual(prompt.selected_conditions, [])
-    return geminiResponse(cartNarrative)
+    return geminiResponse({ ...cartNarrative, summary: prompt.allowed_summaries[0], actions: prompt.allowed_actions })
   }, {
     getCartSnapshot: async () => ({ profile: { primary_goal: null }, preferences: null, items: [{ quantity: 1, product: product(1) }] }),
   })
@@ -349,8 +350,8 @@ test('one protein SKU x20 remains one type, including API failures', async () =>
   }
 })
 
-test('daily deals are real discounts, stable per date, and category-diverse', () => {
-  const products = Array.from({ length: 10 }, (_, index) => ({
+test('daily deals show 8 to 16 real discounts, stay stable per date, and remain category-diverse', () => {
+  const products = Array.from({ length: 30 }, (_, index) => ({
     id: index + 1,
     category: `분류 ${index % 5}`,
     isActive: true,
@@ -364,9 +365,21 @@ test('daily deals are real discounts, stable per date, and category-diverse', ()
   const nextDay = selectDailyDeals(products, '2026-09-06')
   assert.deepEqual(first.map((item) => item.id), refresh.map((item) => item.id))
   assert.notDeepEqual(first.map((item) => item.id), nextDay.map((item) => item.id))
-  assert.equal(first.length, 4)
-  assert.equal(new Set(first.map((item) => item.category)).size, 4)
+  assert.equal(first.length, getDailyDealCount('2026-09-05'))
+  assert.ok(first.length >= 8 && first.length <= 16)
+  assert.equal(new Set(first.map((item) => item.category)).size, 5)
   assert.ok(first.every(isDiscountProduct))
+})
+
+test('daily deal pricing applies a second date-stable discount below the regular sale price', () => {
+  const item = { id: 7, originalPrice: 15000, price: 12000 }
+  const pricing = getDailyDealPricing(item, '2026-09-05')
+  assert.deepEqual(pricing, getDailyDealPricing(item, '2026-09-05'))
+  assert.equal(pricing.originalPrice, 15000)
+  assert.equal(pricing.regularPrice, 12000)
+  assert.ok(pricing.todayPrice < pricing.regularPrice)
+  assert.ok(pricing.extraRate >= 8)
+  assert.ok(pricing.totalRate > pricing.regularRate)
 })
 
 test('countdown targets the next local midnight', () => {

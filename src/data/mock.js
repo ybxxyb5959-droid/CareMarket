@@ -312,11 +312,20 @@ const SAMPLE_REVIEW_TEXT = {
   ],
 }
 
-export function getSampleReviewSummary(productId) {
-  const seed = Array.from(String(productId ?? '')).reduce((hash, char) => (
+function sampleReviewSeed(productId) {
+  return Array.from(String(productId ?? '')).reduce((hash, char) => (
     (Math.imul(hash, 31) + char.charCodeAt(0)) >>> 0
   ), 0)
-  return { averageRating: (43 + seed % 7) / 10, reviewCount: 12 + seed % 77 }
+}
+
+const additionalSampleRating = (seed, index) => (seed + index) % 5 === 0 ? 4 : 5
+
+export function getSampleReviewSummary(productId) {
+  const seed = sampleReviewSeed(productId)
+  const reviewCount = 10 + ((Math.imul(seed ^ (seed >>> 16), 2654435761) >>> 0) % 491)
+  let ratingTotal = 23 // Preserve the original five sample ratings.
+  for (let index = 5; index < reviewCount; index++) ratingTotal += additionalSampleRating(seed, index)
+  return { averageRating: ratingTotal / reviewCount, reviewCount }
 }
 
 export function getSampleReviews(product) {
@@ -326,8 +335,9 @@ export function getSampleReviews(product) {
     : /저칼로리/.test(product.name) && category !== PRODUCT_CATEGORY.SAUCE
       ? 'lowCalorie' : category
   const texts = SAMPLE_REVIEW_TEXT[kind] || SAMPLE_REVIEW_TEXT[PRODUCT_CATEGORY.HEALTH_FOOD]
-  const { reviewCount } = getSampleReviewSummary(product.id)
-  return [...texts, '포장이 흐트러지지 않고 도착했어요. 집에 두고 필요할 때 꺼내 먹고 있습니다.',
+  const seed = sampleReviewSeed(product.id)
+  const reviewCount = 12 + seed % 77 // Preserve original authors and dates.
+  const original = [...texts, '포장이 흐트러지지 않고 도착했어요. 집에 두고 필요할 때 꺼내 먹고 있습니다.',
     '전체적으로 무난했어요. 가격은 조금 아쉬워서 다음에는 할인할 때 사려고요.'].map((content, index) => ({
     id: `${product.id}-sample-${index}`,
     author: ['김**', '박**', '이**', '최**', '정**'][(index + reviewCount) % 5],
@@ -335,4 +345,15 @@ export function getSampleReviews(product) {
     content,
     date: `2026-08-${String(28 - index * 5 - reviewCount % 3).padStart(2, '0')}`,
   }))
+  const total = getSampleReviewSummary(product.id).reviewCount
+  return [...original, ...Array.from({ length: total - original.length }, (_, offset) => {
+    const index = original.length + offset
+    return {
+      id: `${product.id}-sample-${index}`,
+      author: ['김**', '박**', '이**', '최**', '정**', '한**', '윤**', '서**'][(seed + index) % 8],
+      rating: additionalSampleRating(seed, index),
+      content: original[(seed + index) % original.length].content,
+      date: new Date(Date.UTC(2026, 7, 1 - offset)).toISOString().slice(0, 10),
+    }
+  })]
 }

@@ -77,7 +77,7 @@ export default function CartAiInsight({ compact = false, cartOverride = null }) 
   const loadingRef = useRef(false)
   const signatureRef = useRef('')
   const cartSignature = useMemo(() => analysisCart
-    .map(({ product, quantity }) => JSON.stringify([product.id, quantity, product.nutrition, product.allergens, product.category, product.caffeine, product.mainIngredients, product.nutrition?.servingSize]))
+    .map(({ product, quantity }) => JSON.stringify([product.id, product.name, quantity, product.nutrition, product.allergens, product.category, product.caffeine, product.mainIngredients, product.nutrition?.servingSize]))
     .sort()
     .join('|'), [analysisCart])
   const criteriaSignature = [
@@ -205,7 +205,7 @@ export default function CartAiInsight({ compact = false, cartOverride = null }) 
   const attentionMetric = metrics.find(item => item.key === 'attention')
   const mainMetrics = [...metrics.filter(item => item.key !== 'attention').slice(0, 3), ...(attentionMetric ? [attentionMetric] : [])]
   const extraMetrics = metrics.filter(item => !mainMetrics.includes(item))
-  const summary = shortCopy(insight?.summary)
+  const summary = insight?.summary || ''
   const quick = cartQuickSummary(insight)
   const insufficientInfo = goal !== '영양제 탐색' && analysisCart.length > 0 && analysisCart.every(({ product }) =>
     !isSupplement(product) && ['protein', 'sugar', 'sodium', 'calories'].every(key => {

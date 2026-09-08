@@ -1,3 +1,4 @@
+import { LOW_SUGAR_MAX, LOW_SODIUM_MAX, HIGH_PROTEIN_MIN } from '../../supabase/functions/_shared/nutrition-policy.js'
 import { supplementGoalMatch } from '../../supabase/functions/_shared/product-type.js'
 import {
   canonicalProductCategory,
@@ -173,13 +174,14 @@ export function filterAndSort(products, { search, subFilters, allergies, sortBy,
     if (dealsOnly && !(p.originalPrice > p.price)) return false
     if (!matchCategory(p, shopCategory, shopSub)) return false
     if (search) {
-      const q = search.toLowerCase()
-      if (!p.name.toLowerCase().includes(q) && !p.brand.toLowerCase().includes(q) && !p.category.toLowerCase().includes(q)) return false
+      const tokens = search.normalize('NFKC').toLowerCase().trim().split(/\s+/).filter(Boolean)
+      const text = [p.name, p.brand, p.category, ...(p.tags || [])].join(' ').normalize('NFKC').toLowerCase()
+      if (!tokens.every(token => text.includes(token))) return false
     }
     for (const tag of subFilters) {
-      if (tag === '고단백' && p.nutrition.protein < 15) return false
-      if (tag === '저당' && p.nutrition.sugar > 5) return false
-      if (tag === '저염' && p.nutrition.sodium > 250) return false
+      if (tag === '고단백' && (!Number.isFinite(p.nutrition?.protein) || p.nutrition.protein < HIGH_PROTEIN_MIN)) return false
+      if (tag === '저당' && (!Number.isFinite(p.nutrition?.sugar) || p.nutrition.sugar > LOW_SUGAR_MAX)) return false
+      if (tag === '저염' && (!Number.isFinite(p.nutrition?.sodium) || p.nutrition.sodium > LOW_SODIUM_MAX)) return false
       if (tag === '카페인 제외' && p.caffeine) return false
     }
     // 목록에서만 임시 해제하며 저장된 선호 설정은 변경하지 않는다.

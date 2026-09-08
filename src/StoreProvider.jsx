@@ -1,3 +1,4 @@
+import { rememberAuthReturn, consumeAuthReturn } from './lib/auth-return.js'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { StoreContext } from './store'
 import { supabase, oauthCallbackFailed } from './lib/supabase'
@@ -408,6 +409,7 @@ export function StoreProvider({ children }) {
           scrollTop()
           return
         }
+        if (returnAfterLogin()) return
         // A restored completed account must not fall into the email signup form.
         if (['main', 'login', 'register'].includes(parseAppLocation(window.location).view)) {
           window.history.replaceState({ view: 'main', scrollY: 0 }, '', viewUrl('main'))
@@ -465,7 +467,18 @@ export function StoreProvider({ children }) {
     window.history.replaceState({ ...window.history.state, view, scrollY: window.scrollY }, '', window.location.href)
   }
   const catalogStateUrl = (overrides = {}) => catalogUrl({ search, searchMode, aiQuery, shopCategory, shopSub, dealsOnly, sortBy, ...overrides })
+  const returnAfterLogin = () => {
+    let path
+    try { path = consumeAuthReturn(window.sessionStorage, window.location.search) } catch { return false }
+    if (!path) return false
+    window.history.replaceState({ scrollY: 0 }, '', path)
+    window.dispatchEvent(new PopStateEvent('popstate', { state: { scrollY: 0 } }))
+    return true
+  }
   const navigate = (v, options = {}) => {
+    if (v === 'login' && !['login', 'register'].includes(view)) {
+      try { rememberAuthReturn(window.sessionStorage, window.location.pathname + window.location.search) } catch { /* Storage may be disabled. */ }
+    }
     if ((['adminHistory', 'adminProducts', 'adminOrders', 'adminPartnerships', 'adminInquiries'].includes(v) || v === 'adminReviews' || v === 'adminDashboard') && !authLoading && !isAdmin) {
       showToast('관리자 권한이 필요한 페이지입니다.')
       setView('main')
@@ -755,6 +768,10 @@ export function StoreProvider({ children }) {
 
   const loginWithOAuth = async (provider) => {
     try {
+      const path = consumeAuthReturn(window.sessionStorage, window.location.search)
+      if (path) rememberAuthReturn(window.sessionStorage, path)
+    } catch { /* OAuth remains available when storage is disabled. */ }
+    try {
       await startOAuthLogin(supabase, window.location.origin, provider)
       return true
     } catch (error) {
@@ -772,7 +789,7 @@ export function StoreProvider({ children }) {
       setUser(current => current && { ...current, name: fields.displayName.trim() })
       setProfile({ phone: fields.phone.trim(), postalCode: fields.postalCode?.trim() || '', address: fields.address.trim(), addressDetail: fields.addressDetail?.trim() || '' })
       setOauthRegistrationRequired(false)
-      navigate('main')
+      if (!returnAfterLogin()) navigate('main')
       showToast('회원가입이 완료되었습니다.', 'auth')
       return { ok: true }
     } catch (error) {
@@ -792,7 +809,7 @@ export function StoreProvider({ children }) {
     }
 
     syncAuthSession(data.session)
-    navigate('main')
+    if (!returnAfterLogin()) navigate('main')
     const displayName = data.user?.user_metadata?.display_name?.trim()
     showToast(displayName ? `${displayName}님, 안녕하세요.` : '안녕하세요.', 'auth')
     return true

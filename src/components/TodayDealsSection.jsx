@@ -31,6 +31,7 @@ export default function TodayDealsSection() {
           <div>
             <span className="eyebrow">TODAY&apos;S DEAL</span>
             <h2 id="today-deals-title" className="serif">오늘의 특가</h2>
+            <p className="deal-head-note">판매가에서 한 번 더, 오늘 자정까지만</p>
             <div className="deal-countdown" aria-live="off">
               <span>오늘 특가 남은 시간</span>
               <time>{clock.countdown}</time>

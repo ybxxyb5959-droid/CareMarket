@@ -1,3 +1,4 @@
+import { compareNutrient } from '../../supabase/functions/_shared/nutrition-policy.js'
 import { normalizeConditions, normalizeText, validateQuery } from '../../supabase/functions/_shared/ai-search-contract.js'
 
 const ERROR_MESSAGES = {
@@ -68,9 +69,9 @@ export function filterAiProducts(products, raw, sort = null) {
   const comparisons = {
     relevance: (a, b) => score(b) - score(a),
     price_asc: (a, b) => a.price - b.price, price_desc: (a, b) => b.price - a.price,
-    protein_desc: (a, b) => b.nutrition.protein - a.nutrition.protein,
-    sugar_asc: (a, b) => a.nutrition.sugar - b.nutrition.sugar,
-    sodium_asc: (a, b) => a.nutrition.sodium - b.nutrition.sodium,
+    protein_desc: (a, b) => compareNutrient(a.nutrition?.protein, b.nutrition?.protein, true),
+    sugar_asc: (a, b) => compareNutrient(a.nutrition?.sugar, b.nutrition?.sugar),
+    sodium_asc: (a, b) => compareNutrient(a.nutrition?.sodium, b.nutrition?.sodium),
   }
   const compare = comparisons[sort || c.sort_by] || comparisons.relevance
   return list.sort((a, b) => compare(a, b) || a.id - b.id)

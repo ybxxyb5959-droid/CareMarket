@@ -252,4 +252,78 @@ test('final feature SQL contracts', { skip: !process.env.PGLITE_MODULE }, async 
     await db.exec("update orders set status='preparing' where order_id='30000000-0000-4000-8000-000000000003'")
     assert.deepEqual((await db.query("select paid_at from orders where order_id='30000000-0000-4000-8000-000000000003'")).rows[0].paid_at, timestamp)
   })
+  await db.exec(migration('20260907000100_delivered_review_rewards'))
+  // Model a previously deployed per-order reward policy without removing grants.
+  await db.query("insert into user_coupons(user_id,coupon_id,source,reward_order_id) values ($1,'review10','review_reward','30000000-0000-4000-8000-000000000001'),($1,'review10','review_reward','30000000-0000-4000-8000-000000000002')", [a])
+  const historical = (await db.query("select * from user_coupons where source='review_reward' order by id")).rows
+  await db.exec(migration('20260908000100_first_purchase_review_reward'))
+  await t.test('first-purchase migration preserves historical duplicate coupons and records one account claim', async () => {
+    assert.deepEqual((await db.query("select * from user_coupons where source='review_reward' order by id")).rows, historical)
+    assert.equal((await db.query('select count(*)::int n from review_reward_accounts where user_id=$1', [a])).rows[0].n, 1)
+    await assert.rejects(db.query('insert into review_reward_accounts(user_id) values ($1)', [a]), /unique constraint/)
+  })
+  const customer = '00000000-0000-4000-8000-000000000020'
+  const firstOrder = '40000000-0000-4000-8000-000000000001'
+  const secondOrder = '40000000-0000-4000-8000-000000000002'
+  const firstItem = '50000000-0000-4000-8000-000000000001'
+  const extraItem = '50000000-0000-4000-8000-000000000002'
+  const secondItem = '50000000-0000-4000-8000-000000000003'
+  await db.query('insert into auth.users(id,email,raw_user_meta_data) values ($1,$2,$3)', [customer, 'review@example.test', { display_name: 'Review' }])
+  await db.query("insert into orders(order_id,user_id,total_price,status,created_at,paid_at) values ($1,$3,20000,'shipped','2026-01-02','2026-01-02'),($2,$3,10000,'delivered','2026-01-01','2026-01-03')", [firstOrder, secondOrder, customer])
+  await db.query('insert into order_items(order_item_id,order_id,product_id,quantity,price_at_order) values ($1,$4,1,1,10000),($2,$4,2,1,10000),($3,$5,3,1,10000)', [firstItem, extraItem, secondItem, firstOrder, secondOrder])
+  const countCoupons = async id => (await db.query('select count(*)::int n from user_coupons where user_id=$1 and coupon_id=$2', [customer, id])).rows[0].n
+  const submit = async (item, request, rating = 1) => (await db.query('select submit_order_item_review($1,$2,$3,$4) result', [item, rating, '배송 받은 제품을 충분히 사용한 다음 남기는 솔직한 구매 후기입니다.', request])).rows[0].result
+  const request1 = '60000000-0000-4000-8000-000000000001'
+  const request2 = '60000000-0000-4000-8000-000000000002'
+  await db.query("select set_config('request.jwt.claim.sub',$1,false)", [customer])
+  await t.test('new signup receives exactly one 20 percent coupon and unshipped reviews are denied', async () => {
+    assert.equal(await countCoupons('welcome20'), 1)
+    await db.query("insert into user_coupons(user_id,coupon_id) values ($1,'welcome20') on conflict do nothing", [customer])
+    assert.equal(await countCoupons('welcome20'), 1)
+    await assert.rejects(submit(firstItem, request1), /Only delivered/)
+    assert.equal(await countCoupons('review10'), 0)
+  })
+  await t.test('second purchase remains reviewable without rewards, even before first purchase is delivered', async () => {
+    const result = await submit(secondItem, '60000000-0000-4000-8000-000000000003', 5)
+    assert.equal(result.review_created, true)
+    assert.equal(result.coupon_issued, false)
+    assert.equal(await countCoupons('review10'), 0)
+    const items = (await db.query('select * from get_my_review_items()')).rows
+    assert.equal(items.find(row => row.order_item_id === secondItem).reward_coupon_percent, null)
+    assert.equal(items.find(row => row.order_item_id === firstItem).reward_coupon_percent, 10)
+  })
+  await t.test('first delivered purchase low-rating review rewards once across retries and other items', async () => {
+    await db.query("update orders set status='delivered' where order_id=$1", [firstOrder])
+    const first = await submit(firstItem, request1, 1)
+    assert.equal(first.coupon_issued, true)
+    assert.equal(first.coupon_percent, 10)
+    assert.equal(first.coupon_name, '첫 구매 리뷰 감사 10% 할인')
+    // Queued overlapping calls exercise actual RPC retry/uniqueness paths.
+    // PGlite serializes connections; live multi-session locking needs staging QA.
+    const results = await Promise.all([submit(firstItem, request1), submit(extraItem, request2), submit(extraItem, request2)])
+    assert.ok(results.every(row => row.coupon_issued === false))
+    assert.equal(results.filter(row => row.review_created).length, 1)
+    assert.equal(await countCoupons('review10'), 1)
+    await db.query('select delete_my_review($1)', [first.review_id])
+    const restored = await submit(firstItem, '60000000-0000-4000-8000-000000000004')
+    assert.equal(restored.review_restored, true)
+    assert.equal(restored.coupon_issued, false)
+    assert.equal(await countCoupons('review10'), 1)
+    assert.ok((await db.query('select * from get_my_review_items()')).rows.every(row => row.reward_issued))
+  })
+  await t.test('20 and 10 percent checkout totals agree with server payment validation', async () => {
+    for (const [couponId, percent, total] of [['welcome20', 20, 19000], ['review10', 10, 21000]]) {
+      await db.query('insert into cart_items(user_id,product_id,quantity) values ($1,1,2) on conflict(user_id,product_id) do update set quantity=2', [customer])
+      const coupon = (await db.query('select id from user_coupons where user_id=$1 and coupon_id=$2', [customer, couponId])).rows[0].id
+      const order = (await db.query("select create_coupon_checkout_order('Review','01012345678','12345','Address','','',$1) result", [coupon])).rows[0].result
+      assert.equal(order.coupon_percent, percent)
+      assert.equal(order.discount_amount, 20000 * percent / 100)
+      assert.equal(order.total_price, total)
+      await db.query("select set_config('request.jwt.claim.role','service_role',false)")
+      const paid = (await db.query('select complete_paid_order($1,$2) result', [order.order_id, 'quality-' + couponId])).rows[0].result
+      assert.equal(paid.total_price, total)
+      assert.equal(paid.status, 'preparing')
+    }
+  })
+
 })

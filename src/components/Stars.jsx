@@ -1,11 +1,24 @@
 import Icon from './Icon'
-import { getSampleReviewSummary } from '../data/mock'
+import { useEffect, useState } from 'react'
+import { getSampleReviews } from '../data/mock'
+import { useStore } from '../store'
+import { supabase } from '../lib/supabase'
+import { combineReviewSummary, fetchProductReviewSummary } from '../lib/reviews'
 
-export function SampleRating({ productId, showSampleLabel = true }) {
-  const { averageRating, reviewCount } = getSampleReviewSummary(productId)
-  return <span className="sample-rating" aria-label={`샘플 별점 ${averageRating.toFixed(1)}점, 후기 ${reviewCount}개`}>
-    <Stars rating={averageRating.toFixed(1)} count={reviewCount} />
-    {showSampleLabel && <small>샘플</small>}
+export function SampleRating({ product }) {
+  const { reviewRevision } = useStore()
+  const [actual, setActual] = useState(null)
+  const key = `${product.id}:${reviewRevision}`
+  useEffect(() => {
+    let active = true
+    fetchProductReviewSummary(supabase, product.id)
+      .then(summary => { if (active) setActual({ key, ...summary }) })
+      .catch(error => { console.error('Product rating fetch failed:', { code: error?.code || 'REVIEWS_FETCH_FAILED' }) })
+    return () => { active = false }
+  }, [product.id, key])
+  const { average, count } = combineReviewSummary(getSampleReviews(product), actual?.key === key ? actual : {})
+  return <span className="sample-rating" aria-label={`별점 ${average.toFixed(1)}점, 후기 ${count}개`}>
+    <Stars rating={average.toFixed(1)} count={count} />
   </span>
 }
 

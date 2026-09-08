@@ -1,11 +1,13 @@
+import { LOW_SUGAR_MAX, LOW_SODIUM_MAX, HIGH_PROTEIN_MIN } from './nutrition-policy.js'
 import { isSupplement, ingredientDescription, supplementIngredients, registeredServing } from './product-type.js'
-export const CART_ANALYSIS_VERSION = 5
+import { analyzeCartComposition } from './cart-composition.js'
+export const CART_ANALYSIS_VERSION = 6
 
 // Keep these thresholds aligned with the existing catalog quick filters.
 export const CART_NUTRITION_THRESHOLDS = Object.freeze({
-  highProteinMin: 15,
-  lowSugarMax: 5,
-  lowSodiumMax: 250,
+  highProteinMin: HIGH_PROTEIN_MIN,
+  lowSugarMax: LOW_SUGAR_MAX,
+  lowSodiumMax: LOW_SODIUM_MAX,
 })
 
 const GOAL_LABELS = Object.freeze({
@@ -74,9 +76,10 @@ function normalizeRows(rawRows) {
     const n = p.nutrition || p
     unique.set(String(id), {
       id, name: String(p.name || '상품'), category: p.category,
+      mainIngredients: safeStrings(p.mainIngredients ?? p.main_ingredients),
       supplement: isSupplement(p), ingredients: supplementIngredients(p), ingredientDescription: ingredientDescription(p), serving: registeredServing(p),
       allergens: safeStrings(p.allergens), caffeine: p.caffeine === true || p.contains_caffeine === true,
-      nutrition: Object.fromEntries(['protein', 'sugar', 'sodium', 'calories'].map(key => [key, isSupplement(p) ? null : safeNumber(n[key])])),
+      nutrition: Object.fromEntries(['protein', 'sugar', 'sodium', 'calories', 'carbs', 'fat'].map(key => [key, isSupplement(p) ? null : safeNumber(n[key])])),
     })
   }
   return [...unique.values()]
@@ -88,6 +91,7 @@ export function analyzeCartNutrition(rawRows, rawContext = {}) {
   const goal = context.primaryGoal
   const supplements = rows.filter(row => row.supplement)
   const foods = rows.filter(row => !row.supplement)
+  const composition = analyzeCartComposition(rows)
   const selected = new Set(context.selectedConditions)
   const keys = new Set(!goal && (selected.has('저당') || selected.has('저염')) ? [] : goal === '근육량 증가' ? ['protein', 'sugar']
     : goal === '체중 관리' ? ['sugar', 'protein', 'calories']
@@ -156,6 +160,8 @@ export function analyzeCartNutrition(rawRows, rawContext = {}) {
   balanceItems.push({ key: 'attention', label: '확인 필요 상품', status: attentionCount ? 'attention' : 'good', count: attentionCount, total: rows.length, text: attentionCount + ' / ' + rows.length + '종', reason: '목적별 기준 밖, 비교 정보 미비 또는 설정한 알레르기 성분이 포함된 상품입니다.' })
   const goodPoints = balanceItems.filter(item => item.key !== 'attention' && item.key !== 'protein_complement' && item.count > 0).map(item => item.label + '이 ' + item.text + '입니다.')
   const attentionPoints = productReasons.filter(p => p.needsAttention).map(p => p.name + ': ' + p.checks.join(' '))
+  if (composition.goodPoint) goodPoints.push(composition.goodPoint)
+  if (composition.attention) attentionPoints.unshift(composition.attention)
   const scope = goal || (selected.size ? [...selected].join(' · ') : '식단 영양 관리')
   const foodSummary = scope + ' 기준으로 ' + rows.length + '종을 살펴봤습니다. ' + (goodPoints.join(' ') || '해당 기준으로 비교할 상품 정보를 확인해주세요.') + (attentionCount ? ' 확인할 상품은 ' + attentionCount + '종입니다.' : '')
   const directCount = productReasons.filter(p => p.group === '직접 관련 상품').length
@@ -166,17 +172,18 @@ export function analyzeCartNutrition(rawRows, rawContext = {}) {
   const filterLabel = goal === '근육량 증가' ? '고단백' : selected.has('저염') || (!goal && !selected.has('저당')) || goal === '식단 영양 관리' ? '저염' : goal === '영양제 탐색' ? null : '저당'
   const actionDirections = [{ key: filterLabel || 'review_product_labels', fallbackText: '현재 구매 목적에 맞는 상품을 함께 비교하고 상품별 표시 정보를 확인해보세요.' }]
   return {
+    composition,
     hasSupplements: supplements.length > 0,
     groups: [...new Set(productReasons.map(p => p.group))].map(label => ({ label, productIds: productReasons.filter(p => p.group === label).map(p => p.id) })),
     version: CART_ANALYSIS_VERSION, itemCount: rows.length, singleProduct: rows.length === 1,
     availableNutrients: [...keys].filter(key => rows.some(row => row.nutrition[key] != null)),
     dominant: balanceItems.filter(item => item.key !== 'attention' && item.count > 0).map(item => item.key),
     good: balanceItems.filter(item => item.status === 'good' && item.key !== 'attention').map(item => item.key),
-    needsAttention: attentionCount ? ['attention'] : [], needsBalance: [], compositionSignals: [],
+    needsAttention: attentionCount ? ['attention'] : [], needsBalance: [], compositionSignals: [composition.decision],
     balanceItems, productReasons, goodPoints, attentionPoints, observations: goodPoints,
     actionDirections,
     recommendation: { filterLabel, label: (filterLabel || scope) + ' 상품 더 보기' },
-    fallback: { headline: scope + ' 기준 장바구니 분석', summary, actions: actionDirections.map(a => a.fallbackText) },
+    fallback: { headline: scope + ' 기준 장바구니 분석', summary: composition.detailSummary + ' ' + (supplements.length ? summary : scope + ' 구매 목적과 기존 탐색 기준으로 확인했습니다.'), actions: actionDirections.map(a => a.fallbackText) },
   }
 }
 
@@ -184,6 +191,10 @@ export function cartAnalysisForGemini(analysis, basis) {
   return {
     goal: basis.primary_goal, selected_conditions: basis.selected_conditions,
     cart_scope: { item_count: analysis.itemCount, single_product: analysis.singleProduct },
+    cart_composition: analysis.composition,
+    products: analysis.composition.products,
+    allowed_summaries: cartNarrativeSummaries(analysis),
+    allowed_actions: analysis.fallback.actions,
     analysis: { dominant: analysis.dominant, good: analysis.good, needs_attention: analysis.needsAttention,
       needs_balance: analysis.needsBalance, composition_signals: analysis.compositionSignals,
       groups: analysis.groups, supplement_products: analysis.productReasons.filter(p => p.ingredients),
@@ -192,12 +203,25 @@ export function cartAnalysisForGemini(analysis, basis) {
   }
 }
 
+// AI may select an evidence expansion, but cannot rewrite the factual conclusion.
+export function cartNarrativeSummaries(analysis) {
+  return [analysis.fallback.summary, analysis.composition.detailSummary]
+}
+
+export function isGroundedCartNarrative(analysis, narrative) {
+  return Boolean(narrative && cartNarrativeSummaries(analysis).includes(narrative.summary)
+    && Array.isArray(narrative.actions) && narrative.actions.length > 0
+    && narrative.actions.every(action => analysis.fallback.actions.includes(action)))
+}
+
 // Keep the existing response envelope compatible with the deployed storefront.
 // New clients require compositionVersion to reject quantity-based cached results.
 export function composeCartInsight(analysis, basis, narrative = null, aiExplanationAvailable = false) {
-  const copy = analysis.hasSupplements ? analysis.fallback : narrative || analysis.fallback
+  aiExplanationAvailable = aiExplanationAvailable && !analysis.hasSupplements && isGroundedCartNarrative(analysis, narrative)
+  const copy = aiExplanationAvailable ? narrative : analysis.fallback
   return {
     headline: analysis.fallback.headline, summary: copy.summary, balanceItems: analysis.balanceItems,
+    composition: analysis.composition, shortSummary: analysis.composition.shortSummary,
     currentFeatures: analysis.observations, goodPoints: analysis.goodPoints, attentionPoints: analysis.attentionPoints,
     groups: analysis.groups, productReasons: analysis.productReasons, actionTitle: '이렇게 보완해보세요', actions: copy.actions,
     recommendation: analysis.recommendation, basis, analysisVersion: 2, compositionVersion: analysis.version, aiExplanationAvailable,
@@ -218,7 +242,7 @@ export function isCartInsight(value) {
 
 // Accept known deployed envelopes without trusting their older classifications.
 export function isCompatibleCartInsight(value) {
-  return [3, 4, CART_ANALYSIS_VERSION].includes(value?.compositionVersion)
+  return [3, 4, 5, CART_ANALYSIS_VERSION].includes(value?.compositionVersion)
     && isCartInsight({ ...value, compositionVersion: CART_ANALYSIS_VERSION })
 }
 
@@ -233,6 +257,10 @@ export function reconcileCartInsight(response, current) {
   // Keep AI wording only when the server analyzed the same criteria and findings.
   // All rendered counts, groups and per-product reasons come from current rules.
   if (basis(response.basis) !== basis(current.basis) || facts(response) !== facts(current)
+    || response.compositionVersion !== current.compositionVersion
+    || JSON.stringify(response.composition) !== JSON.stringify(current.composition)
+    || ![current.summary, current.composition.detailSummary].includes(response.summary)
+    || !response.actions.every(action => current.actions.includes(action))
     || response.aiExplanationAvailable !== true) return current
   const { explanationNotice: _notice, ...result } = current
   return { ...result, summary: response.summary, actions: response.actions, aiExplanationAvailable: true }

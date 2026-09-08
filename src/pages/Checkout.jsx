@@ -190,7 +190,7 @@ function CheckoutContent() {
           <MyCoupons userId={authUserId} selected={userCouponId} disabled={submitting} onSelect={(_id, coupon) => { setSelectedCoupon(coupon || null); setServerTotal(null) }} />
           <CheckoutPaymentMethods customerKey={authUserId} amount={serverTotal ?? estimatedTotal} onReady={onWidgetsReady} />
         </div>
-        <CheckoutSummary cartTotal={cartTotal} deliveryFee={deliveryFee} discountAmount={discountAmount} cartCount={cart.reduce((sum, item) => sum + item.quantity, 0)} totalOverride={serverTotal} disabled={cartLoading || cartPending > 0 || Boolean(cartError) || !widgets || submitting} submitting={submitting} onPay={submitCheckout} />
+        <CheckoutSummary couponName={selectedCoupon?.coupons?.name} cartTotal={cartTotal} deliveryFee={deliveryFee} discountAmount={discountAmount} cartCount={cart.reduce((sum, item) => sum + item.quantity, 0)} totalOverride={serverTotal} disabled={cartLoading || cartPending > 0 || Boolean(cartError) || !widgets || submitting} submitting={submitting} onPay={submitCheckout} />
       </div>
     </div>
   )

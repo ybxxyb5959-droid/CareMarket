@@ -102,7 +102,7 @@ function ReviewModalContent({ reviewTarget, reviewInitialRating, closeReviewForm
           label: '쿠폰함 보기', onClick: () => navigate('mypage'),
         })
       } else if (result.coupon_already_issued) {
-        showToast('리뷰가 등록되었습니다. 이 주문의 리뷰 보상 쿠폰은 이미 발급되었습니다.')
+        showToast('리뷰가 등록되었습니다. 이 계정의 첫 구매 리뷰 보상 쿠폰은 이미 발급되었습니다.')
       } else if (result.already_reviewed) {
         showToast('이미 등록된 리뷰입니다.')
       } else {
@@ -171,8 +171,9 @@ function ReviewModalContent({ reviewTarget, reviewInitialRating, closeReviewForm
           {editing
             ? '별점과 본문만 수정되며, 보유 쿠폰에는 변화가 없습니다.'
             : reviewTarget.reward_issued
-              ? '이 주문의 리뷰 혜택은 이미 지급되었습니다.'
-              : `이 주문의 첫 리뷰 작성 시, 별점과 관계없이 상품금액 ${rewardPercent > 0 ? `${rewardPercent}% ` : ''}할인 쿠폰이 지급됩니다.`}
+              ? '이 계정의 첫 구매 리뷰 혜택은 이미 지급되었습니다.'
+              : rewardPercent <= 0 ? '리뷰 작성은 가능하며, 첫 구매 리뷰 쿠폰 추가 지급 대상은 아닙니다.'
+              : `첫 구매 주문의 최초 리뷰 작성 시, 별점과 관계없이 계정당 한 번 상품금액 ${rewardPercent > 0 ? `${rewardPercent}% ` : ''}할인 쿠폰이 지급됩니다.`}
         </p>
         {error && <div className="review-submit-error" role="alert"><span>{error}</span><small>내용을 확인한 뒤 다시 등록할 수 있습니다.</small></div>}
         <div className="review-dialog-actions">

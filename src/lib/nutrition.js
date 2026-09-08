@@ -18,6 +18,7 @@ export const GOAL_NUTRIENTS = {
 
 // 값 포맷 (1회 제공량 또는 합산 공용)
 export const fmtNutrient = (key, value) => {
+  if (!Number.isFinite(value)) return '정보 없음'
   const meta = NUTRIENT_META[key]
   const rounded = meta.decimals === 0
     ? Math.round(value)
@@ -30,11 +31,10 @@ export const cartNutritionTotals = (cart) =>
   cart.reduce(
     (acc, { product, quantity }) => {
       if (isSupplement(product)) return acc
-      const n = product.nutrition
-      acc.calories += (n.calories || 0) * quantity
-      acc.protein += (n.protein || 0) * quantity
-      acc.sugar += (n.sugar || 0) * quantity
-      acc.sodium += (n.sodium || 0) * quantity
+      const n = product.nutrition || {}
+      for (const key of Object.keys(acc)) {
+        acc[key] = acc[key] !== null && Number.isFinite(n[key]) ? acc[key] + n[key] * quantity : null
+      }
       return acc
     },
     { calories: 0, protein: 0, sugar: 0, sodium: 0 },
