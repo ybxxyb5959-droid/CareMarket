@@ -7,6 +7,7 @@ import Icon from '../components/Icon'
 import WishlistQuickPanel from '../components/WishlistQuickPanel'
 import MyCoupons from '../components/MyCoupons'
 import { openPostcode } from '../lib/postcode'
+import { IS_MIDTERM_PRESENTATION } from '../lib/presentation'
 
 const STATUS_LABELS = { paid: '결제완료', preparing: '상품준비중', shipped: '배송중', delivered: '배송완료' }
 const orderDate = (value) => new Intl.DateTimeFormat('ko-KR', {
@@ -44,7 +45,7 @@ export default function MyPage() {
 
   useEffect(() => {
     let active = true
-    if (!authUserId) return () => { active = false }
+    if (IS_MIDTERM_PRESENTATION || !authUserId) return () => { active = false }
     fetchMyOrders(supabase, authUserId)
       .then((rows) => {
         if (active) setOrders({ ownerId: authUserId, rows: rows.slice(0, 2), loading: false, error: null })
@@ -65,9 +66,24 @@ export default function MyPage() {
     return (
       <div className="wrap page">
         <div className="page-slim mypage-login"><div className="panel">
-          <div className="auth-head"><h2>로그인이 필요합니다</h2><p>로그인하면 주문내역, 찜한 상품과 배송지를 한곳에서 확인할 수 있습니다.</p></div>
+          <div className="auth-head"><h2>로그인이 필요합니다</h2><p>{IS_MIDTERM_PRESENTATION ? '로그인하면 건강목표와 알레르기 제외 설정을 저장할 수 있습니다.' : '로그인하면 주문내역, 찜한 상품과 배송지를 한곳에서 확인할 수 있습니다.'}</p></div>
           <div className="mypage-login-actions"><button className="btn btn-primary" onClick={() => navigate('login')}>로그인</button><button className="btn btn-ghost" onClick={() => navigate('register')}>회원가입</button></div>
         </div></div>
+      </div>
+    )
+  }
+
+  if (IS_MIDTERM_PRESENTATION) {
+    return (
+      <div className="wrap page mypage">
+        <div className="mypage-head">
+          <div className="profile-id"><div className="avatar">{user.name.slice(0, 1)}</div><div><span className="eyebrow">중간발표 사용자 설정</span><h1>{user.name}님, 안녕하세요</h1><div className="em">{user.email || '제공되지 않음'}</div></div></div>
+          <button className="btn btn-ghost btn-sm" onClick={logout}>로그아웃</button>
+        </div>
+        <section className="mypage-section" aria-labelledby="mypage-goal-title">
+          <div className="mypage-section-head"><div><span className="section-number">1</span><h2 id="mypage-goal-title">나의 건강목표 · 알레르기 설정</h2></div><button className="more-link" onClick={() => navigate('goalSetup')}>설정 변경 →</button></div>
+          <div className="mypage-goal-row"><div><span>건강목표</span><strong>{goal || '미설정'}</strong></div><div><span>검색 필터</span><strong>{subFilters.join(' · ') || '없음'}</strong></div><div><span>알레르기 제외</span><strong>{allergies.join(' · ') || '제외 없음'}</strong></div></div>
+        </section>
       </div>
     )
   }

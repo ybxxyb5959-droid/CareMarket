@@ -5,6 +5,7 @@ import GoalBadge from './GoalBadge'
 import ProductImage from './ProductImage'
 import { SampleRating } from './Stars'
 import { discountRate, won } from '../lib/format'
+import { IS_MIDTERM_PRESENTATION } from '../lib/presentation'
 
 export default function ProductCard({ product, compareSelected = false, onCompareToggle = null }) {
   const { goal, allergies, wishlist, toggleWish, addToCart, openProduct } = useStore()
@@ -14,7 +15,7 @@ export default function ProductCard({ product, compareSelected = false, onCompar
     <article className="card">
       <div className="card-media" onClick={() => openProduct(product)}>
         <ProductImage src={product.image} alt={product.name} />
-        {onCompareToggle && (
+        {!IS_MIDTERM_PRESENTATION && onCompareToggle && (
           <button
             type="button"
             className={`card-compare${compareSelected ? ' on' : ''}`}
@@ -25,21 +26,21 @@ export default function ProductCard({ product, compareSelected = false, onCompar
             비교
           </button>
         )}
-        <button
+        {!IS_MIDTERM_PRESENTATION && <button
           className="card-wish"
           onClick={(e) => { e.stopPropagation(); toggleWish(product.id) }}
           aria-label="위시리스트"
           style={wished ? { color: 'var(--danger)' } : undefined}
         >
           <Icon name="heart" size={17} fill={wished ? 'currentColor' : 'none'} />
-        </button>
+        </button>}
       </div>
 
       <div className="card-body">
         <div className="card-top"><span className="card-brand">{product.brand}</span></div>
 
         <h3 className="card-name" onClick={() => openProduct(product)}>{product.name}</h3>
-        <SampleRating product={product} />
+        {!IS_MIDTERM_PRESENTATION && <SampleRating product={product} />}
 
         <span className="card-origin">
           <Icon name="leaf" size={13} />

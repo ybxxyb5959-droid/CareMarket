@@ -36,6 +36,7 @@ import Support from './pages/Support'
 import SupportInquiry from './pages/SupportInquiry'
 import SupportInquiries from './pages/SupportInquiries'
 import NotFound from './pages/NotFound'
+import { IS_MIDTERM_PRESENTATION } from './lib/presentation'
 
 const PAGES = {
   main: Home,
@@ -98,8 +99,8 @@ function Shell() {
       {!pendingOAuthProfile && !completingOAuth && <CartDrawer />}
       <Toast />
       {loginPromptOpen && <CartLoginPrompt />}
-      {!isAdmin && !pendingOAuthProfile && !completingOAuth && <EventPopup />}
-      {!isAdmin && !pendingOAuthProfile && !completingOAuth && <ReviewModal />}
+      {!IS_MIDTERM_PRESENTATION && !isAdmin && !pendingOAuthProfile && !completingOAuth && <EventPopup />}
+      {!IS_MIDTERM_PRESENTATION && !isAdmin && !pendingOAuthProfile && !completingOAuth && <ReviewModal />}
     </div>
   )
 }

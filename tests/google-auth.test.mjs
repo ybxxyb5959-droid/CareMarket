@@ -92,7 +92,7 @@ test('Supabase RPC errors preserve message, code and details for the caller', as
 test('profile restoration routes interrupted OAuth users back to completion and completed users home', async () => {
   // Execute the actual loader with persisted DB fixtures, including fresh sessions.
   const source = readFileSync(new URL('../src/StoreProvider.jsx', import.meta.url), 'utf8')
-  const body = source.match(/const loadWellnessSettings = async \(\) => \{([\s\S]*?)\n    \}\n\n    loadWellnessSettings/)[1]
+  const body = source.match(/const loadWellnessSettings = async \(\) => \{([\s\S]*?)\r?\n    \}\r?\n\r?\n    loadWellnessSettings/)[1]
   const complete = { display_name: '회원', role: 'user', phone: '01012345678', address: '서울', terms_agreed_at: '2026-09-06', privacy_agreed_at: '2026-09-06' }
   for (const provider of ['kakao', 'google', 'email']) {
     for (const row of [null, { ...complete, phone: null }, { ...complete, display_name: ' ' }, complete]) {
@@ -109,7 +109,7 @@ test('profile restoration routes interrupted OAuth users back to completion and 
           window: { location: { pathname: '/' }, history: { state: {}, replaceState: next => { route = next.view } } },
           DB_TO_GOAL: {}, toPreferenceState: () => ({ subFilters: [], allergies: [] }),
           needsGoogleRegistration, parseAppLocation: () => ({ view: route }), viewUrl: view => `/${view}`,
-          scrollTop: () => {}, showToast: () => {}, returnAfterLogin: () => false,
+          IS_MIDTERM_PRESENTATION: false, scrollTop: () => {}, showToast: () => {}, returnAfterLogin: () => false,
         }
         for (const [, setter] of body.matchAll(/\b(set\w+)\(/g)) scope[setter] = value => { state[setter] = value }
         await new Function(...Object.keys(scope), `return (async () => {${body}})()`)(...Object.values(scope))

@@ -7,6 +7,7 @@ import WellnessTable from '../components/WellnessTable'
 import DailyRoutine from '../components/DailyRoutine'
 import { filterAndSort } from '../lib/catalog'
 import HomeReviewPrompt from '../components/HomeReviewPrompt'
+import { IS_MIDTERM_PRESENTATION } from '../lib/presentation'
 
 // 주목표별 강조 안내문
 const GOAL_GUIDE = {
@@ -106,7 +107,7 @@ export default function Home() {
         </div>
       </section>
 
-      <HomeReviewPrompt />
+      {!IS_MIDTERM_PRESENTATION && <HomeReviewPrompt />}
 
       {isLoggedIn ? (
         /* ── (로그인) 나의 맞춤 쇼핑 기준 — 히어로 하단 흰 배경 구획 ── */
@@ -249,14 +250,14 @@ export default function Home() {
       </section>
 
       {/* ── 오늘의 웰빙 테이블 (Shoppable image) ── */}
-      <WellnessTable />
-      <DailyRoutine />
+      {!IS_MIDTERM_PRESENTATION && <WellnessTable />}
+      {!IS_MIDTERM_PRESENTATION && <DailyRoutine />}
 
       {/* ── 가치 배너 (Trust) ── */}
       <section className="section" style={{ paddingTop: 0 }}>
         <div className="wrap">
           <div className="values">
-            {VALUES.map((v, i) => (
+            {(IS_MIDTERM_PRESENTATION ? VALUES.filter((value) => value.title !== '주문 상태 확인') : VALUES).map((v, i) => (
               <div key={i} className="value">
                 <div className="v-ico"><Icon name={v.icon} size={19} /></div>
                 <div>

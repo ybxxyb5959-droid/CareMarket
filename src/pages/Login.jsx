@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useStore } from '../store'
+import { IS_MIDTERM_PRESENTATION } from '../lib/presentation'
 
 const SOCIAL_PROVIDERS = [
   { id: 'naver', label: '네이버' },
@@ -97,7 +98,7 @@ export default function Login() {
           <span style={{ cursor: 'default' }}>비밀번호 찾기</span>
         </div>
 
-        <section className="social-login" aria-labelledby="social-login-title">
+        {!IS_MIDTERM_PRESENTATION && <section className="social-login" aria-labelledby="social-login-title">
           <div className="social-login-title">
             <span id="social-login-title">간편 로그인</span>
           </div>
@@ -121,7 +122,7 @@ export default function Login() {
           <button type="button" className="social-login-privacy" onClick={() => navigate('privacy')}>
             개인정보처리방침
           </button>
-        </section>
+        </section>}
       </div>
     </div>
   )

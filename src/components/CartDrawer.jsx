@@ -4,6 +4,7 @@ import { useStore } from '../store'
 import Icon from './Icon'
 import { won } from '../lib/format'
 import CartAiInsight from './CartAiInsight'
+import { IS_MIDTERM_PRESENTATION } from '../lib/presentation'
 
 export default function CartDrawer() {
   const {
@@ -73,18 +74,18 @@ export default function CartDrawer() {
 
         {cart.length > 0 && (
           <div className="drawer-foot">
-            <CartAiInsight compact />
+            {!IS_MIDTERM_PRESENTATION && <CartAiInsight compact />}
             <div className="drawer-pricing">
               <div className="sum-row"><span>상품 합계</span><b>{won(cartTotal)}</b></div>
-              <div className="sum-row"><span>신선 배송비 (4만원 이상 무료)</span><b>{deliveryFee === 0 ? '무료' : won(deliveryFee)}</b></div>
+              {!IS_MIDTERM_PRESENTATION && <><div className="sum-row"><span>신선 배송비 (4만원 이상 무료)</span><b>{deliveryFee === 0 ? '무료' : won(deliveryFee)}</b></div>
               <div className="sum-total">
                 <span className="lbl">결제 예정</span>
                 <span className="val">{won(cartTotal + deliveryFee)}</span>
-              </div>
+              </div></>}
             </div>
             <div className="drawer-cta">
               <button className="btn btn-text" onClick={() => { setDrawerOpen(false); navigate('cart') }}>장바구니 상세 보기</button>
-              <button className="btn btn-primary" disabled={cartLoading || cartPending > 0 || Boolean(cartError)} onClick={checkout}>주문하기</button>
+              {!IS_MIDTERM_PRESENTATION && <button className="btn btn-primary" disabled={cartLoading || cartPending > 0 || Boolean(cartError)} onClick={checkout}>주문하기</button>}
             </div>
           </div>
         )}

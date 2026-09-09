@@ -7,6 +7,7 @@ import { availableFilterIds } from '../../supabase/functions/_shared/ai-filter-r
 import Icon from '../components/Icon'
 import ProductCard from '../components/ProductCard'
 import ProductComparisonModal from '../components/ProductComparisonModal'
+import { IS_MIDTERM_PRESENTATION } from '../lib/presentation'
 
 const AI_EXAMPLES = ['카페인 없는 영양제 찾아줘', '당류 낮고 단백질 높은 간식 찾아줘', '저염 식품 찾아줘']
 
@@ -249,7 +250,7 @@ export default function AllProducts() {
           {maxPrice !== null && <button type="button" className="chip on" onClick={() => setMaxPrice(null)} aria-label="최대 가격 필터 해제">{maxPrice.toLocaleString('ko-KR')}원 이하<Icon name="x" size={13} /></button>}
         </div>}
 
-        {(compareProducts.length > 0 || (!productsLoading && !productsError && aiProducts.length > 0)) && (
+        {!IS_MIDTERM_PRESENTATION && (compareProducts.length > 0 || (!productsLoading && !productsError && aiProducts.length > 0)) && (
           <div className="compare-toolbar">
             <div><Icon name="cart" size={15} /><span>비교할 상품을 선택하세요</span><b>{compareIds.length}/3</b></div>
             <button type="button" className="btn btn-soft btn-sm" disabled={!compareProducts.length} onClick={openComparison}>비교하기</button>
@@ -279,12 +280,12 @@ export default function AllProducts() {
         ) : (
           <div className="product-grid">
             {aiProducts.map((p) => (
-              <ProductCard key={p.id} product={p} compareSelected={compareIds.includes(p.id)} onCompareToggle={toggleCompare} />
+              <ProductCard key={p.id} product={p} compareSelected={compareIds.includes(p.id)} onCompareToggle={IS_MIDTERM_PRESENTATION ? null : toggleCompare} />
             ))}
           </div>
         )}
       </div>
-      {compareOpen && <ProductComparisonModal products={compareProducts} goal={goal} onRemove={toggleCompare} onClear={() => setCompareSelection([])} onClose={() => setCompareOpen(false)} />}
+      {!IS_MIDTERM_PRESENTATION && compareOpen && <ProductComparisonModal products={compareProducts} goal={goal} onRemove={toggleCompare} onClear={() => setCompareSelection([])} onClose={() => setCompareOpen(false)} />}
     </div>
   )
 }

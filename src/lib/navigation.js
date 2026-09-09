@@ -1,3 +1,5 @@
+import { isPresentationViewAllowed } from './presentation.js'
+
 const VIEW_PATHS = {
   main: '/',
   deals: '/deals',
@@ -36,7 +38,7 @@ const VIEW_PATHS = {
 
 const PATH_VIEWS = Object.fromEntries(Object.entries(VIEW_PATHS).map(([view, path]) => [path, view]))
 
-export function parseAppLocation(location) {
+export function parseAppLocation(location, presentationStage) {
   const rawPathname = location?.pathname || '/'
   const pathname = rawPathname === '/' ? '/' : rawPathname.replace(/\/+$/, '') || '/'
   const params = new URLSearchParams(location?.search || '')
@@ -49,7 +51,8 @@ export function parseAppLocation(location) {
     }
   }
   const isSearch = pathname === '/search'
-  const view = isSearch ? 'products' : (PATH_VIEWS[pathname] || 'notFound')
+  const requestedView = isSearch ? 'products' : (PATH_VIEWS[pathname] || 'notFound')
+  const view = isPresentationViewAllowed(requestedView, presentationStage) ? requestedView : 'notFound'
   const mode = params.get('mode') === 'ai' ? 'ai' : 'normal'
   const query = params.get('q') || ''
   return {
@@ -79,8 +82,8 @@ export function catalogUrl({ search, searchMode, aiQuery, shopCategory, shopSub,
   return suffix ? `${base}?${suffix}` : base
 }
 
-export function viewUrl(view) {
-  return VIEW_PATHS[view] || '/'
+export function viewUrl(view, presentationStage) {
+  return isPresentationViewAllowed(view, presentationStage) ? (VIEW_PATHS[view] || '/') : '/'
 }
 
 export function adminOrdersUrl({ status } = {}) {

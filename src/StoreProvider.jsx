@@ -8,6 +8,7 @@ import { calculateCartPricing, createCartController, EMPTY_CART } from './lib/ca
 import { AI_SORT_TO_UI, conditionLabels, requestAiConditions } from './lib/ai-search'
 import { fetchWishlistIds, saveWishlistItem } from './lib/wishlist'
 import { adminOrdersUrl, catalogUrl, parseAppLocation, productUrl, viewUrl } from './lib/navigation'
+import { IS_MIDTERM_PRESENTATION, isPresentationViewAllowed } from './lib/presentation'
 
 const scrollTop = () => window.scrollTo({ top: 0, behavior: 'smooth' })
 
@@ -181,7 +182,7 @@ export function StoreProvider({ children }) {
 
   useEffect(() => {
     let active = true
-    if (!authUserId) return () => { active = false }
+    if (IS_MIDTERM_PRESENTATION || !authUserId) return () => { active = false }
     setWishlistLoading(true)
     setWishlistError(null)
     fetchWishlistIds(supabase, authUserId)
@@ -327,7 +328,7 @@ export function StoreProvider({ children }) {
         return
       }
 
-      const isAdminUser = profileResult.data?.role === 'admin'
+      const isAdminUser = !IS_MIDTERM_PRESENTATION && profileResult.data?.role === 'admin'
       setIsAdmin(isAdminUser)
       if (isAdminUser) setOauthRegistrationRequired(false)
 
@@ -421,7 +422,7 @@ export function StoreProvider({ children }) {
 
       // 조건 미설정 회원은 설정을 강제하지 않고 맞춤 상품 화면으로 안내한다.
       // (맞춤 상품 화면에서 '추천 조건 설정하기'로 자연스럽게 설정 화면으로 이동)
-      if (!loadedGoal && !isAdminUser && ['main', 'login'].includes(parseAppLocation(window.location).view)) {
+      if (!IS_MIDTERM_PRESENTATION && !loadedGoal && !isAdminUser && ['main', 'login'].includes(parseAppLocation(window.location).view)) {
         window.history.replaceState({ ...window.history.state, view: 'custom', scrollY: 0 }, '', viewUrl('custom'))
         setView('custom')
         scrollTop()
@@ -446,6 +447,7 @@ export function StoreProvider({ children }) {
   const reloadProfile = () => setProfileReloadKey((key) => key + 1)
 
   const openReviewForm = useCallback((target, initialRating = null, mode = 'create') => {
+    if (IS_MIDTERM_PRESENTATION) return false
     const editing = mode === 'edit'
     if (!authUserId || (!editing && !target?.order_item_id) || (editing && !(target?.review_id || target?.id))) return false
     setReviewTarget({ ...target, form_mode: editing ? 'edit' : 'create' })
@@ -476,6 +478,14 @@ export function StoreProvider({ children }) {
     return true
   }
   const navigate = (v, options = {}) => {
+    if (!isPresentationViewAllowed(v)) {
+      showToast('중간발표 범위에 포함되지 않은 기능입니다.')
+      setDrawerOpen(false)
+      setView('main')
+      window.history.pushState({ view: 'main', scrollY: 0 }, '', '/')
+      scrollTop()
+      return
+    }
     if (v === 'login' && !['login', 'register'].includes(view)) {
       try { rememberAuthReturn(window.sessionStorage, window.location.pathname + window.location.search) } catch { /* Storage may be disabled. */ }
     }
@@ -628,6 +638,7 @@ export function StoreProvider({ children }) {
   }
 
   const toggleWish = async (id) => {
+    if (IS_MIDTERM_PRESENTATION) return false
     if (products.find(product => product.id === id)?.isDemoProduct) { showToast('시연용 상품은 찜 저장을 지원하지 않습니다.'); return false }
     if (!authUserId) {
       showToast('로그인 후 상품을 찜할 수 있습니다.')
@@ -716,6 +727,11 @@ export function StoreProvider({ children }) {
   const cartCount = cart.reduce((s, i) => s + i.quantity, 0)
 
   const checkout = () => {
+    if (IS_MIDTERM_PRESENTATION) {
+      showToast('결제 기능은 중간발표 범위 이후에 구현됩니다.')
+      setDrawerOpen(false)
+      return
+    }
     if (cart.some(item => item.product.isDemoProduct)) { showToast('시연용 상품을 제외하면 실제 주문을 진행할 수 있습니다.'); return }
     if (!requireCartLogin() || cart.length === 0 || cartPending || cartLoading || cartError) return
     setDrawerOpen(false)
@@ -761,7 +777,7 @@ export function StoreProvider({ children }) {
     }
 
     // 저장 후 홈이 아닌 맞춤 상품 화면으로 돌려보내 변경된 조건의 결과를 바로 확인하게 한다.
-    navigate('custom')
+    navigate(IS_MIDTERM_PRESENTATION ? 'products' : 'custom')
     showToast('맞춤 웰빙 설정이 반영되었습니다.')
     return true
   }

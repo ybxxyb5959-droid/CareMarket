@@ -7,6 +7,7 @@ import Icon from '../components/Icon'
 import ProductImage from '../components/ProductImage'
 import ProductReviews from '../components/ProductReviews'
 import { discountRate, won } from '../lib/format'
+import { IS_MIDTERM_PRESENTATION } from '../lib/presentation'
 
 const FREE_DELIVERY_THRESHOLD = 40000
 const DELIVERY_FEE = 3000
@@ -108,9 +109,9 @@ export default function ProductDetail() {
         <section className="detail-info" aria-labelledby="product-title">
           <div className="detail-brand-row">
             <span><b>{p.brand}</b><i aria-hidden="true">·</i>{p.category}</span>
-            <button className="detail-wish" onClick={() => toggleWish(p.id)} aria-label={wished ? '위시리스트에서 제외' : '위시리스트에 추가'} style={wished ? { color: 'var(--danger)' } : undefined}>
+            {!IS_MIDTERM_PRESENTATION && <button className="detail-wish" onClick={() => toggleWish(p.id)} aria-label={wished ? '위시리스트에서 제외' : '위시리스트에 추가'} style={wished ? { color: 'var(--danger)' } : undefined}>
               <Icon name="heart" size={20} fill={wished ? 'currentColor' : 'none'} />
-            </button>
+            </button>}
           </div>
           <h1 id="product-title" className="detail-title">{p.name}</h1>
 
@@ -120,13 +121,13 @@ export default function ProductDetail() {
             <span className="amt"><small>판매가</small>{p.price.toLocaleString('ko-KR')}<em>원</em></span>
           </div>
 
-          <div className="detail-delivery">
+          {!IS_MIDTERM_PRESENTATION && <div className="detail-delivery">
             <Icon name="truck" size={18} />
             <div>
               <b>{estimatedDeliveryFee === 0 ? '무료배송 적용' : `배송비 ${won(DELIVERY_FEE)}`}</b>
               <span>이 상품 합계 {won(FREE_DELIVERY_THRESHOLD)} 이상 무료배송</span>
             </div>
-          </div>
+          </div>}
 
           {allergenMatches.length > 0 && <div className="allergen-warning" role="note">
             <strong>⚠ 설정하신 알레르기 성분이 포함된 상품입니다.</strong>
@@ -146,8 +147,8 @@ export default function ProductDetail() {
               </div>
             </div>
             <div className="detail-total-breakdown">
-              <span>상품금액 {won(itemTotal)} + 배송비 {estimatedDeliveryFee === 0 ? '무료' : won(estimatedDeliveryFee)}</span>
-              <div><b>예상 결제금액</b><strong>{won(estimatedTotal)}</strong></div>
+              <span>{IS_MIDTERM_PRESENTATION ? `선택 수량 ${quantity}개` : `상품금액 ${won(itemTotal)} + 배송비 ${estimatedDeliveryFee === 0 ? '무료' : won(estimatedDeliveryFee)}`}</span>
+              <div><b>{IS_MIDTERM_PRESENTATION ? '선택 상품 합계' : '예상 결제금액'}</b><strong>{won(IS_MIDTERM_PRESENTATION ? itemTotal : estimatedTotal)}</strong></div>
             </div>
           </div>
 
@@ -156,7 +157,7 @@ export default function ProductDetail() {
               <Icon name="cart" size={17} /> {purchasePending ? '처리 중…' : '장바구니 담기'}
             </button>
             <button className="btn btn-primary" onClick={moveToCartForPurchase} disabled={purchasePending || unavailable}>
-              {unavailable ? '품절' : '장바구니에서 구매하기'}
+              {unavailable ? '품절' : '장바구니에서 확인하기'}
             </button>
           </div>
           <p className="detail-purchase-note">선택 수량을 담고 장바구니 확인 단계로 이동합니다. 최종 금액은 장바구니 전체 상품에 따라 달라질 수 있습니다.</p>
@@ -166,7 +167,7 @@ export default function ProductDetail() {
       <section className="detail-description" aria-labelledby="detail-description-title">
         <span>상품 설명</span>
         <h2 id="detail-description-title">{p.name}</h2>
-        <p>{supplement ? supplementGoalMatch(p, goal) ? `현재 ${goal} 구매 목적과 연관된 영양제 상품입니다. 주요 성분을 기준으로 비교할 수 있습니다.` : '등록된 주요 성분과 함량을 기준으로 상품을 비교할 수 있습니다.' : p.summary || '등록된 상품 설명이 없습니다.'}</p>
+        <p>{supplement ? supplementGoalMatch(p, goal) ? `현재 ${goal} 구매 목적과 연관된 영양제 상품입니다. 주요 성분과 함량을 확인할 수 있습니다.` : '등록된 주요 성분과 함량을 확인할 수 있습니다.' : p.summary || '등록된 상품 설명이 없습니다.'}</p>
       </section>
 
       <div className="tabs" id="product-information">
@@ -176,7 +177,7 @@ export default function ProductDetail() {
             { id: 'info', label: '원재료 및 알레르기' },
             { id: 'qna', label: '배송 · 교환 · 반품' },
             { id: 'reviews', label: '구매후기' },
-          ].map((t) => (
+          ].filter((t) => !IS_MIDTERM_PRESENTATION || ['nutrition', 'info'].includes(t.id)).map((t) => (
             <button key={t.id} className={t.id !== 'reviews' && tab === t.id ? 'on' : ''} onClick={() => {
               if (t.id === 'reviews') document.getElementById('product-reviews')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
               else setTab(t.id)
@@ -257,9 +258,9 @@ export default function ProductDetail() {
         )}
       </section>
 
-      <ProductReviews key={p.id} product={p} />
+      {!IS_MIDTERM_PRESENTATION && <ProductReviews key={p.id} product={p} />}
       <aside className="detail-mobile-buy" aria-label="모바일 구매 영역">
-        <div><span>예상 결제금액</span><strong>{won(estimatedTotal)}</strong></div>
+        <div><span>{IS_MIDTERM_PRESENTATION ? '선택 상품 합계' : '예상 결제금액'}</span><strong>{won(IS_MIDTERM_PRESENTATION ? itemTotal : estimatedTotal)}</strong></div>
         <button className="btn btn-ghost" onClick={addSelectedToCart} disabled={purchasePending || unavailable}>담기</button>
         <button className="btn btn-primary" onClick={moveToCartForPurchase} disabled={purchasePending || unavailable}>{unavailable ? '품절' : '장바구니 확인'}</button>
       </aside>

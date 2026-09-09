@@ -1,4 +1,5 @@
 import { useStore } from '../store'
+import { IS_MIDTERM_PRESENTATION } from '../lib/presentation'
 
 const GROUPS = [
   { title: 'SHOP', links: [
@@ -20,6 +21,9 @@ const GROUPS = [
 
 export default function Footer() {
   const { navigate } = useStore()
+  const groups = IS_MIDTERM_PRESENTATION
+    ? [{ title: 'MIDTERM', links: [['상품 목록', 'products'], ['건강목표 설정', 'goalSetup']] }]
+    : GROUPS
   const openLink = (view) => {
     if (view === 'wellness') {
       navigate('main')
@@ -40,7 +44,7 @@ export default function Footer() {
             <span className="tl">Pure &amp; Clean Nutrition</span>
           </div>
           <nav className="footer-links" aria-label="서비스 안내">
-            {GROUPS.map((group) => (
+            {groups.map((group) => (
               <section className="footer-group" key={group.title}>
                 <h2>{group.title}</h2>
                 <div>
@@ -55,8 +59,8 @@ export default function Footer() {
           </nav>
         </div>
         <div className="footer-fine">
-          <p>CareMarket은 건강식품과 식단 상품을 둘러보고 주문할 수 있는 서비스입니다.</p>
-          <p>상품 정보와 주문 관련 안내는 각 상품 상세 및 주문내역에서 확인할 수 있습니다.</p>
+          <p>CareMarket은 건강식품과 식단 상품을 탐색하는 서비스입니다.</p>
+          <p>{IS_MIDTERM_PRESENTATION ? '중간발표 버전은 상품 탐색과 장바구니 영양 합산까지 제공합니다.' : '상품 정보와 주문 관련 안내는 각 상품 상세 및 주문내역에서 확인할 수 있습니다.'}</p>
         </div>
       </div>
     </footer>

@@ -5,6 +5,7 @@ import Icon from './Icon'
 import ProductImage from './ProductImage'
 import { won } from '../lib/format'
 import { QUERY_MAX_LENGTH } from '../../supabase/functions/_shared/ai-search-contract.js'
+import { IS_MIDTERM_PRESENTATION } from '../lib/presentation'
 
 const AI_SEARCH_EXAMPLES = [
   '카페인 없는 영양제 찾아줘',
@@ -63,7 +64,13 @@ function AnnouncementBar({ navigate, isLoggedIn }) {
     onFocus={() => setInteracting(true)} onBlur={event => { if (!event.currentTarget.contains(event.relatedTarget)) setInteracting(false) }}>
     <div className="announce-shell">
       <div className="announce-viewport">
-        <div className="announce-track" style={{ transform: `translateY(-${active * 50}%)` }}>
+        {IS_MIDTERM_PRESENTATION ? (
+          <div className="announce-inner">
+            <b>MIDTERM DEMO</b>
+            <span>2026년 9월 14일 개발 범위 · 상품 탐색과 장바구니 영양 합산</span>
+            <button type="button" className="link" onClick={() => navigate('products')}>상품 둘러보기 →</button>
+          </div>
+        ) : <div className="announce-track" style={{ transform: `translateY(-${active * 50}%)` }}>
           <div className="announce-inner" aria-hidden={active !== 0} inert={active !== 0}>
             <b>ORGANIC &amp; CLEAN</b>
             <span>자연에서 온 무첨가 할인식단 · 40,000원 이상 무료배송</span>
@@ -74,7 +81,7 @@ function AnnouncementBar({ navigate, isLoggedIn }) {
             <span>반가워요, 신규 가입 <strong>20% 쿠폰 지급</strong></span>
             <button type="button" className="link" onClick={openCoupons}>쿠폰함 확인하기 →</button>
           </div>
-        </div>
+        </div>}
       </div>
     </div>
   </div>
@@ -378,7 +385,7 @@ export default function Header() {
               </button>
               {isLoggedIn ? (
                 <>
-                  {isAdmin && (
+                  {!IS_MIDTERM_PRESENTATION && isAdmin && (
                     <button
                       type="button"
                       className="header-admin-btn"
@@ -388,7 +395,7 @@ export default function Header() {
                       <Icon name="shield-check" size={15} /> <span>관리자 화면</span>
                     </button>
                   )}
-                  <button
+                  {!IS_MIDTERM_PRESENTATION && <button
                     className="icon-btn header-wishlist-btn"
                     onClick={() => navigate('wishlist')}
                     aria-label={`찜한 상품 ${wishlist.length}개`}
@@ -397,7 +404,7 @@ export default function Header() {
                   >
                     <Icon name="heart" size={20} fill={wishlist.length ? 'currentColor' : 'none'} />
                     {wishlist.length > 0 && <span className="header-wishlist-count">{wishlist.length > 99 ? '99+' : wishlist.length}</span>}
-                  </button>
+                  </button>}
                   <button className="icon-btn" onClick={() => navigate('mypage')} aria-label="마이페이지">
                     <Icon name="user" size={20} />
                   </button>
@@ -451,18 +458,18 @@ export default function Header() {
                   </button>
                 )
               ))}
-              <button
+              {!IS_MIDTERM_PRESENTATION && <button
                 type="button"
                 className={`deal-nav-item${view === 'deals' ? ' on' : ''}`}
                 onClick={() => navigate('deals')}
               >
                 특가상품
-              </button>
+              </button>}
             </div>
-            <div className="header-nav-right">
+            {!IS_MIDTERM_PRESENTATION && <div className="header-nav-right">
               <CompanyMenu navigate={navigate} />
               <button type="button" className="order-lookup-link" onClick={() => navigate('orders')}>주문 · 배송 조회</button>
-            </div>
+            </div>}
           </div>
         </div>
       </header>

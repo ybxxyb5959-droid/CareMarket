@@ -105,13 +105,13 @@ test('auth returns reject external, protocol-relative, encoded backslash and con
 
 test('order loading completes even when review loading rejects', async () => {
   const code = read('src/pages/Orders.jsx')
-  const body = code.match(/const load = async \(\) => \{([\s\S]*?)\n    \}\n    void load/)[1]
+  const body = code.match(/const load = async \(\) => \{([\s\S]*?)\r?\n    \}\r?\n    void load/)[1]
   const rows = [{ order_id: 'order-1', items: [{ order_item_id: 'item-1' }] }]
   let state
   await new Function('setState', 'authUserId', 'active', 'fetchMyOrders', 'fetchMyReviewItems', 'supabase', 'return (async () => {' + body + '})()')(
     next => { state = next }, 'owner', true, async () => rows, async () => { throw new Error('reviews unavailable') }, {})
   assert.deepEqual(state, { ownerId: 'owner', rows, loading: false, error: null })
-  const reviewEffect = code.match(/useEffect\(\(\) => \{\n    let active = true\n    setReviews([\s\S]*?)\n  \}, \[authUserId, reloadKey, reviewRevision\]\)/)[0]
+  const reviewEffect = code.match(/useEffect\(\(\) => \{\r?\n    let active = true\r?\n    setReviews([\s\S]*?)\r?\n  \}, \[authUserId, reloadKey, reviewRevision\]\)/)[0]
   assert.doesNotMatch(reviewEffect, /setState\(/)
   assert.match(reviewEffect, /error: '리뷰 상태를 불러오지 못했습니다.'/)
 })
@@ -136,8 +136,8 @@ test('new reward guard preserves legacy coupons and adds a transactionally uniqu
 
 test('successful login restores the actual router product selection and order route', () => {
   const code = read('src/StoreProvider.jsx')
-  const returnBody = code.match(/const returnAfterLogin = \(\) => \{([\s\S]*?)\n  \}\n  const navigate/)[1]
-  const popBody = code.match(/const onPopState = \(event\) => \{([\s\S]*?)\n    \}\n    window.addEventListener/)[1]
+  const returnBody = code.match(/const returnAfterLogin = \(\) => \{([\s\S]*?)\r?\n  \}\r?\n  const navigate/)[1]
+  const popBody = code.match(/const onPopState = \(event\) => \{([\s\S]*?)\r?\n    \}\r?\n    window.addEventListener/)[1]
   for (const path of ['/products/12', '/orders']) {
     const tab = storage()
     rememberAuthReturn(tab, path)

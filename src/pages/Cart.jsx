@@ -5,8 +5,9 @@ import { useStore } from '../store'
 import Icon from '../components/Icon'
 import { won } from '../lib/format'
 import { calculateCartPricing } from '../lib/cart'
-import { GOAL_NUTRIENTS, NUTRIENT_META, fmtNutrient } from '../lib/nutrition'
+import { GOAL_NUTRIENTS, NUTRIENT_META, cartNutritionTotals, fmtNutrient } from '../lib/nutrition'
 import CartAiInsight from '../components/CartAiInsight'
+import { IS_MIDTERM_PRESENTATION } from '../lib/presentation'
 
 
 export default function Cart() {
@@ -27,6 +28,7 @@ export default function Cart() {
     freeDeliveryRemaining,
   } = calculateCartPricing(displayCart)
   const cartCount = displayCart.reduce((sum, item) => sum + item.quantity, 0)
+  const nutritionTotals = useMemo(() => cartNutritionTotals(displayCart), [displayCart])
   const goalKeys = GOAL_NUTRIENTS[goal]?.length ? GOAL_NUTRIENTS[goal] : ['calories']
   const isBusy = cartLoading || cartPending > 0
   const canCollapseProducts = displayCart.length > 3
@@ -74,7 +76,7 @@ export default function Cart() {
         <div className="page-head cart-page-head">
           <div>
             <h1 className="page-title">장바구니</h1>
-            <p>담은 상품과 수량을 확인한 뒤 주문을 진행해 주세요.</p>
+            <p>{IS_MIDTERM_PRESENTATION ? '담은 상품의 수량과 영양정보 단순 합계를 확인해 주세요.' : '담은 상품과 수량을 확인한 뒤 주문을 진행해 주세요.'}</p>
           </div>
           <span>총 {cart.length}종 · {cartCount}개</span>
         </div>
@@ -104,7 +106,7 @@ export default function Cart() {
             <div className="cart-layout">
               <section className="cart-products" aria-labelledby="cart-products-title" aria-busy={isBusy}>
                 <div className="cart-section-head">
-                  <h2 id="cart-products-title">주문 상품</h2>
+                  <h2 id="cart-products-title">{IS_MIDTERM_PRESENTATION ? '담은 상품' : '주문 상품'}</h2>
                   <span>{cart.length}종 · {cartCount}개</span>
                 </div>
 
@@ -153,11 +155,11 @@ export default function Cart() {
 
               <aside className="summary cart-order-summary" aria-labelledby="cart-summary-title" aria-live="polite">
                 <div className="cart-summary-head">
-                  <h2 id="cart-summary-title">주문 금액</h2>
+                  <h2 id="cart-summary-title">{IS_MIDTERM_PRESENTATION ? '장바구니 금액' : '주문 금액'}</h2>
                   {cartPending > 0 && <span>금액 반영 중…</span>}
                 </div>
                 <div className="sum-row"><span>상품금액</span><b>{won(cartTotal)}</b></div>
-                <div className="sum-row"><span>배송비</span><b>{deliveryFee === 0 ? '무료' : won(deliveryFee)}</b></div>
+                {!IS_MIDTERM_PRESENTATION && <><div className="sum-row"><span>배송비</span><b>{deliveryFee === 0 ? '무료' : won(deliveryFee)}</b></div>
                 <div className={`delivery-progress${deliveryFee === 0 ? ' complete' : ''}`}>
                   <Icon name={deliveryFee === 0 ? 'check' : 'truck'} size={15} />
                   <span>{deliveryFee === 0 ? '무료배송이 적용됐어요' : `무료배송까지 ${won(freeDeliveryRemaining)} 남았어요`}</span>
@@ -169,20 +171,32 @@ export default function Cart() {
                 <button className="btn btn-primary btn-lg btn-block cart-checkout-button" disabled={isBusy || Boolean(cartError)} onClick={checkout}>
                   {cartCount}개 상품 주문하기 <Icon name="chevron-right" size={17} />
                 </button>
-                <p className="cart-summary-note">결제 단계에서 배송지와 결제수단을 입력합니다.</p>
+                <p className="cart-summary-note">결제 단계에서 배송지와 결제수단을 입력합니다.</p></>}
+                {IS_MIDTERM_PRESENTATION && <p className="cart-summary-note">결제 기능은 다음 개발 단계에서 연결됩니다.</p>}
               </aside>
 
               <section className="cart-wellness" aria-labelledby="cart-wellness-title">
                 <div className="cart-wellness-content">
-                  <CartAiInsight cartOverride={displayCart} />
+                  {IS_MIDTERM_PRESENTATION ? <>
+                    <div className="cart-section-head">
+                      <h2 id="cart-wellness-title">장바구니 영양정보 단순 합계</h2>
+                      <span>수량 실시간 반영</span>
+                    </div>
+                    <p className="cart-summary-note">식품의 1회 제공량에 장바구니 수량을 곱해 단순 합산하며, 기준 초과·부족은 판단하지 않습니다.</p>
+                    <div className="nutri-grid" aria-label="장바구니 영양정보 합계">
+                      {Object.entries(NUTRIENT_META).map(([key, meta]) => (
+                        <div className="nutri-cell" key={key}><div className="k">{meta.total}</div><div className="v">{fmtNutrient(key, nutritionTotals[key])}</div></div>
+                      ))}
+                    </div>
+                  </> : <CartAiInsight cartOverride={displayCart} />}
                 </div>
               </section>
             </div>
 
-            <div className="cart-mobile-checkout" aria-label="모바일 주문 요약">
+            {!IS_MIDTERM_PRESENTATION && <div className="cart-mobile-checkout" aria-label="모바일 주문 요약">
               <div><span>예상 결제금액</span><strong>{won(paymentTotal)}</strong></div>
               <button className="btn btn-primary" disabled={isBusy || Boolean(cartError)} onClick={checkout}>{cartCount}개 주문하기</button>
-            </div>
+            </div>}
           </>
         )}
       </div>

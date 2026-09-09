@@ -19,13 +19,14 @@ test('mypage uses a conditional compact wishlist summary instead of full product
 })
 
 test('mypage sections follow the requested order', () => {
+  const productionSections = myPageSource.slice(myPageSource.indexOf('const recentOrdersState'))
   const sectionOrder = [
     'mypage-orders-title',
     'mypage-profile-title',
     'mypage-goal-title',
     'mypage-inquiries-title',
   ]
-  const positions = sectionOrder.map((id) => myPageSource.indexOf(`aria-labelledby="${id}"`))
+  const positions = sectionOrder.map((id) => productionSections.indexOf(`aria-labelledby="${id}"`))
   assert.ok(positions.every((position) => position >= 0))
   assert.deepEqual([...positions].sort((a, b) => a - b), positions)
 })
