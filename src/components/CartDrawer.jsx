@@ -74,7 +74,7 @@ export default function CartDrawer() {
 
         {cart.length > 0 && (
           <div className="drawer-foot">
-            {!IS_MIDTERM_PRESENTATION && <CartAiInsight compact />}
+            <CartAiInsight compact />
             <div className="drawer-pricing">
               <div className="sum-row"><span>상품 합계</span><b>{won(cartTotal)}</b></div>
               {!IS_MIDTERM_PRESENTATION && <><div className="sum-row"><span>신선 배송비 (4만원 이상 무료)</span><b>{deliveryFee === 0 ? '무료' : won(deliveryFee)}</b></div>

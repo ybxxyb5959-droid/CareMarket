@@ -46,12 +46,12 @@ test('midterm action guards protect production-side writes', () => {
   assert.match(storeSource, /if \(IS_MIDTERM_PRESENTATION \|\| !authUserId\)/)
 })
 
-test('midterm cart exposes simple totals and does not render AI analysis or checkout actions', () => {
+test('midterm cart reuses AI analysis while checkout actions stay blocked', () => {
   const cartSource = readFileSync(new URL('../src/pages/Cart.jsx', import.meta.url), 'utf8')
   const drawerSource = readFileSync(new URL('../src/components/CartDrawer.jsx', import.meta.url), 'utf8')
-  assert.match(cartSource, /장바구니 영양정보 단순 합계/)
-  assert.match(cartSource, /cartNutritionTotals\(displayCart\)/)
-  assert.match(cartSource, /IS_MIDTERM_PRESENTATION \? <>/)
-  assert.match(drawerSource, /!IS_MIDTERM_PRESENTATION && <CartAiInsight compact/)
+  assert.match(cartSource, /<CartAiInsight cartOverride=\{displayCart\} \/>/)
+  assert.match(drawerSource, /<CartAiInsight compact \/>/)
+  assert.doesNotMatch(drawerSource, /!IS_MIDTERM_PRESENTATION && <CartAiInsight/)
+  assert.match(cartSource, /!IS_MIDTERM_PRESENTATION && <div className="cart-mobile-checkout"/)
   assert.match(drawerSource, /!IS_MIDTERM_PRESENTATION && <button className="btn btn-primary"[^\n]+onClick=\{checkout\}/)
 })

@@ -5,7 +5,7 @@ import { useStore } from '../store'
 import Icon from '../components/Icon'
 import { won } from '../lib/format'
 import { calculateCartPricing } from '../lib/cart'
-import { GOAL_NUTRIENTS, NUTRIENT_META, cartNutritionTotals, fmtNutrient } from '../lib/nutrition'
+import { GOAL_NUTRIENTS, NUTRIENT_META, fmtNutrient } from '../lib/nutrition'
 import CartAiInsight from '../components/CartAiInsight'
 import { IS_MIDTERM_PRESENTATION } from '../lib/presentation'
 
@@ -28,7 +28,6 @@ export default function Cart() {
     freeDeliveryRemaining,
   } = calculateCartPricing(displayCart)
   const cartCount = displayCart.reduce((sum, item) => sum + item.quantity, 0)
-  const nutritionTotals = useMemo(() => cartNutritionTotals(displayCart), [displayCart])
   const goalKeys = GOAL_NUTRIENTS[goal]?.length ? GOAL_NUTRIENTS[goal] : ['calories']
   const isBusy = cartLoading || cartPending > 0
   const canCollapseProducts = displayCart.length > 3
@@ -177,18 +176,7 @@ export default function Cart() {
 
               <section className="cart-wellness" aria-labelledby="cart-wellness-title">
                 <div className="cart-wellness-content">
-                  {IS_MIDTERM_PRESENTATION ? <>
-                    <div className="cart-section-head">
-                      <h2 id="cart-wellness-title">장바구니 영양정보 단순 합계</h2>
-                      <span>수량 실시간 반영</span>
-                    </div>
-                    <p className="cart-summary-note">식품의 1회 제공량에 장바구니 수량을 곱해 단순 합산하며, 기준 초과·부족은 판단하지 않습니다.</p>
-                    <div className="nutri-grid" aria-label="장바구니 영양정보 합계">
-                      {Object.entries(NUTRIENT_META).map(([key, meta]) => (
-                        <div className="nutri-cell" key={key}><div className="k">{meta.total}</div><div className="v">{fmtNutrient(key, nutritionTotals[key])}</div></div>
-                      ))}
-                    </div>
-                  </> : <CartAiInsight cartOverride={displayCart} />}
+                  <CartAiInsight cartOverride={displayCart} />
                 </div>
               </section>
             </div>
