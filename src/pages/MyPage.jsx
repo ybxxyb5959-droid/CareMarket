@@ -77,7 +77,7 @@ export default function MyPage() {
     return (
       <div className="wrap page mypage">
         <div className="mypage-head">
-          <div className="profile-id"><div className="avatar">{user.name.slice(0, 1)}</div><div><span className="eyebrow">중간발표 사용자 설정</span><h1>{user.name}님, 안녕하세요</h1><div className="em">{user.email || '제공되지 않음'}</div></div></div>
+          <div className="profile-id"><div className="avatar">{user.name.slice(0, 1)}</div><div><span className="eyebrow">사용자 설정</span><h1>{user.name}님, 안녕하세요</h1><div className="em">{user.email || '제공되지 않음'}</div></div></div>
           <button className="btn btn-ghost btn-sm" onClick={logout}>로그아웃</button>
         </div>
         <section className="mypage-section" aria-labelledby="mypage-goal-title">

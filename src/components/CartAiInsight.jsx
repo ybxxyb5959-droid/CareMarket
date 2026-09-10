@@ -43,7 +43,7 @@ const briefReason = (text = '') => text
   .replace('비교 정보가 충분하지 않아 판정을 보류했습니다.', '비교 정보를 확인해주세요.')
   .replace(/(단백질|당류|나트륨) [\d.]+(?:mg|g)으로 기존 (.+?) 탐색 기준 밖입니다./, '$2 기준 밖으로 표시 정보를 확인해주세요.')
 
-const METRIC_HINTS = { sugar: '당류 기준 충족', protein: '단백질 기준 충족', sodium: '나트륨 기준 충족', calories: '현재 장바구니 내 비교', attention: '추가 확인 권장', protein_complement: '단백질 기준 확인', supplement: '구매 목적의 상품군', caffeine: '등록 성분 기준' }
+const METRIC_HINTS = { sugar: '당류 기준 충족', protein: '단백질 기준 충족', sodium: '나트륨 기준 충족', calories: '현재 장바구니 내 비교', attention: '추가 확인 권장', protein_complement: '단백질 기준 확인', supplement: '등록된 상품 유형', caffeine: '등록 성분 기준' }
 
 function FindingCard({ title, items, attention = false }) {
   return <section className={`cart-ai-finding${attention ? ' is-attention' : ''}`}>
@@ -60,7 +60,7 @@ function FindingCard({ title, items, attention = false }) {
 export default function CartAiInsight({ compact = false, cartOverride = null }) {
   const {
     cart, cartLoading, cartPending, cartError,
-    goal, subFilters, allergies, settingsLoading,
+    allergies, settingsLoading,
     navigate, navigateToCatalog, setSubFilters, setDrawerOpen, authUserId,
   } = useStore()
   const inputCart = cartOverride || cart
@@ -81,16 +81,14 @@ export default function CartAiInsight({ compact = false, cartOverride = null }) 
     .sort()
     .join('|'), [analysisCart])
   const criteriaSignature = [
-    goal || '',
-    [...subFilters].sort().join(','),
     [...allergies].sort().join(','),
   ].join('|')
-  const analysisKey = `${CART_ANALYSIS_VERSION}|compat1|${authUserId || 'anonymous'}|${criteriaSignature}|${cartSignature}`
+  const analysisKey = `${CART_ANALYSIS_VERSION}|cart-only1|${authUserId || 'anonymous'}|${criteriaSignature}|${cartSignature}`
   const localFallback = useMemo(() => {
-    const context = { primaryGoal: goal, selectedConditions: subFilters, excludedAllergens: allergies }
+    const context = { compositionOnly: true, excludedAllergens: allergies }
     const deterministic = analyzeCartNutrition(analysisCart, context)
     return composeCartInsight(deterministic, cartAnalysisBasis(context))
-  }, [analysisCart, goal, subFilters, allergies])
+  }, [analysisCart, allergies])
   const [analysis, setAnalysis] = useState(() => {
     const cached = getCachedCartSummary(analysisKey)
     return cached
@@ -174,7 +172,7 @@ export default function CartAiInsight({ compact = false, cartOverride = null }) 
 
   const openSettings = () => {
     if (compact) setDrawerOpen(false)
-    navigate('goalSetup')
+    navigate('mypage')
   }
 
   const openDetailedAnalysis = () => {
@@ -189,11 +187,11 @@ export default function CartAiInsight({ compact = false, cartOverride = null }) 
   const openComplementProducts = () => {
     const filterLabel = insight?.recommendation?.filterLabel
     setDrawerOpen(false)
-    navigateToCatalog(goal === '영양제 탐색' ? '영양제' : '전체상품', '전체')
+    navigateToCatalog('전체상품', '전체')
     setSubFilters(filterLabel ? [filterLabel] : [])
   }
 
-  const localCriteriaSet = Boolean(goal || subFilters.length || allergies.length)
+  const localCriteriaSet = Boolean(allergies.length)
   const insight = visibleStatus === 'success' ? renderedAnalysis.insight : localFallback
   const basis = insight?.basis
   const actions = insight?.actions || []
@@ -207,7 +205,7 @@ export default function CartAiInsight({ compact = false, cartOverride = null }) 
   const extraMetrics = metrics.filter(item => !mainMetrics.includes(item))
   const summary = insight?.summary || ''
   const quick = cartQuickSummary(insight)
-  const insufficientInfo = goal !== '영양제 탐색' && analysisCart.length > 0 && analysisCart.every(({ product }) =>
+  const insufficientInfo = analysisCart.length > 0 && analysisCart.every(({ product }) =>
     !isSupplement(product) && ['protein', 'sugar', 'sodium', 'calories'].every(key => {
       const value = product.nutrition?.[key]
       return value === null || value === undefined || value === '' || !Number.isFinite(Number(value))
@@ -218,11 +216,11 @@ export default function CartAiInsight({ compact = false, cartOverride = null }) 
       {compact ? <div className="cart-ai-intro">
         <span><Icon name="sparkles" size={15} /> AI 장바구니 분석</span>
         {visibleStatus === 'success' ? <p>{quick.basis} 기준 · {quick.itemCount}종 분석</p>
-          : visibleStatus === 'idle' && <p>현재 장바구니 구성을 구매 목적 기준으로 확인해볼 수 있어요.</p>}
+          : visibleStatus === 'idle' && <p>현재 담긴 상품의 구성과 등록 영양정보를 확인해보세요.</p>}
       </div> : <header className="cart-ai-dashboard-head">
         <div className="cart-ai-guide-intro"><Icon name="sparkles" size={22} /><div>
           <h2 id="cart-wellness-title" tabIndex={-1}>장바구니 영양 가이드</h2>
-          <p>담은 상품 {analysisCart.length}종 · 구매 수량 {quantityCount}개 / 구매 목적: {goal || '미설정'}</p>
+          <p>담은 상품 {analysisCart.length}종 · 구매 수량 {quantityCount}개</p>
           <small>상품구성 상세내용을 확인해보세요.</small>
         </div></div>
         <button type="button" className="btn btn-soft btn-sm" aria-expanded={guideOpen} aria-controls="cart-ai-guide" disabled={!guideOpen && unavailable && visibleStatus !== 'success'} onClick={() => {
@@ -235,12 +233,12 @@ export default function CartAiInsight({ compact = false, cartOverride = null }) 
 
       <div id={compact ? undefined : 'cart-ai-guide'} hidden={!compact && !guideOpen} aria-busy={visibleStatus === 'loading'}>
       {!compact && visibleStatus !== 'success' && <div className="cart-ai-state" role={visibleStatus === 'error' ? 'alert' : 'status'}>
-        <h3>{!analysisCart.length ? '분석할 상품이 없습니다.' : visibleStatus === 'loading' ? '장바구니를 분석하고 있어요…' : visibleStatus === 'error' ? 'AI 분석을 완료하지 못했어요.' : visibleStatus === 'stale' ? '장바구니 또는 구매 조건이 변경됐어요.' : '내 구매 목적에 맞는 구성인지 살펴볼까요?'}</h3>
+        <h3>{!analysisCart.length ? '분석할 상품이 없습니다.' : visibleStatus === 'loading' ? '장바구니를 분석하고 있어요…' : visibleStatus === 'error' ? 'AI 분석을 완료하지 못했어요.' : visibleStatus === 'stale' ? '장바구니 또는 구매 조건이 변경됐어요.' : '현재 장바구니 구성을 살펴볼까요?'}</h3>
         <p>{visibleStatus === 'error' ? renderedAnalysis.error : visibleStatus === 'stale' ? '이전 결과는 표시하지 않습니다. 다시 분석해 주세요.' : '담은 전체 상품의 등록 정보를 상품 종류별로 비교합니다. 구매 수량은 섭취량으로 환산하지 않습니다.'}</p>
         <button type="button" className={`btn btn-primary cart-ai-trigger${visibleStatus === 'loading' ? ' is-loading' : ''}`} onClick={analyze} disabled={unavailable || visibleStatus === 'loading'}>
           {visibleStatus === 'loading' ? '분석 중…' : visibleStatus === 'error' ? '다시 시도' : visibleStatus === 'stale' ? '다시 분석' : '장바구니 영양 분석하기'}
         </button>
-        {!localCriteriaSet && <p className="cart-ai-personalization-note">맞춤 기준이 없어 일반적인 상품 구성을 분석합니다. <button type="button" onClick={openSettings}>추천 조건 설정</button></p>}
+        {!localCriteriaSet && <p className="cart-ai-personalization-note">등록된 상품 정보로 구성을 분석합니다. <button type="button" onClick={openSettings}>알레르기 설정</button></p>}
       </div>}
       {!compact && insufficientInfo && <p className="cart-ai-data-note" role="status">등록된 영양정보가 부족해 영양 비교를 보류합니다. 상품별 정보 없음 항목과 원재료 표시를 확인해 주세요.</p>}
       {compact && visibleStatus === 'error' && <div className="ai-insight-stale" role="alert"><p>분석 결과를 불러오지 못했습니다.</p><button type="button" className="btn btn-soft btn-sm" onClick={analyze} disabled={unavailable}>다시 시도</button></div>}
@@ -252,8 +250,8 @@ export default function CartAiInsight({ compact = false, cartOverride = null }) 
           </button>
           {!settingsLoading && !localCriteriaSet && (
             <p className="cart-ai-personalization-note">
-              맞춤 기준이 없어 일반적인 영양 구성만 분석해요.
-              <button type="button" onClick={openSettings}>추천 조건 설정</button>
+              등록된 상품 정보로 구성을 분석해요.
+              <button type="button" onClick={openSettings}>알레르기 설정</button>
             </p>
           )}
         </>
@@ -284,8 +282,8 @@ export default function CartAiInsight({ compact = false, cartOverride = null }) 
               </div>)}
             </dl>
             {quick.goodPoint && <section className="cart-ai-quick-good"><h4>✓ 좋은 점</h4><p title={quick.goodPoint}>{quick.goodPoint}</p></section>}
-            {quick.attentionCount > 0 && <section className="cart-ai-quick-checks">
-              <h4>! 확인 필요 {quick.attentionCount}종</h4>
+            {quick.checks.length > 0 && <section className="cart-ai-quick-checks">
+              <h4>! 확인 필요{quick.attentionCount > 0 ? ` ${quick.attentionCount}종` : ''}</h4>
               <ul>{quick.checks.map(product => <li key={product.id}>
                 <strong title={product.name}>{product.name}</strong><p title={product.reason}>{product.reason}</p>
               </li>)}</ul>
@@ -300,7 +298,7 @@ export default function CartAiInsight({ compact = false, cartOverride = null }) 
           <div className="cart-ai-result cart-ai-result-detail cart-ai-dashboard">
             <section className="cart-ai-glance">
               <h4><Icon name="sparkles" size={18} /> AI 한눈 요약</h4>
-              <small>기준 목적: {basis?.primary_goal || '일반 구성'} · {productReasons.length}종 분석</small>
+              <small>현재 장바구니 구성 · {productReasons.length}종 분석</small>
               <p>{summary}</p>
               {!insight.aiExplanationAvailable && <small>등록 정보 기반 기본 분석</small>}
             </section>
@@ -308,14 +306,14 @@ export default function CartAiInsight({ compact = false, cartOverride = null }) 
               {mainMetrics.map(item => <div key={item.key} className={`cart-ai-metric${item.key === 'attention' ? ' is-attention' : ''}`} title={item.reason}>
                 <span>{item.label}</span>
                 <strong>{insufficientInfo && !['attention', 'supplement', 'caffeine'].includes(item.key) ? <small>정보 없음 · 비교 보류</small> : <>{item.count}<small>{item.key === 'attention' ? '종' : ' / ' + item.total + '종'}</small></>}</strong>
-                <p>{METRIC_HINTS[item.key] || '현재 목적 기준'}</p>
+                <p>{METRIC_HINTS[item.key] || '현재 상품 구성'}</p>
                 <details><summary><span>기준 보기</span><Icon name="chevron-down" size={13} /></summary><p>{item.reason}</p></details>
               </div>)}
             </div>
             {extraMetrics.length > 0 && <details className="cart-ai-extra-metrics"><summary><span>추가 조건 지표 {extraMetrics.length}개</span><Icon name="chevron-down" size={15} /></summary><BalanceItems items={extraMetrics} /></details>}
             <div className="cart-ai-findings">
               <FindingCard title="좋은 점" items={insight.goodPoints?.length ? insight.goodPoints : ['현재 기준에 해당하는 상품 정보를 더 살펴보세요.']} />
-              <FindingCard title="확인할 점" attention items={insight.attentionPoints?.length ? insight.attentionPoints : ['등록 정보에서 추가 확인 항목이 도출되지 않았습니다. 알레르기 정보는 상품 원재료 표시를 확인해 주세요.']} />
+              <FindingCard title="확인 필요" attention items={insight.attentionPoints?.length ? insight.attentionPoints : ['등록 정보에서 추가 확인 항목이 도출되지 않았습니다. 알레르기 정보는 상품 원재료 표시를 확인해 주세요.']} />
             </div>
             <section className="cart-ai-product-section">
               <div className="cart-ai-section-heading"><h4>상품별 분석</h4><span>{productReasons.length}종 · 자세한 근거는 펼쳐서 확인</span></div>
@@ -361,11 +359,11 @@ export default function CartAiInsight({ compact = false, cartOverride = null }) 
               </button>}
             </section>
             <section className="cart-ai-cta">
-              <div><h4>현재 구매 목적에 맞는 상품을 함께 비교해보세요.</h4>{actions.map(action => <p key={action}>{action}</p>)}</div>
+              <div><h4>현재 구성과 함께 살펴볼 상품 유형</h4>{actions.map(action => <p key={action}>{action}</p>)}</div>
               {hasComplementFilter && <button type="button" className="btn btn-primary cart-ai-products-link" onClick={openComplementProducts}>{insight.recommendation.label}<Icon name="chevron-right" size={15} /></button>}
             </section>
             <footer className="cart-ai-dashboard-foot">
-              {!basis?.personalized && <p className="cart-ai-personalization-note">맞춤 기준이 없어 일반적인 구성을 분석했어요. <button type="button" onClick={openSettings}>추천 조건 설정</button></p>}
+              {!basis?.excluded_allergens?.length && <p className="cart-ai-personalization-note">등록 알레르기를 설정하면 상품 성분과 비교할 수 있어요. <button type="button" onClick={openSettings}>알레르기 설정</button></p>}
               <div><small>상품 종류 기준 참고 분석 · 실제 섭취량과는 달라요.</small>
                 <button type="button" className={`cart-ai-reanalyze${visibleStatus === 'loading' ? ' cart-ai-trigger is-loading' : ''}`} disabled={unavailable || visibleStatus === 'loading'} onClick={analyze}>
                   {visibleStatus === 'loading' ? <Icon name="sparkles" size={14} /> : <span aria-hidden="true">↻</span>}
@@ -374,7 +372,7 @@ export default function CartAiInsight({ compact = false, cartOverride = null }) 
               </div>
               {visibleStatus === 'stale' && <small role="status">구성이 변경됐어요. 현재 기준의 기본 분석을 표시합니다.</small>}
               {insight.explanationNotice && <small className="cart-ai-fallback-note" role="status">{insight.explanationNotice}</small>}
-              <small>적용 조건: {basis?.selected_conditions?.join(' · ') || '추가 조건 없음'} / 알레르기 설정: {basis?.excluded_allergens?.join(' · ') || '미설정'}</small>
+              <small>알레르기 설정: {basis?.excluded_allergens?.join(' · ') || '미설정'}</small>
               <small>등록 정보가 없는 값은 비교할 수 없으며, 알레르기 안전 여부를 보장하지 않습니다.</small>
             </footer>
           </div>

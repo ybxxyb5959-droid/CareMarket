@@ -26,7 +26,7 @@ const products = [
   },
 ]
 let serverCart = [{ product: products[0], quantity: 1 }]
-let profile = { user_id: userId, display_name: '테스트 사용자', primary_goal: 'muscle_gain', role: 'user' }
+let profile = { user_id: userId, display_name: '테스트 사용자', primary_goal: 'supplement_search', role: 'user' }
 let preferences = { low_sugar: true, low_sodium: false, high_protein: true, exclude_caffeine: false, excluded_allergens: ['우유'] }
 let failAnalysis = false
 let analysisCalls = 0
@@ -131,6 +131,17 @@ try {
   await page.locator('.drawer').getByRole('button', { name: '다시 분석', exact: true }).click()
   await page.locator('.drawer .cart-ai-result-compact').waitFor()
   assert.equal(serverCart[0].quantity, 3)
+  serverCart.push({ product: products[1], quantity: 1 })
+  await page.reload()
+  await page.locator('.cart-btn').click()
+  await page.getByRole('button', { name: '장바구니 분석하기', exact: true }).click()
+  await page.locator('.drawer .cart-ai-result-compact').waitFor()
+  assert.match(await page.locator('.cart-ai-quick-checks li').first().innerText(), /저당 그릭요거트[\s\S]*우유/)
+  assert.doesNotMatch(await page.locator('.drawer .cart-ai-insight').innerText(), /영양제 탐색|구매목적 달성/)
+  await page.getByRole('button', { name: '분석 결과 자세히 보기', exact: true }).click()
+  await page.locator('#cart-ai-guide .cart-ai-product-reason').first().waitFor()
+  assert.match(await page.locator('.cart-ai-finding.is-attention').innerText(), /저당 그릭요거트.*우유/)
+  assert.doesNotMatch(await page.locator('#cart-ai-guide').innerText(), /영양제 탐색|구매목적 달성/)
   serverCart=[]
   await page.reload()
   await page.getByRole('heading', { name: '장바구니가 비어 있어요.' }).waitFor()
