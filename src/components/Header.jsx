@@ -66,9 +66,9 @@ function AnnouncementBar({ navigate, isLoggedIn }) {
       <div className="announce-viewport">
         {IS_MIDTERM_PRESENTATION ? (
           <div className="announce-inner">
-            <b>MIDTERM DEMO</b>
-            <span>2026년 9월 14일 개발 범위 · 상품 탐색과 장바구니 영양 합산</span>
-            <button type="button" className="link" onClick={() => navigate('products')}>상품 둘러보기 →</button>
+            <b>ORGANIC &amp; CLEAN</b>
+            <span>자연에서 온 무첨가 할인식단 · 40,000원 이상 무료배송</span>
+            <button type="button" className="link" onClick={() => navigate('products')}>내 맞춤 상품 보기 →</button>
           </div>
         ) : <div className="announce-track" style={{ transform: `translateY(-${active * 50}%)` }}>
           <div className="announce-inner" aria-hidden={active !== 0} inert={active !== 0}>
