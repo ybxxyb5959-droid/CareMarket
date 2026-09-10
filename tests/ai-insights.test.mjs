@@ -126,8 +126,8 @@ test('cart summary uses only the authenticated user server snapshot', async () =
     const payload = JSON.parse(options.body)
     assert.deepEqual(payload.generationConfig.responseJsonSchema.required, GEMINI_CART_SCHEMA.required)
     const prompt = JSON.parse(payload.contents[0].parts[0].text)
-    assert.deepEqual(prompt.goal, '근육량 증가')
-    assert.deepEqual(prompt.selected_conditions, ['고단백'])
+    assert.equal('goal' in prompt, false)
+    assert.equal('selected_conditions' in prompt, false)
     assert.deepEqual(prompt.cart_scope, { item_count: 1, single_product: true })
     assert.equal(prompt.analysis.dominant.includes('protein'), true)
     assert.equal(prompt.analysis.balance_items.some((item) => item.key === 'protein' && item.status === 'good'), true)
@@ -146,13 +146,14 @@ test('cart summary uses only the authenticated user server snapshot', async () =
   assert.equal(response.status, 200)
   assert.equal(requestedUser, 'user-a')
   const insight = (await response.json()).insight
-  assert.equal(insight.headline, '근육량 증가 기준 장바구니 분석')
+  assert.equal(insight.headline, '현재 장바구니 구성')
   assert.equal(insight.aiExplanationAvailable, true)
   assert.equal(insight.balanceItems.some((item) => item.key === 'protein' && item.status === 'good'), true)
   assert.deepEqual(insight.basis, {
-    personalized: true,
-    primary_goal: '근육량 증가',
-    selected_conditions: ['고단백'],
+    composition_only: true,
+    personalized: false,
+    primary_goal: null,
+    selected_conditions: [],
     excluded_allergens: [],
   })
 })
@@ -172,8 +173,8 @@ test('cart quantities never change composition and duplicate IDs count once', ()
 test('missing preferences stays a general analysis without fake personalization', async () => {
   const handler = makeHandler(async (_url, options) => {
     const prompt = JSON.parse(JSON.parse(options.body).contents[0].parts[0].text)
-    assert.equal(prompt.goal, null)
-    assert.deepEqual(prompt.selected_conditions, [])
+    assert.equal('goal' in prompt, false)
+    assert.equal('selected_conditions' in prompt, false)
     return geminiResponse({ ...cartNarrative, summary: prompt.allowed_summaries[0], actions: prompt.allowed_actions })
   }, {
     getCartSnapshot: async () => ({ profile: { primary_goal: null }, preferences: null, items: [{ quantity: 1, product: product(1) }] }),
@@ -183,6 +184,7 @@ test('missing preferences stays a general analysis without fake personalization'
   const insight = (await response.json()).insight
   assert.equal(insight.aiExplanationAvailable, true)
   assert.deepEqual(insight.basis, {
+    composition_only: true,
     personalized: false,
     primary_goal: null,
     selected_conditions: [],

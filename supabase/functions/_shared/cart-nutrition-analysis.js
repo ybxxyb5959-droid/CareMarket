@@ -56,6 +56,7 @@ export function normalizeCartAnalysisContext({ primaryGoal = null, selectedCondi
 }
 
 export function cartAnalysisBasis(context = {}) {
+  if (context.compositionOnly) return { composition_only: true, personalized: false, primary_goal: null, selected_conditions: [], excluded_allergens: safeStrings(context.excludedAllergens) }
   const normalized = normalizeCartAnalysisContext(context)
   return {
     personalized: Boolean(normalized.primaryGoal || normalized.selectedConditions.length || normalized.excludedAllergens.length),
@@ -86,6 +87,7 @@ function normalizeRows(rawRows) {
 }
 
 export function analyzeCartNutrition(rawRows, rawContext = {}) {
+  if (rawContext.compositionOnly) return analyzeCurrentCart(rawRows, rawContext)
   const rows = normalizeRows(rawRows)
   const context = normalizeCartAnalysisContext(rawContext)
   const goal = context.primaryGoal
@@ -189,7 +191,7 @@ export function analyzeCartNutrition(rawRows, rawContext = {}) {
 
 export function cartAnalysisForGemini(analysis, basis) {
   return {
-    goal: basis.primary_goal, selected_conditions: basis.selected_conditions,
+    ...(basis.composition_only ? { excluded_allergens: basis.excluded_allergens } : { goal: basis.primary_goal, selected_conditions: basis.selected_conditions }),
     cart_scope: { item_count: analysis.itemCount, single_product: analysis.singleProduct },
     cart_composition: analysis.composition,
     products: analysis.composition.products,
@@ -248,7 +250,7 @@ export function isCompatibleCartInsight(value) {
 
 export function reconcileCartInsight(response, current) {
   if (!isCompatibleCartInsight(response) || !isCartInsight(current)) return null
-  const basis = value => JSON.stringify([value?.primary_goal || null,
+  const basis = value => JSON.stringify([Boolean(value?.composition_only), value?.primary_goal || null,
     [...(value?.selected_conditions || [])].sort(), [...(value?.excluded_allergens || [])].sort()])
   const facts = value => JSON.stringify([
     value.balanceItems.map(item => [item.key, item.count, item.total]).sort(),
@@ -264,4 +266,59 @@ export function reconcileCartInsight(response, current) {
     || response.aiExplanationAvailable !== true) return current
   const { explanationNotice: _notice, ...result } = current
   return { ...result, summary: response.summary, actions: response.actions, aiExplanationAvailable: true }
+}
+
+// Composition-only cart mode: reuse registered nutrient rules, never goal suitability.
+function analyzeCurrentCart(rawRows, context) {
+  const analysis = analyzeCartNutrition(rawRows, { selectedConditions: ['고단백', '저당', '저염'], excludedAllergens: context.excludedAllergens })
+  const rows = normalizeRows(rawRows)
+  const quantities = new Map()
+  for (const item of Array.isArray(rawRows) ? rawRows : []) {
+    const id = String(item?.product?.id ?? item?.product?.product_id)
+    const quantity = safeNumber(item?.quantity)
+    if (quantity >= 1) quantities.set(id, (quantities.get(id) || 0) + quantity)
+  }
+  analysis.composition.products = analysis.composition.products.map(product => ({ ...product, quantity: quantities.get(String(product.id)) }))
+  if (analysis.composition.decision === 'limited' && rows.length > 1) {
+    const categories = [...new Set(rows.map(row => row.category).filter(Boolean))]
+    if (categories.length && rows.every(row => row.category)) {
+      const concentrated = categories.length === 1
+      const summary = concentrated
+        ? `현재 담긴 ${rows.length}종은 ${categories[0]} 카테고리에 집중되어 있어요.`
+        : `현재 장바구니에는 ${categories.join(' · ')} 등 ${categories.length}개 카테고리 상품이 함께 담겨 있어요.`
+      analysis.composition = { ...analysis.composition,
+        decision: concentrated ? 'category_centered' : 'category_variety', shortSummary: summary,
+        detailSummary: summary + ' 구매 상품 구성에 대한 설명이며 한 끼나 하루 섭취량을 의미하지 않습니다.',
+        goodPoint: concentrated ? null : summary,
+        attention: concentrated ? '다양한 상품 구성을 원한다면 다른 카테고리도 함께 살펴볼 수 있습니다.' : null }
+    }
+  }
+  analysis.compositionSignals = [analysis.composition.decision]
+  analysis.productReasons = analysis.productReasons.map(product => {
+    const row = rows.find(row => String(row.id) === String(product.id))
+    const allergyMatches = safeStrings(context.excludedAllergens).filter(a => row.allergens.includes(a))
+    const allergyChecks = allergyMatches.length ? [`사용자가 설정한 알레르기 성분 '${allergyMatches.join(' · ')}'가 포함되어 있습니다. 구매 전 실제 상품의 알레르기 표시사항을 확인해주세요.`] : []
+    const missing = product.checks.filter(check => check.includes('정보가 충분하지'))
+    const checks = [...allergyChecks, ...missing]
+    return { ...product, quantity: quantities.get(String(product.id)), group: row.supplement ? '보조 영양 상품' : '일반 식품',
+      allergyMatches, checks, needsAttention: checks.length > 0,
+      tags: [...product.tags.filter(tag => !['확인 필요', '직접 관련 상품', '기타 식품'].includes(tag)), ...(checks.length ? ['확인 필요'] : [])],
+      reasons: [...product.reasons.filter(reason => !product.checks.includes(reason)), ...checks] }
+  }).sort((a,b) => b.allergyMatches.length - a.allergyMatches.length)
+  const attention = analysis.balanceItems.find(item => item.key === 'attention')
+  attention.count = analysis.productReasons.filter(p => p.needsAttention).length
+  attention.text = `${attention.count} / ${rows.length}종`
+  attention.status = attention.count ? 'attention' : 'good'
+  attention.reason = '등록 알레르기 일치 또는 영양정보 미비를 확인합니다.'
+  analysis.attentionPoints = analysis.productReasons.filter(p => p.needsAttention).map(p => `${p.name}: ${p.checks.join(' ')}`)
+  if (analysis.composition.attention) analysis.attentionPoints.push(analysis.composition.attention)
+  analysis.goodPoints = [...new Set([...(analysis.composition.goodPoint ? [analysis.composition.goodPoint] : []), ...analysis.goodPoints.filter(p => !p.includes('보완'))])]
+  analysis.observations = analysis.goodPoints
+  analysis.groups = [...new Set(analysis.productReasons.map(p => p.group))].map(label => ({ label, productIds: analysis.productReasons.filter(p => p.group === label).map(p => p.id) }))
+  analysis.needsAttention = attention.count ? ['attention'] : []
+  const action = analysis.composition.attention || '현재 담긴 상품의 카테고리와 표시 정보를 비교하며 다른 상품 유형도 함께 살펴보세요.'
+  analysis.actionDirections = [{ key: 'review_cart_composition', fallbackText: action }]
+  analysis.recommendation = { filterLabel: null, label: '다른 상품 유형 살펴보기' }
+  analysis.fallback = { headline: '현재 장바구니 구성', summary: analysis.composition.detailSummary, actions: [action] }
+  return analysis
 }
