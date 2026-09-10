@@ -250,14 +250,14 @@ export default function Home() {
       </section>
 
       {/* ── 오늘의 웰빙 테이블 (Shoppable image) ── */}
-      {!IS_MIDTERM_PRESENTATION && <WellnessTable />}
-      {!IS_MIDTERM_PRESENTATION && <DailyRoutine />}
+      <WellnessTable />
+      <DailyRoutine />
 
       {/* ── 가치 배너 (Trust) ── */}
       <section className="section" style={{ paddingTop: 0 }}>
         <div className="wrap">
           <div className="values">
-            {(IS_MIDTERM_PRESENTATION ? VALUES.filter((value) => value.title !== '주문 상태 확인') : VALUES).map((v, i) => (
+            {VALUES.map((v, i) => (
               <div key={i} className="value">
                 <div className="v-ico"><Icon name={v.icon} size={19} /></div>
                 <div>
