@@ -6624,7 +6624,6 @@ button.service-cta:hover { border-color: var(--brand-500); background: var(--sur
 .cart-ai-result-detail .cart-ai-overall > h3 { margin-top: 0; }
 .cart-ai-result-detail .cart-ai-balance-item { grid-template-columns: auto minmax(0, 1fr) auto; }
 .cart-ai-basis-inline { color: var(--muted); font-size: 10.5px; line-height: 1.6; }
-.cart-ai-result-detail .cart-ai-products-link { max-width: 100%; }
 .cart-ai-overall > span { display: inline-flex; align-items: center; gap: 6px; color: var(--brand-600); font-size: 10.5px; font-weight: 800; }
 .cart-ai-overall > h3 { margin-top: 7px; color: var(--brand-ink); font-size: 15px; line-height: 1.45; }
 .cart-ai-overall > p { margin-top: 5px; color: var(--ink-2); font-size: 12px; line-height: 1.6; }
@@ -6633,8 +6632,6 @@ button.service-cta:hover { border-color: var(--brand-500); background: var(--sur
 .cart-ai-result-detail .cart-ai-section ol { display: grid; gap: 9px; margin: 0; padding: 0 0 0 18px; list-style-position: outside; color: var(--ink-2); font-size: 11.5px; line-height: 1.8; }
 .cart-ai-result-detail .cart-ai-section ul { list-style: disc; }
 .cart-ai-result-detail .cart-ai-section ol { list-style: decimal; }
-.cart-ai-products-link { display: inline-flex; align-items: center; justify-content: center; gap: 4px; width: fit-content; min-height: 34px; padding: 7px 10px; border: 1px solid var(--brand-tint-border); border-radius: var(--r-xs); background: var(--surface); color: var(--brand-600); font-size: 11px; font-weight: 800; }
-.cart-ai-products-link:hover { border-color: var(--brand-500); color: var(--brand-ink); }
 .cart-ai-fallback-note { display: block; color: var(--faint); font-size: 10px; line-height: 1.45; }
 .cart-ai-result-compact > .cart-ai-fallback-note { margin-top: 6px; }
 
@@ -11231,12 +11228,41 @@ button.service-cta:hover { border-color: var(--brand-500); background: var(--sur
 .cart-ai-dashboard-head > p { margin-top: 8px; color: var(--muted); font-size: 12px; line-height: 1.6; }
 .cart-ai-result-detail.cart-ai-dashboard { margin-top: 20px; padding: 0; border: 0; background: transparent; border-radius: 0; overflow: visible; gap: 18px; }
 .cart-ai-dashboard h4 { font-size: 14px; font-weight: 800; line-height: 1.5; color: var(--ink); }
-.cart-ai-glance, .cart-ai-finding, .cart-ai-dashboard .cart-ai-product-reason, .cart-ai-cta { padding: 20px; border: 1px solid var(--line); border-radius: var(--r-sm); background: var(--surface); min-width: 0; }
+.cart-ai-glance, .cart-ai-finding, .cart-ai-dashboard .cart-ai-product-reason { padding: 20px; border: 1px solid var(--line); border-radius: var(--r-sm); background: var(--surface); min-width: 0; }
 .cart-ai-glance { background: var(--brand-tint); border-color: var(--brand-tint-border); }
-.cart-ai-glance h4, .cart-ai-finding h4, .cart-ai-cta h4 { display: flex; align-items: center; gap: 8px; }
+.cart-ai-glance h4, .cart-ai-finding h4 { display: flex; align-items: center; gap: 8px; }
 .cart-ai-glance h4, .cart-ai-glance svg { color: var(--brand-600); }
 .cart-ai-glance > p { margin-top: 10px; color: var(--brand-ink); font-size: 15px; font-weight: 650; line-height: 1.75; }
 .cart-ai-glance > small { display: block; margin-top: 8px; font-size: 10px; color: var(--muted); }
+/* 목적 부합도 한 줄 요약 (최상단) */
+.cart-ai-goal-fit { display: flex; align-items: center; flex-wrap: wrap; gap: 14px; margin-top: 12px; padding: 14px 16px; border-radius: var(--r-sm); background: var(--surface); border: 1px solid var(--line); }
+.cart-ai-goal-fit.is-fit { background: var(--brand-tint); border-color: var(--brand-tint-border); }
+.cart-ai-goal-fit.is-low { background: color-mix(in srgb, var(--warn, #d98324) 12%, var(--surface)); border-color: color-mix(in srgb, var(--warn, #d98324) 40%, var(--line)); }
+.cart-ai-goal-fit-text { flex: 1; min-width: 200px; }
+.cart-ai-goal-fit-text > p { margin: 0; font-size: 13px; font-weight: 650; line-height: 1.6; color: var(--ink-2); }
+.cart-ai-goal-fit-lines { display: grid; gap: 4px; margin: 6px 0 0; padding: 0; list-style: none; font-size: 12px; line-height: 1.6; color: var(--muted); }
+/* Mini card goal-fit: donut badge + one/two-line summary, nothing else. */
+.cart-ai-goal-fit-mini { display: flex; align-items: center; gap: 10px; margin: 0; }
+.cart-ai-goal-fit-mini > p { flex: 1; min-width: 0; margin: 0; color: var(--ink-2); font-size: 12px; font-weight: 650; line-height: 1.55; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; }
+/* Donut is shared by the mini card and the detail page's "AI 한눈 요약" — same
+   size-agnostic markup, color driven by the same ≥50%/미만 is-fit/is-low split. */
+.cart-ai-goal-donut { flex: none; }
+.cart-ai-goal-donut-track { stroke: var(--surface-2); }
+.cart-ai-goal-donut-value { stroke: var(--brand-600); transition: stroke-dashoffset 0.3s ease; }
+.cart-ai-goal-donut-text { fill: var(--brand-ink); font-weight: 800; }
+.cart-ai-goal-fit-mini.is-low .cart-ai-goal-donut-value, .cart-ai-goal-fit.is-low .cart-ai-goal-donut-value { stroke: var(--warn, #b45309); }
+.cart-ai-goal-fit-mini.is-low .cart-ai-goal-donut-text, .cart-ai-goal-fit.is-low .cart-ai-goal-donut-text { fill: var(--warn, #b45309); }
+.cart-ai-goal-fit-mini-text { margin: 0; padding: 8px 10px; border-radius: 8px; background: var(--surface-2); color: var(--ink-2); font-size: 12px; font-weight: 650; line-height: 1.6; }
+/* Mini card exception: allergy risk always stands out, regardless of goal-fit state. */
+.cart-ai-result-compact > p.cart-ai-allergy-alert { display: flex; align-items: center; gap: 5px; margin-top: 8px; padding: 7px 9px; border-radius: 8px; background: color-mix(in srgb, var(--danger, #dc2626) 12%, var(--surface)); color: var(--danger, #b91c1c); font-size: 12px; font-weight: 750; line-height: 1.5; -webkit-line-clamp: 2; }
+.cart-ai-allergy-alert svg { flex: none; }
+/* 상품별 목적 대비 판정 */
+.cart-ai-goal-verdict { display: flex; align-items: flex-start; gap: 6px; margin-top: 8px; font-size: 12px; line-height: 1.6; font-weight: 600; color: var(--muted); }
+.cart-ai-goal-verdict svg { flex: none; margin-top: 2px; }
+.cart-ai-goal-verdict.is-met { color: var(--brand-600); }
+.cart-ai-goal-verdict.is-unmet { color: var(--warn, #b45309); }
+.cart-ai-canvas .cart-ai-goal-verdict { margin-left: 60px; }
+@media (max-width: 640px) { .cart-ai-canvas .cart-ai-goal-verdict { margin-left: 0; } }
 .cart-ai-dashboard .cart-ai-metrics { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
 .cart-ai-metric { padding: 16px 12px; border: 1px solid var(--line); border-radius: var(--r-sm); background: var(--surface); min-width: 0; }
 .cart-ai-metric > span { display: block; color: var(--ink-2); font-size: 11.5px; font-weight: 750; min-height: 32px; }
@@ -11270,10 +11296,25 @@ button.service-cta:hover { border-color: var(--brand-500); background: var(--sur
 .cart-ai-dashboard .cart-ai-evidence > summary > span, .cart-ai-dashboard .cart-ai-extra-metrics > summary > span { font-size: 11px; color: var(--muted); font-weight: 650; }
 .cart-ai-evidence ul { margin: 8px 0 0; padding: 12px 12px 12px 28px; background: var(--surface-2); border-radius: 8px; color: var(--muted); font-size: 11.5px; line-height: 1.8; list-style: disc; }
 .cart-ai-extra-metrics .cart-ai-balance-items { margin-top: 8px; }
-.cart-ai-cta { display: flex; align-items: center; justify-content: space-between; gap: 16px; background: var(--brand-tint); border-color: var(--brand-tint-border); }
-.cart-ai-cta h4 svg { color: var(--brand-600); }
-.cart-ai-cta p { margin-top: 7px; font-size: 12px; color: var(--muted); line-height: 1.7; }
-.cart-ai-dashboard .cart-ai-cta .cart-ai-products-link { flex-shrink: 0; min-height: 40px; background: var(--brand-ink); color: var(--surface); border-color: var(--brand-ink); }
+/* 영양제 표기 전용 패널: 식품 분석 섹션과 배경·구분선으로 명확히 분리한다. */
+.cart-ai-supplement-panel { padding: 20px; border: 1px dashed var(--line); border-radius: var(--r-sm); background: var(--surface-2); }
+.cart-ai-supplement-panel .cart-ai-section-heading h4 { font-size: 13px; }
+.cart-ai-supplement-list { display: flex; flex-wrap: wrap; gap: 8px; padding: 0; margin: 0; list-style: none; }
+.cart-ai-supplement-list li { padding: 6px 12px; border-radius: 999px; background: var(--surface); border: 1px solid var(--line); font-size: 12px; color: var(--ink-2); }
+.cart-ai-supplement-note { margin-top: 12px; font-size: 11px; color: var(--muted); line-height: 1.7; }
+/* 채소 카테고리 안내: 수치/기준 없이 카테고리 유무만 전달 + 실제 상품 카드. */
+.cart-ai-vegetable-panel { padding: 20px; background: #faf5ed; display: grid; gap: 18px; }
+.cart-ai-vegetable-group.has-divider { padding-top: 18px; border-top: 1px solid color-mix(in srgb, #896a3d 20%, transparent); }
+.cart-ai-vegetable-note { display: flex; align-items: center; gap: 6px; margin: 0; color: #896a3d; font-size: 13px; font-weight: 700; line-height: 1.6; }
+.cart-ai-vegetable-note svg { flex: none; }
+.cart-ai-vegetable-suggestions { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 10px; margin-top: 14px; }
+.cart-ai-vegetable-card { display: flex; flex-direction: column; padding: 10px; border: 1px solid var(--line); border-radius: var(--r-sm); background: var(--surface); }
+.cart-ai-vegetable-media { width: 100%; aspect-ratio: 1; border-radius: var(--r-xs); overflow: hidden; background: var(--surface-2); }
+.cart-ai-vegetable-media img { width: 100%; height: 100%; object-fit: cover; }
+.cart-ai-vegetable-name { width: 100%; margin-top: 8px; color: var(--ink-2); font-size: 11.5px; font-weight: 650; line-height: 1.4; text-align: left; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; }
+.cart-ai-vegetable-card > strong { margin-top: 4px; color: var(--ink); font-size: 12.5px; font-weight: 750; }
+.cart-ai-vegetable-add { display: flex; align-items: center; justify-content: center; gap: 4px; margin-top: 8px; min-height: 30px; border: 1px solid var(--brand-tint-border); border-radius: var(--r-xs); background: var(--surface); color: var(--brand-600); font-size: 11px; font-weight: 750; }
+.cart-ai-vegetable-add:hover { background: var(--brand-tint); }
 .cart-ai-dashboard-foot { display: grid; gap: 7px; color: var(--muted); }
 .cart-ai-dashboard-foot > div { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; }
 .cart-ai-dashboard-foot small { font-size: 10px; line-height: 1.6; }
@@ -11283,11 +11324,9 @@ button.service-cta:hover { border-color: var(--brand-500); background: var(--sur
   .cart-ai-dashboard-head h2 { font-size: 16px; }
   .cart-ai-dashboard .cart-ai-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .cart-ai-findings { grid-template-columns: minmax(0, 1fr); }
-  .cart-ai-glance, .cart-ai-finding, .cart-ai-dashboard .cart-ai-product-reason, .cart-ai-cta { padding: 16px; }
+  .cart-ai-glance, .cart-ai-finding, .cart-ai-dashboard .cart-ai-product-reason { padding: 16px; }
   .cart-ai-glance > p { font-size: 14px; }
   .cart-ai-metric > span { min-height: 0; }
-  .cart-ai-cta { flex-direction: column; align-items: stretch; gap: 12px; }
-  .cart-ai-dashboard .cart-ai-cta .cart-ai-products-link { width: 100%; }
 }
 
 .cart-wellness-content > .cart-ai-insight:not(.compact) { margin-top: 0; padding-top: 0; border-top: 0; }
@@ -11307,7 +11346,8 @@ button.service-cta:hover { border-color: var(--brand-500); background: var(--sur
 .cart-ai-canvas .cart-ai-data-note { padding: 16px; background: var(--surface-2); border-radius: var(--r-sm); }
 .cart-ai-canvas .cart-ai-state .btn-primary { background: var(--brand-600); color: var(--surface); }
 .cart-ai-canvas .cart-ai-dashboard { gap: 0; border: 1px solid var(--brand-tint-border); border-radius: var(--r); overflow: hidden; background: var(--surface); margin-top: 16px; }
-.cart-ai-canvas .cart-ai-glance, .cart-ai-canvas .cart-ai-findings, .cart-ai-canvas .cart-ai-product-section, .cart-ai-canvas .cart-ai-cta, .cart-ai-canvas .cart-ai-dashboard-foot { padding: 26px; border: 0; border-bottom: 1px solid var(--line); border-radius: 0; }
+.cart-ai-canvas .cart-ai-glance, .cart-ai-canvas .cart-ai-findings, .cart-ai-canvas .cart-ai-product-section, .cart-ai-canvas .cart-ai-supplement-panel, .cart-ai-canvas .cart-ai-vegetable-panel, .cart-ai-canvas .cart-ai-dashboard-foot { padding: 26px; border: 0; border-bottom: 1px solid var(--line); border-radius: 0; }
+.cart-ai-canvas .cart-ai-supplement-panel { background: var(--surface-2); }
 .cart-ai-canvas .cart-ai-glance h4 { font-size: 12px; }
 .cart-ai-canvas .cart-ai-glance > p { font-size: 17px; font-weight: 550; line-height: 1.8; color: var(--ink); }
 .cart-ai-canvas .cart-ai-dashboard .cart-ai-metrics { grid-template-columns: repeat(var(--cart-ai-metric-count), minmax(0, 1fr)); gap: 0; padding: 20px 26px; border-bottom: 1px solid var(--line); }
@@ -11322,7 +11362,7 @@ button.service-cta:hover { border-color: var(--brand-500); background: var(--sur
 .cart-ai-canvas .cart-ai-findings { gap: 24px; }
 .cart-ai-canvas .cart-ai-finding { padding: 0; border: 0; border-radius: 0; background: transparent; }
 .cart-ai-canvas .cart-ai-finding + .cart-ai-finding { padding-left: 24px; border-left: 1px solid var(--line); }
-.cart-ai-canvas .cart-ai-finding h4, .cart-ai-canvas .cart-ai-section-heading h4, .cart-ai-canvas .cart-ai-cta h4 { font-size: 12px; font-weight: 650; }
+.cart-ai-canvas .cart-ai-finding h4, .cart-ai-canvas .cart-ai-section-heading h4 { font-size: 12px; font-weight: 650; }
 .cart-ai-canvas .cart-ai-finding li p { display: block; overflow: visible; }
 .cart-ai-canvas .cart-ai-finding details { margin-top: 12px; }
 .cart-ai-canvas .cart-ai-product-list { gap: 0; border: 1px solid var(--line); border-radius: var(--r-sm); overflow: hidden; }
@@ -11336,12 +11376,11 @@ button.service-cta:hover { border-color: var(--brand-500); background: var(--sur
 .cart-ai-canvas .cart-ai-nutrition-details { padding: 14px; background: var(--surface-2); border-radius: var(--r-xs); color: var(--muted); font-size: 11px; line-height: 1.8; }
 .cart-ai-canvas .cart-ai-nutrition-details > div { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin: 8px 0; }
 .cart-ai-canvas .cart-ai-nutrition-details b { color: var(--ink-2); font-weight: 600; }
-.cart-ai-canvas .cart-ai-cta { background: var(--surface); }
 .cart-ai-canvas .cart-ai-dashboard-foot { padding-top: 16px; padding-bottom: 16px; border-bottom: 0; }
 .cart-ai-canvas button:focus-visible, .cart-ai-canvas summary:focus-visible { outline: 2px solid var(--brand-500); outline-offset: 3px; }
 @media (max-width: 600px) {
   .cart-ai-canvas .cart-ai-dashboard-head { flex-direction: column; align-items: stretch; padding: 18px; }
-  .cart-ai-canvas .cart-ai-glance, .cart-ai-canvas .cart-ai-findings, .cart-ai-canvas .cart-ai-product-section, .cart-ai-canvas .cart-ai-cta, .cart-ai-canvas .cart-ai-dashboard-foot { padding: 20px 16px; }
+  .cart-ai-canvas .cart-ai-glance, .cart-ai-canvas .cart-ai-findings, .cart-ai-canvas .cart-ai-product-section, .cart-ai-canvas .cart-ai-supplement-panel, .cart-ai-canvas .cart-ai-vegetable-panel, .cart-ai-canvas .cart-ai-dashboard-foot { padding: 20px 16px; }
   .cart-ai-canvas .cart-ai-glance > p { font-size: 15px; }
   .cart-ai-canvas .cart-ai-dashboard .cart-ai-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); padding: 8px 16px; }
   .cart-ai-canvas .cart-ai-metric { padding: 14px 10px; }
@@ -11533,7 +11572,7 @@ button.service-cta:hover { border-color: var(--brand-500); background: var(--sur
   /* Keep the full AI guide divider-based and make long copy wrap safely. */
   .cart-ai-canvas { overflow-wrap: anywhere; }
   .cart-ai-canvas .cart-ai-dashboard-head { flex-direction: column; align-items: stretch; padding: 18px; }
-  .cart-ai-canvas .cart-ai-glance, .cart-ai-canvas .cart-ai-findings, .cart-ai-canvas .cart-ai-product-section, .cart-ai-canvas .cart-ai-cta, .cart-ai-canvas .cart-ai-dashboard-foot { padding: 20px 16px; }
+  .cart-ai-canvas .cart-ai-glance, .cart-ai-canvas .cart-ai-findings, .cart-ai-canvas .cart-ai-product-section, .cart-ai-canvas .cart-ai-supplement-panel, .cart-ai-canvas .cart-ai-vegetable-panel, .cart-ai-canvas .cart-ai-dashboard-foot { padding: 20px 16px; }
   .cart-ai-canvas .cart-ai-dashboard .cart-ai-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); padding: 8px 16px; }
   .cart-ai-canvas .cart-ai-metric { padding: 14px 10px; }
   .cart-ai-canvas .cart-ai-metric:nth-child(odd) { padding-left: 0; border-left: 0; }
@@ -11803,3 +11842,13 @@ button.service-cta:hover { border-color: var(--brand-500); background: var(--sur
   .detail-brand-option::before { display: none; }
   .detail-brand-option:nth-child(even)::before { display: block; content: ''; position: absolute; left: 0; top: 50%; transform: translateY(-50%); height: 12px; width: 1px; background: var(--line); }
 }
+.cart-story-title { margin: 16px 0 8px; font-size: 23px; line-height: 1.4; color: #163f31; }
+.cart-product-story { font-size: 16px; font-weight: 650; color: #193b30; }
+.cart-story-facts { margin: 12px 0 18px; padding: 18px; border-radius: 14px; background: #f4f8f5; }
+.cart-story-facts > small { color: #65766c; }
+.cart-story-facts dl { display: flex; flex-wrap: wrap; gap: 18px 34px; margin: 14px 0 0; }
+.cart-story-facts dt { font-size: 12px; color: #65766c; }
+.cart-story-facts dd { margin: 4px 0 0; font-size: 26px; font-weight: 700; color: #163f31; }
+.cart-story-facts dd span { margin-left: 3px; font-size: 13px; font-weight: 400; }
+.cart-story-check { margin-top: 16px; padding-top: 14px; border-top: 1px solid #dce5dd; color: #785726; font-size: 13px; }
+.cart-story-check p { margin: 6px 0 0; line-height: 1.6; }

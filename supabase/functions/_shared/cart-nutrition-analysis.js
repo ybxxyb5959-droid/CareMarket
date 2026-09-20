@@ -1,7 +1,12 @@
 import { LOW_SUGAR_MAX, LOW_SODIUM_MAX, HIGH_PROTEIN_MIN } from './nutrition-policy.js'
 import { isSupplement, ingredientDescription, supplementIngredients, registeredServing } from './product-type.js'
 import { analyzeCartComposition } from './cart-composition.js'
-export const CART_ANALYSIS_VERSION = 6
+import { cartShoppingInsights } from './cart-shopping-insights.js'
+import { cartStory, productStory } from './cart-story.js'
+import { groundedCartHeadline } from './cart-headline.js'
+import { validCartSummary } from './cart-narrative.js'
+import { analyzeGoalFit, goalFitHeadline, goalFitDetailLines, goalFitComplement } from './cart-goal-fit.js'
+export const CART_ANALYSIS_VERSION = 18
 
 // Keep these thresholds aligned with the existing catalog quick filters.
 export const CART_NUTRITION_THRESHOLDS = Object.freeze({
@@ -56,7 +61,7 @@ export function normalizeCartAnalysisContext({ primaryGoal = null, selectedCondi
 }
 
 export function cartAnalysisBasis(context = {}) {
-  if (context.compositionOnly) return { composition_only: true, personalized: false, primary_goal: null, selected_conditions: [], excluded_allergens: safeStrings(context.excludedAllergens) }
+  if (context.compositionOnly) return { composition_only: true, personalized: Boolean(context.displayGoal), primary_goal: normalizeCartAnalysisContext({ primaryGoal: context.displayGoal }).primaryGoal, selected_conditions: [], excluded_allergens: safeStrings(context.excludedAllergens) }
   const normalized = normalizeCartAnalysisContext(context)
   return {
     personalized: Boolean(normalized.primaryGoal || normalized.selectedConditions.length || normalized.excludedAllergens.length),
@@ -80,7 +85,7 @@ function normalizeRows(rawRows) {
       mainIngredients: safeStrings(p.mainIngredients ?? p.main_ingredients),
       supplement: isSupplement(p), ingredients: supplementIngredients(p), ingredientDescription: ingredientDescription(p), serving: registeredServing(p),
       allergens: safeStrings(p.allergens), caffeine: p.caffeine === true || p.contains_caffeine === true,
-      nutrition: Object.fromEntries(['protein', 'sugar', 'sodium', 'calories', 'carbs', 'fat'].map(key => [key, isSupplement(p) ? null : safeNumber(n[key])])),
+      nutrition: Object.fromEntries(['protein', 'sugar', 'sodium', 'calories', 'carbs', 'fat', 'fiber'].map(key => [key, isSupplement(p) ? null : safeNumber(n[key])])),
     })
   }
   return [...unique.values()]
@@ -149,10 +154,17 @@ export function analyzeCartNutrition(rawRows, rawContext = {}) {
     return { id: row.id, name: row.name, group: goal === '영양제 탐색' ? '일반 식품' : (goal === '근육량 증가' ? matches.includes('protein') : matches.some(key => key !== 'caffeine')) ? '직접 관련 상품' : '기타 식품', matches, needsAttention: checks.length > 0, tags: [...matches.map(k => labels[k].replace(' 상품', '')), ...(checks.length ? ['확인 필요'] : [])], reasons: [...reasons, ...checks], checks }
   })
   productReasons.sort((a, b) => (goal === '영양제 탐색' ? Number(b.group === '영양제 구성') - Number(a.group === '영양제 구성') : Number(b.group === '직접 관련 상품') - Number(a.group === '직접 관련 상품') || Number(a.group === '보조 영양 상품') - Number(b.group === '보조 영양 상품')))
+  // "기준값 대비 실제값": spell out the numeric threshold each O/X check uses.
+  const thresholdText = {
+    protein: '단백질 ' + CART_NUTRITION_THRESHOLDS.highProteinMin + 'g 이상',
+    sugar: '당류 ' + CART_NUTRITION_THRESHOLDS.lowSugarMax + 'g 이하',
+    sodium: '나트륨 ' + CART_NUTRITION_THRESHOLDS.lowSodiumMax + 'mg 이하',
+    caffeine: '카페인 미표시',
+  }
   const balanceItems = [...keys].filter(key => (key === 'supplement' || key === 'caffeine' && rows.length > 0) || foods.length > 0).map(key => {
     const total = ['supplement', 'caffeine'].includes(key) ? rows.length : foods.length
     const count = productReasons.filter(p => p.matches.includes(key)).length
-    return { key, label: labels[key], count, total, status: count ? 'good' : 'balance', text: count + ' / ' + total + '종', reason: key === 'calories' ? '상품 종류별 등록 제공량 열량의 평균과 비교합니다. 제공량이 다를 수 있으며 절대적인 저열량 기준이 아닙니다.' : '기존 CareMarket 탐색 기준으로 상품 종류를 셉니다.' }
+    return { key, label: labels[key], count, total, status: count ? 'good' : 'balance', text: count + ' / ' + total + '종', reason: key === 'calories' ? '상품 종류별 등록 제공량 열량의 평균과 비교합니다. 제공량이 다를 수 있으며 절대적인 저열량 기준이 아닙니다.' : thresholdText[key] ? thresholdText[key] + ' 기준으로 ' + total + '종 중 ' + count + '종이 충족했습니다.' : '기존 CareMarket 탐색 기준으로 상품 종류를 셉니다.' }
   })
   if (foods.length && keys.has('protein') && goal === '근육량 증가') {
     const count = rows.filter(row => row.nutrition.protein !== null && !rules.protein(row.nutrition.protein)).length
@@ -190,12 +202,24 @@ export function analyzeCartNutrition(rawRows, rawContext = {}) {
 }
 
 export function cartAnalysisForGemini(analysis, basis) {
+  const focusByGoal = {
+    '근육량 증가': ['protein', 'high_protein'],
+    '체중 관리': ['calories', 'sugar'],
+    '식단 영양 관리': ['sodium', 'sugar', 'protein'],
+    '영양제 탐색': ['supplement_ingredients'],
+  }
   return {
+    headline_context: { purchase_goal: basis.primary_goal, fallback_title: analysis.fallback.headline },
+    purpose_focus: { goal: basis.primary_goal, preferred_topics: focusByGoal[basis.primary_goal] || ['registered_nutrition'] },
+    allergy_context: { excluded_allergens: basis.excluded_allergens, matched_products: analysis.productReasons.filter(product => product.allergyMatches?.length).map(product => ({ id: product.id, name: product.name, matches: product.allergyMatches })) },
+    registered_product_facts: analysis.productReasons.map(product => ({ id: product.id, name: product.name, group: product.group, nutrition: analysis.composition.products.find(item => String(item.id) === String(product.id))?.nutrition || null, ingredients: product.ingredients || [], checks: product.checks || [] })),
+    nutrient_metrics: analysis.balanceItems,
     ...(basis.composition_only ? { excluded_allergens: basis.excluded_allergens } : { goal: basis.primary_goal, selected_conditions: basis.selected_conditions }),
     cart_scope: { item_count: analysis.itemCount, single_product: analysis.singleProduct },
     cart_composition: analysis.composition,
     products: analysis.composition.products,
     allowed_summaries: cartNarrativeSummaries(analysis),
+    shopping_insights: analysis.productReasons.map(product => ({ product_id: product.id, findings: product.shoppingInsights || [] })),
     allowed_actions: analysis.fallback.actions,
     analysis: { dominant: analysis.dominant, good: analysis.good, needs_attention: analysis.needsAttention,
       needs_balance: analysis.needsBalance, composition_signals: analysis.compositionSignals,
@@ -207,11 +231,11 @@ export function cartAnalysisForGemini(analysis, basis) {
 
 // AI may select an evidence expansion, but cannot rewrite the factual conclusion.
 export function cartNarrativeSummaries(analysis) {
-  return [analysis.fallback.summary, analysis.composition.detailSummary]
+  return analysis.summaryOptions || [analysis.fallback.summary, analysis.composition.detailSummary]
 }
 
-export function isGroundedCartNarrative(analysis, narrative) {
-  return Boolean(narrative && cartNarrativeSummaries(analysis).includes(narrative.summary)
+export function isGroundedCartNarrative(analysis, narrative, basis = {}) {
+  return Boolean(narrative && (cartNarrativeSummaries(analysis).includes(narrative.summary) || validCartSummary(narrative.summary, analysis.composition, analysis.balanceItems, basis.primary_goal))
     && Array.isArray(narrative.actions) && narrative.actions.length > 0
     && narrative.actions.every(action => analysis.fallback.actions.includes(action)))
 }
@@ -219,11 +243,15 @@ export function isGroundedCartNarrative(analysis, narrative) {
 // Keep the existing response envelope compatible with the deployed storefront.
 // New clients require compositionVersion to reject quantity-based cached results.
 export function composeCartInsight(analysis, basis, narrative = null, aiExplanationAvailable = false) {
-  aiExplanationAvailable = aiExplanationAvailable && !analysis.hasSupplements && isGroundedCartNarrative(analysis, narrative)
+  aiExplanationAvailable = aiExplanationAvailable && isGroundedCartNarrative(analysis, narrative, basis)
   const copy = aiExplanationAvailable ? narrative : analysis.fallback
   return {
-    headline: analysis.fallback.headline, summary: copy.summary, balanceItems: analysis.balanceItems,
+    headline: aiExplanationAvailable && groundedCartHeadline(copy.headline, analysis.composition, basis) ? copy.headline.trim() : analysis.fallback.headline, summary: copy.summary, balanceItems: analysis.balanceItems,
     composition: analysis.composition, shortSummary: analysis.composition.shortSummary,
+    goalFit: analysis.goalFit || null,
+    supplementNotice: analysis.supplementNotice || null,
+    vegetableNotice: analysis.vegetableNotice || null,
+    summaryOptions: cartNarrativeSummaries(analysis),
     currentFeatures: analysis.observations, goodPoints: analysis.goodPoints, attentionPoints: analysis.attentionPoints,
     groups: analysis.groups, productReasons: analysis.productReasons, actionTitle: '이렇게 보완해보세요', actions: copy.actions,
     recommendation: analysis.recommendation, basis, analysisVersion: 2, compositionVersion: analysis.version, aiExplanationAvailable,
@@ -244,7 +272,7 @@ export function isCartInsight(value) {
 
 // Accept known deployed envelopes without trusting their older classifications.
 export function isCompatibleCartInsight(value) {
-  return [3, 4, 5, CART_ANALYSIS_VERSION].includes(value?.compositionVersion)
+  return [3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, CART_ANALYSIS_VERSION].includes(value?.compositionVersion)
     && isCartInsight({ ...value, compositionVersion: CART_ANALYSIS_VERSION })
 }
 
@@ -261,15 +289,61 @@ export function reconcileCartInsight(response, current) {
   if (basis(response.basis) !== basis(current.basis) || facts(response) !== facts(current)
     || response.compositionVersion !== current.compositionVersion
     || JSON.stringify(response.composition) !== JSON.stringify(current.composition)
-    || ![current.summary, current.composition.detailSummary].includes(response.summary)
+    || (!(current.summaryOptions || [current.summary, current.composition.detailSummary]).includes(response.summary) && !validCartSummary(response.summary, current.composition, current.balanceItems, current.basis.primary_goal))
     || !response.actions.every(action => current.actions.includes(action))
     || response.aiExplanationAvailable !== true) return current
   const { explanationNotice: _notice, ...result } = current
-  return { ...result, summary: response.summary, actions: response.actions, aiExplanationAvailable: true }
+  return { ...result, headline: groundedCartHeadline(response.headline, current.composition, current.basis) ? response.headline.trim() : current.headline, summary: response.summary, actions: response.actions, aiExplanationAvailable: true }
+}
+
+// Describe present products only; missing categories belong in attentionPoints.
+function currentCartSummary(rows, goal) {
+  const foods = rows.filter(row => !row.supplement)
+  const supplements = rows.length - foods.length
+  if (goal === '근육량 증가' && foods.length) {
+    const known = foods.filter(row => row.nutrition.protein !== null)
+    const high = known.filter(row => row.nutrition.protein >= HIGH_PROTEIN_MIN)
+    const message = !known.length ? '등록된 단백질 함량이 없어 제품 표시사항을 확인해야 해요.'
+      : high.length === foods.length ? '담은 식품은 모두 서비스의 고단백 기준에 해당해요. 상품별 제공량과 단백질 함량을 함께 살펴보세요.'
+        : high.length ? '고단백 기준에 해당하는 식품과 그렇지 않은 식품이 함께 담겨 있어요. 아래에서 제품별 단백질 함량을 확인해 보세요.'
+          : '현재 담은 식품 중 서비스의 고단백 기준에 해당하는 상품은 없어요. 단백질을 중심으로 고르신다면 상품별 함량을 확인해 보세요.'
+    return message + (supplements ? ' 영양제는 등록된 주요 성분을 별도로 확인해요.' : '')
+  }
+  const features = [
+    { key: 'sugar', label: '저당', matches: value => value <= LOW_SUGAR_MAX },
+    { key: 'protein', label: '고단백', matches: value => value >= HIGH_PROTEIN_MIN },
+    { key: 'sodium', label: '저염', matches: value => value <= LOW_SODIUM_MAX },
+  ].map(feature => ({ ...feature, count: foods.filter(row => row.nutrition[feature.key] !== null && feature.matches(row.nutrition[feature.key])).length }))
+    .filter(feature => feature.count > 0 && feature.count >= foods.length / 2)
+    .sort((a, b) => {
+      const priority = goal === '근육량 증가' ? 'protein' : goal === '식단 영양 관리' ? 'sodium' : 'sugar'
+      return Number(b.key === priority) - Number(a.key === priority) || b.count - a.count
+    }).slice(0, 2)
+  const subject = supplements ? '함께 담은 일반 식품은' : '담은 상품은'
+  const coverage = feature => feature.count === foods.length ? '모두' : feature.count > foods.length / 2 ? '대부분' : '절반이'
+  const descriptions = { sugar: '당류가 낮은 편이에요', protein: '단백질이 풍부한 편이에요', sodium: '나트륨이 낮은 편이에요' }
+  const sentences = []
+  if (features.length) {
+    const [first, second] = features
+    sentences.push(`${subject} ${coverage(first)} ${descriptions[first.key]}.`)
+    if (second) sentences.push(`${coverage(second)} ${second.label} 기준도 충족하는 구성이에요.`)
+  }
+  if (!sentences.length && foods.length) {
+    const categories = [...new Set(foods.map(row => row.category).filter(Boolean))]
+    sentences.push(categories.length === 1 ? '같은 종류의 상품을 모아 담았어요.'
+      : categories.length > 1 ? '다양한 상품을 함께 담았어요.'
+        : `일반 식품 ${foods.length}종을 담았어요. 상품별 등록 정보를 비교해 보세요.`)
+  }
+  if (supplements) {
+    if (sentences.length > 1) sentences.pop()
+    sentences.push(`영양제 ${supplements}종은 등록된 주요 성분과 함량을 별도로 확인해요.`)
+  }
+  return sentences.join(' ') || '담긴 상품이 없습니다.'
 }
 
 // Composition-only cart mode: reuse registered nutrient rules, never goal suitability.
 function analyzeCurrentCart(rawRows, context) {
+  const displayGoal = normalizeCartAnalysisContext({ primaryGoal: context.displayGoal }).primaryGoal
   const analysis = analyzeCartNutrition(rawRows, { selectedConditions: ['고단백', '저당', '저염'], excludedAllergens: context.excludedAllergens })
   const rows = normalizeRows(rawRows)
   const quantities = new Map()
@@ -319,6 +393,49 @@ function analyzeCurrentCart(rawRows, context) {
   const action = analysis.composition.attention || '현재 담긴 상품의 카테고리와 표시 정보를 비교하며 다른 상품 유형도 함께 살펴보세요.'
   analysis.actionDirections = [{ key: 'review_cart_composition', fallbackText: action }]
   analysis.recommendation = { filterLabel: null, label: '다른 상품 유형 살펴보기' }
-  analysis.fallback = { headline: '현재 장바구니 구성', summary: analysis.composition.detailSummary, actions: [action] }
+  // Judge every food against the goal's balance checklist (지표 커버리지 기반 목적 부합도).
+  // Supplements never enter this: analyzeGoalFit filters them out before scoring.
+  const goalFit = analyzeGoalFit(rows, displayGoal)
+  const goalVerdict = new Map((goalFit?.products || []).map(item => [String(item.id), item]))
+  analysis.productReasons = cartShoppingInsights(rows, analysis.productReasons)
+    .map(product => {
+      const verdict = goalVerdict.get(String(product.id))
+      return {
+        ...product,
+        story: productStory(rows.find(row => String(row.id) === String(product.id)), displayGoal),
+        // Goal fit is a separate signal from allergy/missing-info "확인 필요":
+        // it never flips needsAttention, only enriches the product's own evidence.
+        goalFit: verdict ? { status: verdict.status, reason: verdict.reason, metrics: verdict.metrics } : null,
+        reasons: verdict ? [verdict.reason, ...product.reasons.filter(reason => reason !== verdict.reason)] : product.reasons,
+      }
+    })
+  analysis.goalFit = goalFit ? { ...goalFit, headline: goalFitHeadline(goalFit), detailLines: goalFitDetailLines(goalFit) } : null
+  // A missing checklist metric maps to a complement category/filter for the
+  // existing "다른 상품 유형 살펴보기" button. No checklist (예: 영양제 탐색) → no complement.
+  const complement = goalFitComplement(goalFit)
+  if (complement) {
+    analysis.recommendation = complement.filterLabel
+      ? { filterLabel: complement.filterLabel, label: complement.label }
+      : { filterLabel: null, category: complement.category, sub: complement.sub, label: complement.label }
+  }
+  // 영양제는 표기 전용: 성분/함량 판정이나 보완 추천 없이 이름만 노출한다.
+  const supplementRows = rows.filter(row => row.supplement)
+  analysis.supplementNotice = supplementRows.length ? {
+    count: supplementRows.length,
+    items: supplementRows.map(row => ({ id: row.id, name: row.name })),
+    note: '영양제는 개인 건강 상태에 따라 필요 여부가 다르니, 성분·함량은 상품 상세페이지에서 직접 확인해주세요.',
+  } : null
+  // 채소 포함 여부는 cart-composition.js의 텍스트/카테고리 판정을 그대로 참조한다.
+  // 수치나 기준(예: "3g 충족")은 절대 언급하지 않고 "카테고리가 비어있다"는
+  // 사실만 전달한다 — fiber 수치가 없어 판정할 수 없는 것과는 별개의 신호다.
+  analysis.vegetableNotice = analysis.composition.foodProducts > 0 && analysis.composition.vegetableTypeProducts === 0
+    ? { message: '채소가 포함된 메뉴가 부족해요.' }
+    : null
+  const summary = currentCartSummary(rows, displayGoal)
+  const story = cartStory(rows, displayGoal)
+  const allergyNote = analysis.productReasons.some(product => product.allergyMatches.length) ? ' 설정한 알레르기 성분과 일치하는 상품은 아래 구매 전 체크에서 확인해 주세요.' : ''
+  analysis.summaryOptions = [`${story.introduction} ${summary}${allergyNote}`.trim(), `${summary} ${story.introduction}${allergyNote}`.trim()]
+  analysis.composition = { ...analysis.composition, shortSummary: summary, detailSummary: analysis.summaryOptions[0] }
+  analysis.fallback = { headline: story.headline, summary: analysis.composition.detailSummary, actions: [action] }
   return analysis
 }

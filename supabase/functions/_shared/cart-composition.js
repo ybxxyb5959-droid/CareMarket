@@ -1,5 +1,21 @@
 import { HIGH_PROTEIN_MIN } from './nutrition-policy.js'
 
+// Vegetable classification is text/category only: product name and DB category
+// regex matching. Never image analysis, never Gemini judgment — the model is
+// never sent product images (see ai-insights/handler.js's productForPrompt),
+// so it has no way to "see" a vegetable even if asked to. Exported so both cart
+// rows and full-catalog products (for the "채소 포함 메뉴" suggestion cards) can
+// be classified with the exact same rule.
+export function isVegetableProduct({ name, category }) {
+  const normalizedName = String(name || '').normalize('NFKC').toLowerCase()
+  const normalizedCategory = String(category || '').normalize('NFKC').toLowerCase()
+  const beverage = /음료|라떼|주스|쥬스/.test(normalizedName + ' ' + normalizedCategory)
+  const condiment = /소스|조미료|드레싱/.test(normalizedCategory) || /소스|드레싱/.test(normalizedName)
+  return !beverage && !condiment && (/샐러드|야채|채소/.test(normalizedName)
+    || /^(채소|야채|샐러드)(류|·샐러드)?$/.test(normalizedCategory)
+    || (/그린/.test(normalizedName) && /채소|야채|샐러드/.test(normalizedCategory)))
+}
+
 // Roles describe registered products, never a person's diet or nutrient intake.
 export function analyzeCartComposition(rows) {
   const foods = rows.filter(row => !row.supplement)
@@ -11,9 +27,7 @@ export function analyzeCartComposition(rows) {
     const highProtein = row.nutrition.protein !== null && row.nutrition.protein >= HIGH_PROTEIN_MIN
     // Mixed catalog categories (e.g. 음료·프로틴음료) do not prove a role.
     const proteinSource = highProtein || (!condiment && /닭가슴살|닭고기|스테이크|두부|계란|달걀|프로틴|단백질|연어|소고기|쇠고기/.test(name))
-    const vegetable = !beverage && !condiment && (/샐러드|야채|채소/.test(name)
-      || /^(채소|야채|샐러드)(류|·샐러드)?$/.test(category)
-      || (/그린/.test(name) && /채소|야채|샐러드/.test(category)))
+    const vegetable = isVegetableProduct(row)
     const other = /도시락|간편식|시리얼|그래놀라|견과|건과류|유제품|대체유|간식|소스|조미료/.exec(category)?.[0]
     const family = beverage ? 'beverage' : vegetable ? 'vegetable' : proteinSource ? 'protein' : other || null
     return { id: row.id, name: row.name, category: row.category, nutrition: row.nutrition,

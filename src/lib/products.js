@@ -60,6 +60,7 @@ export function adaptProductRow(row) {
       fat: nutrientNumber(row.fat),
       sugar,
       sodium,
+      fiber: nutrientNumber(row.fiber),
       special: mainIngredients.slice(0, 3).join(' · ') || `${category} 상품`,
     },
     allergens: asTextArray(row.allergens),

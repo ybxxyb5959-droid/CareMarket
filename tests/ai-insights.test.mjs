@@ -132,7 +132,7 @@ test('cart summary uses only the authenticated user server snapshot', async () =
     assert.equal(prompt.analysis.dominant.includes('protein'), true)
     assert.equal(prompt.analysis.balance_items.some((item) => item.key === 'protein' && item.status === 'good'), true)
     assert.equal(prompt.products[0].name, '상품 6')
-    assert.deepEqual(payload.generationConfig.responseJsonSchema.properties.summary.enum, prompt.allowed_summaries)
+    assert.equal(payload.generationConfig.responseJsonSchema.properties.summary.enum, undefined)
     assert.equal('nutrition_totals' in prompt, false)
     assert.equal('cart_items' in prompt, false)
     return geminiResponse({ ...cartNarrative, summary: prompt.allowed_summaries[0], actions: prompt.allowed_actions })
@@ -146,13 +146,13 @@ test('cart summary uses only the authenticated user server snapshot', async () =
   assert.equal(response.status, 200)
   assert.equal(requestedUser, 'user-a')
   const insight = (await response.json()).insight
-  assert.equal(insight.headline, '현재 장바구니 구성')
+  assert.equal(insight.headline, cartNarrative.headline)
   assert.equal(insight.aiExplanationAvailable, true)
   assert.equal(insight.balanceItems.some((item) => item.key === 'protein' && item.status === 'good'), true)
   assert.deepEqual(insight.basis, {
     composition_only: true,
-    personalized: false,
-    primary_goal: null,
+    personalized: true,
+    primary_goal: '근육량 증가',
     selected_conditions: [],
     excluded_allergens: [],
   })

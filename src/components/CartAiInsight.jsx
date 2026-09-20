@@ -1,4 +1,6 @@
 import { isSupplement, ingredientDescription } from '../../supabase/functions/_shared/product-type.js'
+import { isVegetableProduct } from '../../supabase/functions/_shared/cart-composition.js'
+import { GOAL_FIT_METRICS, METRIC_COMPLEMENT, meetsCriteria } from '../../supabase/functions/_shared/cart-goal-fit.js'
 import { Fragment, useEffect, useMemo, useRef, useState } from 'react'
 import Icon from './Icon'
 import ProductImage from './ProductImage'
@@ -13,6 +15,18 @@ import {
 } from '../../supabase/functions/_shared/cart-nutrition-analysis.js'
 import { useStore } from '../store'
 import { cartQuickSummary } from '../lib/cart-quick-summary'
+import { won } from '../lib/format'
+
+const MAX_COMPLEMENT_SUGGESTIONS = 3
+
+// A catalog product satisfies a checklist metric under the exact same rule
+// analyzeGoalFit judges cart items with (see cart-goal-fit.js) — never a
+// separately invented threshold.
+const meetsMetric = (product, key) => {
+  const metric = GOAL_FIT_METRICS[key]
+  const value = product.nutrition?.[key]
+  return metric != null && value !== null && value !== undefined && Number.isFinite(Number(value)) && meetsCriteria(metric, Number(value))
+}
 
 const INITIAL_ANALYSIS = { status: 'idle', signature: '', insight: null }
 let focusDetailedAnalysis = false
@@ -45,6 +59,64 @@ const briefReason = (text = '') => text
 
 const METRIC_HINTS = { sugar: '당류 기준 충족', protein: '단백질 기준 충족', sodium: '나트륨 기준 충족', calories: '현재 장바구니 내 비교', attention: '추가 확인 권장', protein_complement: '단백질 기준 확인', supplement: '등록된 상품 유형', caffeine: '등록 성분 기준' }
 
+// Compact mini-card only: a one-line summary for the checklist coverage percent.
+// Detail lines already say "✅ 단백질은 잘 챙겼어요" — strip the marker and join
+// the first two into the mini card's one-line summary.
+const compactFitSummary = (fit) => (fit?.detailLines || []).slice(0, 2).map(line => line.replace(/^(?:✅|⚠️)\s*/u, '')).join(', ')
+
+// Shared between the mini card and the detail page: a circular badge for the
+// checklist coverage percent. `size` scales the whole badge; stroke width and
+// font size scale with it so the ring stays proportional at any size.
+function GoalFitDonut({ percent, size = 56 }) {
+  const strokeWidth = size * 0.125
+  const radius = size / 2 - strokeWidth
+  const center = size / 2
+  const circumference = 2 * Math.PI * radius
+  const offset = circumference * (1 - Math.min(100, Math.max(0, percent)) / 100)
+  return (
+    <svg className="cart-ai-goal-donut" viewBox={`0 0 ${size} ${size}`} width={size} height={size} role="img" aria-label={`목적 부합도 ${percent}%`}>
+      <circle cx={center} cy={center} r={radius} className="cart-ai-goal-donut-track" fill="none" strokeWidth={strokeWidth} />
+      <circle cx={center} cy={center} r={radius} className="cart-ai-goal-donut-value" fill="none" strokeWidth={strokeWidth}
+        strokeDasharray={circumference} strokeDashoffset={offset} strokeLinecap="round" transform={`rotate(-90 ${center} ${center})`} />
+      <text x={center} y={center + size * 0.07} textAnchor="middle" className="cart-ai-goal-donut-text" style={{ fontSize: size * 0.23 }}>{percent}%</text>
+    </svg>
+  )
+}
+
+// One reusable card panel for every "부족 지표 → 실제 상품" inline recommendation:
+// the 채소 notice and each missing checklist metric (단백질/저당/나트륨/저지방)
+// all render through this same markup/CSS, never a generic filter-link button.
+// All notices share ONE outer panel (single background/border) — stacking
+// separate <section>s for 채소 vs 지표 left a visible gap between two borders,
+// so every group renders inside the same box, only separated by a thin divider.
+function ComplementPanel({ groups, openProduct, addToCart }) {
+  const visible = groups.filter((group) => group?.message)
+  if (!visible.length) return null
+  return (
+    <section className="cart-ai-vegetable-panel">
+      {visible.map((group, index) => (
+        <div key={group.key} className={`cart-ai-vegetable-group${index > 0 ? ' has-divider' : ''}`}>
+          <p className="cart-ai-vegetable-note"><Icon name="alert-circle" size={14} /> {group.message}</p>
+          {group.items.length > 0 && <div className="cart-ai-vegetable-suggestions">
+            {group.items.map((product) => (
+              <article key={product.id} className="cart-ai-vegetable-card">
+                <button type="button" className="cart-ai-vegetable-media" onClick={() => openProduct(product)} aria-label={`${product.name} 상세보기`}>
+                  <ProductImage src={product.image} alt="" />
+                </button>
+                <button type="button" className="cart-ai-vegetable-name" onClick={() => openProduct(product)}>{product.name}</button>
+                <strong>{won(product.price)}</strong>
+                <button type="button" className="cart-ai-vegetable-add" onClick={() => addToCart(product, 1)} aria-label={`${product.name} 장바구니 담기`}>
+                  <Icon name="cart" size={14} /> 담기
+                </button>
+              </article>
+            ))}
+          </div>}
+        </div>
+      ))}
+    </section>
+  )
+}
+
 function FindingCard({ title, items, attention = false }) {
   return <section className={`cart-ai-finding${attention ? ' is-attention' : ''}`}>
     <h4><Icon name={attention ? 'alert-circle' : 'check-circle'} size={17} />{title}</h4>
@@ -60,8 +132,9 @@ function FindingCard({ title, items, attention = false }) {
 export default function CartAiInsight({ compact = false, cartOverride = null }) {
   const {
     cart, cartLoading, cartPending, cartError,
-    allergies, settingsLoading,
-    navigate, navigateToCatalog, setSubFilters, setDrawerOpen, authUserId,
+    allergies, settingsLoading, goal,
+    navigate, setDrawerOpen, authUserId,
+    products, openProduct, addToCart,
   } = useStore()
   const inputCart = cartOverride || cart
   const analysisCart = useMemo(() => inputCart.map(item => ({ ...item, product: {
@@ -70,6 +143,13 @@ export default function CartAiInsight({ compact = false, cartOverride = null }) 
       Object.entries(item.product.nutritionAvailability || {}).filter(([, available]) => !available).map(([key]) => [key, null]),
     ) },
   } })), [inputCart])
+  // "채소가 포함된 메뉴가 부족해요" notice pairs with a few real catalog picks —
+  // same text/category rule as cart-composition.js's vegetable classification,
+  // never an invented category and never image/Gemini judgment.
+  const vegetableSuggestions = useMemo(() => {
+    const cartIds = new Set(analysisCart.map(item => String(item.product.id)))
+    return products.filter(product => !cartIds.has(String(product.id)) && isVegetableProduct(product)).slice(0, MAX_COMPLEMENT_SUGGESTIONS)
+  }, [products, analysisCart])
   const [guideExpanded, setGuideOpen] = useState(null)
   const [expandedProductsKey, setExpandedProductsKey] = useState(null)
   const quantityCount = analysisCart.reduce((sum, item) => sum + item.quantity, 0)
@@ -81,14 +161,15 @@ export default function CartAiInsight({ compact = false, cartOverride = null }) 
     .sort()
     .join('|'), [analysisCart])
   const criteriaSignature = [
+    goal || '',
     [...allergies].sort().join(','),
   ].join('|')
   const analysisKey = `${CART_ANALYSIS_VERSION}|cart-only1|${authUserId || 'anonymous'}|${criteriaSignature}|${cartSignature}`
   const localFallback = useMemo(() => {
-    const context = { compositionOnly: true, excludedAllergens: allergies }
+    const context = { compositionOnly: true, displayGoal: goal, excludedAllergens: allergies }
     const deterministic = analyzeCartNutrition(analysisCart, context)
     return composeCartInsight(deterministic, cartAnalysisBasis(context))
-  }, [analysisCart, allergies])
+  }, [analysisCart, allergies, goal])
   const [analysis, setAnalysis] = useState(() => {
     const cached = getCachedCartSummary(analysisKey)
     return cached
@@ -184,26 +265,65 @@ export default function CartAiInsight({ compact = false, cartOverride = null }) 
     window.dispatchEvent(new Event('cart-ai:show-details'))
   }
 
-  const openComplementProducts = () => {
-    const filterLabel = insight?.recommendation?.filterLabel
-    setDrawerOpen(false)
-    navigateToCatalog('전체상품', '전체')
-    setSubFilters(filterLabel ? [filterLabel] : [])
-  }
-
   const localCriteriaSet = Boolean(allergies.length)
+  // Mini card exception: allergy risk always surfaces here, independent of the
+  // goal checklist/metrics that were otherwise trimmed out of the compact view.
+  const allergyAlert = useMemo(() => {
+    if (!allergies.length) return null
+    const matches = analysisCart.map(({ product }) => matchingAllergens(product, allergies)).filter(list => list.length)
+    if (!matches.length) return null
+    return { count: matches.length, allergens: [...new Set(matches.flat())] }
+  }, [analysisCart, allergies])
   const insight = visibleStatus === 'success' ? renderedAnalysis.insight : localFallback
   const basis = insight?.basis
-  const actions = insight?.actions || []
-  const hasComplementFilter = Boolean(insight?.recommendation)
+  // "다른 상품 유형 살펴보기" 고정 버튼 대신, 부족한 체크리스트 지표를 실제로
+  // 충족하는 카탈로그 상품을 카드로 보여준다. 채소 부족은 별도
+  // vegetableNotice/vegetableSuggestions 로직을 그대로 사용한다. 부족 지표가
+  // 하나면 그 지표 이름으로, 두 개 이상이면 지표별로 쪼개지 않고 한 섹션에
+  // 섞어서 보여준다(지표마다 카드가 여러 번 나오면 소비자가 헷갈릴 수 있음).
+  const metricComplementSections = useMemo(() => {
+    const missing = insight?.goalFit?.missingMetrics || []
+    if (!missing.length) return []
+    const cartIds = new Set(analysisCart.map(item => String(item.product.id)))
+    const perMetric = missing.map(key => {
+      const complement = METRIC_COMPLEMENT[key]
+      if (!complement) return null
+      const items = products.filter(product => !cartIds.has(String(product.id)) && !isSupplement(product) && meetsMetric(product, key))
+      return { key, complement, items }
+    }).filter(Boolean)
+    if (!perMetric.length) return []
+    if (perMetric.length === 1) {
+      const { key, complement, items } = perMetric[0]
+      return [{ key, message: `${complement.noticeLabel} 메뉴가 부족해요.`, items: items.slice(0, MAX_COMPLEMENT_SUGGESTIONS) }]
+    }
+    // 지표별 후보를 번갈아 가져와 한쪽 지표 상품으로만 카드가 쏠리지 않게 한다.
+    const merged = []
+    const seen = new Set()
+    let progressed = true
+    while (merged.length < MAX_COMPLEMENT_SUGGESTIONS && progressed) {
+      progressed = false
+      for (const { items } of perMetric) {
+        if (merged.length >= MAX_COMPLEMENT_SUGGESTIONS) break
+        const next = items.find((product) => !seen.has(String(product.id)))
+        if (next) { seen.add(String(next.id)); merged.push(next); progressed = true }
+      }
+    }
+    return [{ key: 'combined', message: '부족함을 채우는 메뉴를 담아보세요.', items: merged }]
+  }, [insight?.goalFit, products, analysisCart])
   const productReasons = insight?.productReasons || []
+  // Food analysis and supplement notice are visually and logically separate:
+  // supplements are never scored against a food goal checklist.
+  const foodProductReasons = productReasons.filter(product => {
+    const source = analysisCart.find(item => String(item.product.id) === String(product.id))?.product
+    return !isSupplement(source)
+  })
+  const supplementNotice = insight?.supplementNotice || null
   const productsExpanded = expandedProductsKey === analysisKey
-  const visibleProductReasons = productsExpanded || analysisCart.some(item => isSupplement(item.product)) ? productReasons : productReasons.slice(0, 3)
+  const visibleProductReasons = productsExpanded ? foodProductReasons : foodProductReasons.slice(0, 3)
   const metrics = insight?.balanceItems || []
   const attentionMetric = metrics.find(item => item.key === 'attention')
   const mainMetrics = [...metrics.filter(item => item.key !== 'attention').slice(0, 3), ...(attentionMetric ? [attentionMetric] : [])]
   const extraMetrics = metrics.filter(item => !mainMetrics.includes(item))
-  const summary = insight?.summary || ''
   const quick = cartQuickSummary(insight)
   const insufficientInfo = analysisCart.length > 0 && analysisCart.every(({ product }) =>
     !isSupplement(product) && ['protein', 'sugar', 'sodium', 'calories'].every(key => {
@@ -273,22 +393,20 @@ export default function CartAiInsight({ compact = false, cartOverride = null }) 
       {insight && visibleStatus === 'success' && (
         compact ? (
           <div className="cart-ai-result cart-ai-result-compact">
-            <p className="cart-ai-quick-summary">{quick.summary}</p>
+            {insight.goalFit?.foodCount > 0 ? (
+              insight.goalFit.percent != null ? (
+                <div className={`cart-ai-goal-fit-mini${insight.goalFit.percent >= 50 ? ' is-fit' : ' is-low'}`}>
+                  <GoalFitDonut percent={insight.goalFit.percent} />
+                  <p>{compactFitSummary(insight.goalFit) || insight.goalFit.headline}</p>
+                </div>
+              ) : (
+                <p className="cart-ai-goal-fit-mini-text">{insight.goalFit.headline}</p>
+              )
+            ) : <p className="cart-ai-quick-summary">{quick.summary}</p>}
+            {allergyAlert && <p className="cart-ai-allergy-alert" role="alert">
+              <Icon name="alert-circle" size={14} /> 알레르기 주의 상품 {allergyAlert.count}개 포함 ({allergyAlert.allergens.join(', ')})
+            </p>}
             {insight.explanationNotice && <small className="cart-ai-fallback-note">{insight.explanationNotice}</small>}
-            <dl className="cart-ai-quick-metrics" style={{ '--quick-metric-count': quick.metrics.length }} aria-label="핵심 분석 지표">
-              {quick.metrics.map(item => <div key={item.key} className={item.key === 'attention' && item.count ? 'is-attention' : ''}>
-                <dt title={item.label}>{({ sugar: '저당', sodium: '저염', protein: '고단백', calories: '상대 저열량', supplement: '영양제', caffeine: '카페인 미표시', attention: '확인 필요' })[item.key] || item.label}</dt>
-                <dd>{item.count}{item.key !== 'attention' && <span>/{item.total}</span>}<small>종</small></dd>
-              </div>)}
-            </dl>
-            {quick.goodPoint && <section className="cart-ai-quick-good"><h4>✓ 좋은 점</h4><p title={quick.goodPoint}>{quick.goodPoint}</p></section>}
-            {quick.checks.length > 0 && <section className="cart-ai-quick-checks">
-              <h4>! 확인 필요{quick.attentionCount > 0 ? ` ${quick.attentionCount}종` : ''}</h4>
-              <ul>{quick.checks.map(product => <li key={product.id}>
-                <strong title={product.name}>{product.name}</strong><p title={product.reason}>{product.reason}</p>
-              </li>)}</ul>
-              {quick.remaining > 0 && <small>외 {quick.remaining}종은 상세 분석에서 확인</small>}
-            </section>}
             <div className="cart-ai-compact-actions">
               <button type="button" onClick={openDetailedAnalysis}>분석 결과 자세히 보기</button>
               <button type="button" onClick={analyze} disabled={unavailable}>다시 분석</button>
@@ -299,9 +417,26 @@ export default function CartAiInsight({ compact = false, cartOverride = null }) 
             <section className="cart-ai-glance">
               <h4><Icon name="sparkles" size={18} /> AI 한눈 요약</h4>
               <small>현재 장바구니 구성 · {productReasons.length}종 분석</small>
-              <p>{summary}</p>
+              {insight.goalFit?.headline && <div className={`cart-ai-goal-fit${insight.goalFit.percent != null && insight.goalFit.percent >= 50 ? ' is-fit' : insight.goalFit.percent != null ? ' is-low' : ''}`} role="status">
+                {insight.goalFit.percent != null && <GoalFitDonut percent={insight.goalFit.percent} size={72} />}
+                <div className="cart-ai-goal-fit-text">
+                  <p>{insight.goalFit.headline}</p>
+                  {insight.goalFit.detailLines?.length > 0 && <ul className="cart-ai-goal-fit-lines">
+                    {insight.goalFit.detailLines.map((line, index) => <li key={index}>{line}</li>)}
+                  </ul>}
+                </div>
+              </div>}
+              <h3 className="cart-story-title">{insight.headline}</h3>
               {!insight.aiExplanationAvailable && <small>등록 정보 기반 기본 분석</small>}
             </section>
+            <ComplementPanel
+              groups={[
+                insight.vegetableNotice && { key: 'vegetable', message: insight.vegetableNotice.message, items: vegetableSuggestions },
+                ...metricComplementSections,
+              ]}
+              openProduct={openProduct}
+              addToCart={addToCart}
+            />
             <div className="cart-ai-metrics cart-ai-balance-items" style={{ '--cart-ai-metric-count': mainMetrics.length }} aria-label="핵심 분석 지표">
               {mainMetrics.map(item => <div key={item.key} className={`cart-ai-metric${item.key === 'attention' ? ' is-attention' : ''}`} title={item.reason}>
                 <span>{item.label}</span>
@@ -316,15 +451,15 @@ export default function CartAiInsight({ compact = false, cartOverride = null }) 
               <FindingCard title="확인 필요" attention items={insight.attentionPoints?.length ? insight.attentionPoints : ['등록 정보에서 추가 확인 항목이 도출되지 않았습니다. 알레르기 정보는 상품 원재료 표시를 확인해 주세요.']} />
             </div>
             <section className="cart-ai-product-section">
-              <div className="cart-ai-section-heading"><h4>상품별 분석</h4><span>{productReasons.length}종 · 자세한 근거는 펼쳐서 확인</span></div>
+              <div className="cart-ai-section-heading"><h4>상품별 분석</h4><span>{foodProductReasons.length}종 · 자세한 근거는 펼쳐서 확인</span></div>
               <div id="cart-ai-product-list" className="cart-ai-product-list">
                 {visibleProductReasons.map((product, index) => {
                   const source = analysisCart.find(item => String(item.product.id) === String(product.id))?.product
                   const allergyHit = source && matchingAllergens(source, allergies).length > 0
                   const tags = product.tags.filter(tag => tag !== '확인 필요')
-                  const preview = allergyHit ? '설정하신 알레르기 성분이 포함되어 있어 원재료 확인이 필요합니다.'
+                  const preview = product.preview || (allergyHit ? '설정하신 알레르기 성분이 포함되어 있어 원재료 확인이 필요합니다.'
                     : product.checks.length ? briefReason(product.checks[0])
-                      : tags.length ? tags.join('·') + ' 기준에 해당하는 구성이에요.' : product.reasons[0] || '상품별 표시 정보를 함께 확인해주세요.'
+                      : tags.length ? tags.join('·') + ' 기준에 해당하는 구성이에요.' : product.reasons[0] || '상품별 표시 정보를 함께 확인해주세요.')
                   return <Fragment key={product.id}>
                     {product.group !== visibleProductReasons[index - 1]?.group && <div className="cart-ai-section-heading"><h4>{product.group}</h4></div>}
                     <article className="cart-ai-product-reason">
@@ -336,7 +471,16 @@ export default function CartAiInsight({ compact = false, cartOverride = null }) 
                       {product.tags.map(tag => <span key={tag} className={`tag ${tag === '확인 필요' ? 'cart-ai-check-tag' : 'tag-soft'}`}>{tag}</span>)}
                       {source && <AllergenBadges product={source} allergies={allergies} />}
                     </div>
-                    <p className="cart-ai-product-preview">{isSupplement(source) ? '주요 성분: ' + ingredientDescription(source) : shortCopy(preview)}</p>
+                    {!isSupplement(source) && <p className="cart-ai-product-preview cart-product-story">{product.story?.title || shortCopy(preview)}</p>}
+                    {product.goalFit && <p className={`cart-ai-goal-verdict is-${product.goalFit.status}`}>
+                      <Icon name={product.goalFit.status === 'met' ? 'check-circle' : 'alert-circle'} size={14} />{product.goalFit.reason}
+                    </p>}
+                    {product.story && <div className="cart-story-facts">
+                      <small>등록 제공량 · {product.story.serving}</small>
+                      <dl>{product.story.metrics.map(metric => <div key={metric.key}><dt>{metric.label}</dt><dd>{metric.value == null ? <span>정보 없음</span> : <>{metric.value}<span>{metric.unit}</span></>}</dd></div>)}</dl>
+                      {isSupplement(source) && <p>{ingredientDescription(source)}</p>}
+                      {[...product.checks, ...product.story.checks].length > 0 && <div className="cart-story-check"><strong>구매 전 체크</strong>{[...new Set([...product.checks, ...product.story.checks])].map(check => <p key={check}>{check}</p>)}</div>}
+                    </div>}
                     <details key={analysisKey} className="cart-ai-evidence">
                       <summary><span className="cart-ai-closed-label">자세히 보기</span><span className="cart-ai-open-label">접기</span><Icon name="chevron-down" size={15} /></summary>
                       {source && <div className="cart-ai-nutrition-details">
@@ -348,20 +492,23 @@ export default function CartAiInsight({ compact = false, cartOverride = null }) 
                         })}</div>}
                         <p>등록 알레르기 성분: {source.allergens?.length ? source.allergens.join(', ') : '정보 없음 · 원재료 표시 확인 필요'}</p>
                       </div>}
-                      <ul>{product.reasons.map(reason => <li key={reason}>{reason}</li>)}</ul>
+                      <ul>{[...new Set([...(product.shoppingInsights || []).map(item => item.text), ...product.reasons])].map(reason => <li key={reason}>{reason}</li>)}</ul>
                     </details>
                   </article></Fragment>
                 })}
               </div>
-              {productReasons.length > 3 && !analysisCart.some(item => isSupplement(item.product)) && <button type="button" className="btn btn-soft btn-sm cart-products-toggle" aria-expanded={productsExpanded} aria-controls="cart-ai-product-list" onClick={() => setExpandedProductsKey(productsExpanded ? null : analysisKey)}>
-                {productsExpanded ? '상품 접기' : `나머지 ${productReasons.length - 3}종 더 보기`}
+              {foodProductReasons.length > 3 && <button type="button" className="btn btn-soft btn-sm cart-products-toggle" aria-expanded={productsExpanded} aria-controls="cart-ai-product-list" onClick={() => setExpandedProductsKey(productsExpanded ? null : analysisKey)}>
+                {productsExpanded ? '상품 접기' : `나머지 ${foodProductReasons.length - 3}종 더 보기`}
                 <Icon name={productsExpanded ? 'chevron-up' : 'chevron-down'} size={16} />
               </button>}
             </section>
-            <section className="cart-ai-cta">
-              <div><h4>현재 구성과 함께 살펴볼 상품 유형</h4>{actions.map(action => <p key={action}>{action}</p>)}</div>
-              {hasComplementFilter && <button type="button" className="btn btn-primary cart-ai-products-link" onClick={openComplementProducts}>{insight.recommendation.label}<Icon name="chevron-right" size={15} /></button>}
-            </section>
+            {supplementNotice && <section className="cart-ai-supplement-panel">
+              <div className="cart-ai-section-heading"><h4>💊 영양제 {supplementNotice.count}종 담겨있어요</h4></div>
+              <ul className="cart-ai-supplement-list">
+                {supplementNotice.items.map(item => <li key={item.id}>{item.name}</li>)}
+              </ul>
+              <p className="cart-ai-supplement-note">{supplementNotice.note}</p>
+            </section>}
             <footer className="cart-ai-dashboard-foot">
               {!basis?.excluded_allergens?.length && <p className="cart-ai-personalization-note">등록 알레르기를 설정하면 상품 성분과 비교할 수 있어요. <button type="button" onClick={openSettings}>알레르기 설정</button></p>}
               <div><small>상품 종류 기준 참고 분석 · 실제 섭취량과는 달라요.</small>

@@ -39,7 +39,7 @@ test('protein numbers, goal and role facts reach Gemini without invented nutriti
   assert.match(analysis.attentionPoints[0], /샐러드·채소류/)
   assert.equal(input.products[0].nutrition.protein, 25)
   assert.equal(input.products[0].nutrition.sugar, null)
-  assert.equal('fiber' in input.products[0].nutrition, false)
+  assert.equal(input.products[0].nutrition.fiber, null)
 })
 
 test('supplements stay separate and cannot contribute protein or vegetable roles', () => {
