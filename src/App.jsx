@@ -1,4 +1,7 @@
+import { useEffect } from 'react'
 import { StoreProvider } from './StoreProvider'
+import { viewUrl } from './lib/navigation'
+import AdminGate from './components/AdminGate'
 import { useStore } from './store'
 import Header from './components/Header'
 import Footer from './components/Footer'
@@ -76,30 +79,50 @@ const PAGES = {
 }
 
 function Shell() {
-  const { view, loginPromptOpen, user, authLoading, authUserId, oauthRegistrationRequired, profileError, reloadProfile, logout } = useStore()
+  const { view, setView, isAdmin, roleReady, isLoggedIn, loginPromptOpen, user, authLoading, authUserId, oauthRegistrationRequired, profileError, reloadProfile, logout } = useStore()
   const pendingOAuthProfile = user?.oauth && oauthRegistrationRequired === null
   const completingOAuth = user?.oauth && oauthRegistrationRequired === true
   const Page = completingOAuth ? Register : PAGES[view] || NotFound
-  const isAdmin = ['adminDashboard', 'adminHistory', 'adminProducts', 'adminOrders', 'adminReviews', 'adminPartnerships', 'adminInquiries'].includes(view)
+  const adminRoute = ['adminDashboard', 'adminHistory', 'adminProducts', 'adminOrders', 'adminReviews', 'adminPartnerships', 'adminInquiries'].includes(view)
+  const redirectToAdmin = !authLoading && roleReady && isAdmin && !adminRoute
+  const waitingForAuth = authLoading || (isLoggedIn && !roleReady) || pendingOAuthProfile
+
+  useEffect(() => {
+    if (!redirectToAdmin) return
+    window.history.replaceState({ view: 'adminDashboard', scrollY: 0 }, '', viewUrl('adminDashboard'))
+    setView('adminDashboard')
+    window.scrollTo({ top: 0, behavior: 'auto' })
+  }, [redirectToAdmin, view, setView])
+
+  // Do not mount shopping pages or chrome until the account role is known.
+  if (waitingForAuth || redirectToAdmin) {
+    return <div className="app"><main className="wrap page auth-page"><div className="auth-container">
+      <p role={profileError ? 'alert' : 'status'}>{profileError || '로그인 정보를 확인하고 있습니다.'}</p>
+      {profileError && <><button type="button" className="btn btn-primary" onClick={reloadProfile}>다시 시도</button><button type="button" className="btn btn-text" onClick={logout}>로그아웃</button></>}
+    </div></main></div>
+  }
+
+  if (adminRoute) {
+    return <div className="app"><AdminGate>
+      <AdminTopbar />
+      <main><div className="view-fade" key={view}><Page /></div></main>
+    </AdminGate><Toast /></div>
+  }
+
   return (
     <div className="app">
-      {isAdmin ? <AdminTopbar /> : <Header />}
+      <Header />
       <main>
         <div className="view-fade" key={completingOAuth ? `oauth-register:${authUserId}` : view}>
-          {authLoading || pendingOAuthProfile ? <div className="wrap page auth-page">
-            <div className="auth-container">
-              <p role={profileError ? 'alert' : 'status'}>{profileError || '로그인 정보를 확인하고 있습니다.'}</p>
-              {profileError && <><button type="button" className="btn btn-primary" onClick={reloadProfile}>다시 시도</button><button type="button" className="btn btn-text" onClick={logout}>로그아웃</button></>}
-            </div>
-          </div> : <Page />}
+          <Page />
         </div>
       </main>
-      {!isAdmin && <Footer />}
+      <Footer />
       {!pendingOAuthProfile && !completingOAuth && <CartDrawer />}
       <Toast />
       {loginPromptOpen && <CartLoginPrompt />}
-      {!isAdmin && !pendingOAuthProfile && !completingOAuth && <EventPopup />}
-      {!isAdmin && !pendingOAuthProfile && !completingOAuth && <ReviewModal />}
+      {!pendingOAuthProfile && !completingOAuth && <EventPopup />}
+      {!pendingOAuthProfile && !completingOAuth && <ReviewModal />}
     </div>
   )
 }

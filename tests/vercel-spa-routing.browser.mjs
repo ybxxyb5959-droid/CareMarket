@@ -83,7 +83,7 @@ const routes = [
 
 try {
   const context = await browser.newContext({ viewport: { width: 1280, height: 900 } })
-  await context.addInitScript(() => localStorage.setItem('cm_welcome_hide_date', new Date().toISOString().slice(0, 10)))
+  await context.addInitScript(() => sessionStorage.setItem('cm_welcome_dismissed', '1'))
   let forceProductFailure = false
   await context.route('**/rest/v1/**', async (route) => {
     const resource = new URL(route.request().url()).pathname.split('/').pop()
@@ -165,13 +165,14 @@ try {
   const userId = '00000000-0000-4000-8000-000000000099'
   const userContext = await browser.newContext({ viewport: { width: 390, height: 844 } })
   await userContext.addInitScript(({ session }) => {
-    localStorage.setItem('cm_welcome_hide_date', new Date().toISOString().slice(0, 10))
-    localStorage.setItem('sb-owxgtzepynkwdixmwhim-auth-token', JSON.stringify(session))
+    sessionStorage.setItem('cm_welcome_dismissed', '1')
+    if (!location.search.includes('signed-out')) localStorage.setItem('sb-owxgtzepynkwdixmwhim-auth-token', JSON.stringify(session))
   }, { session: makeSession(userId) })
   let failOrders = false
   let failCart = false
   let failWishlist = false
   let failProfileContact = false
+  let userCartItems = []
   await userContext.route('**/rest/v1/**', async (route) => {
     const url = new URL(route.request().url())
     const resource = url.pathname.split('/').pop()
@@ -194,10 +195,24 @@ try {
       await route.fulfill({ status: 200, headers: { 'Content-Type': 'application/json', 'Content-Range': '0-0/1' }, body: JSON.stringify({ low_sugar: false, low_sodium: false, high_protein: false, exclude_caffeine: false, excluded_allergens: [] }) })
       return
     }
-    await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(resource === 'products' ? [productFixture] : []) })
+    await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(resource === 'products' ? [productFixture] : resource === 'cart_items' ? userCartItems : []) })
   })
   const userPage = await userContext.newPage()
   userPage.setDefaultTimeout(10000)
+  await userContext.route('**/auth/v1/token?**', route => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(makeSession(userId)) }))
+  await userPage.goto(`${origin}/login?signed-out`)
+  await userPage.locator('input[type="email"]').fill('routing@example.test')
+  await userPage.locator('input[type="password"]').fill('fixture-password')
+  await userPage.locator('.auth-login-submit').click()
+  await userPage.waitForURL(`${origin}/`)
+  await userPage.locator('.header').waitFor()
+  await userPage.goto(`${origin}/products/1`)
+  await userPage.getByRole('heading', { name: productFixture.name, level: 1, exact: true }).waitFor()
+  await userPage.goto(`${origin}/checkout`)
+  await userPage.getByRole('heading', { name: '결제할 상품이 없습니다.', exact: true }).waitFor()
+  await userPage.goto(`${origin}/admin`)
+  await userPage.getByRole('heading', { name: '관리자 권한이 필요한 페이지입니다.', exact: true }).waitFor()
+  assert.equal(await userPage.locator('.admin-topbar').count(), 0)
   for (const viewport of [{ width: 1440, height: 1000 }, { width: 768, height: 900 }, { width: 390, height: 844 }]) {
     await userPage.setViewportSize(viewport)
     await userPage.goto(`${origin}/orders`)
@@ -208,6 +223,13 @@ try {
     await userPage.getByRole('heading', { name: '장바구니가 비어 있어요.', exact: true }).waitFor()
     await assertStateFits(userPage, '.cart-empty', viewportResults, 'cart-empty')
   }
+  userCartItems = [{ cart_item_id: '00000000-0000-4000-8000-000000000001', product_id: 1, quantity: 1, product: productFixture }]
+  await userPage.goto(`${origin}/cart`)
+  await userPage.locator('.cart-item').waitFor()
+  await userPage.locator('.cart-mobile-checkout button').click()
+  await userPage.waitForURL(`${origin}/checkout`)
+  await userPage.getByRole('heading', { name: '주문/결제', exact: true }).waitFor()
+  userCartItems = []
   failOrders = true
   await userPage.goto(`${origin}/orders`)
   await userPage.getByRole('heading', { name: '주문 내역을 불러오지 못했어요.', exact: true }).waitFor()
@@ -221,7 +243,7 @@ try {
   await userPage.getByText('최근 주문을 불러오지 못했어요.', { exact: true }).waitFor()
   failOrders = false
   failWishlist = true
-  await userPage.goto(`${origin}/mypage`)
+  await userPage.goto(`${origin}/wishlist`)
   await userPage.getByText('찜 목록을 불러오지 못했어요.', { exact: true }).waitFor()
   failWishlist = false
   failProfileContact = true
@@ -231,15 +253,24 @@ try {
 
   const adminContext = await browser.newContext({ viewport: { width: 1280, height: 900 } })
   await adminContext.addInitScript(({ session }) => {
-    localStorage.setItem('cm_welcome_hide_date', new Date().toISOString().slice(0, 10))
-    localStorage.setItem('sb-owxgtzepynkwdixmwhim-auth-token', JSON.stringify(session))
+    sessionStorage.setItem('cm_welcome_dismissed', '1')
+    if (!location.search.includes('signed-out')) localStorage.setItem('sb-owxgtzepynkwdixmwhim-auth-token', JSON.stringify(session))
   }, { session: makeSession('00000000-0000-4000-8000-000000000100') })
   let failAdminOrders = false
   let failPartnerships = false
+  let failAdminRole = false
   await adminContext.route('**/rest/v1/**', async (route) => {
     const url = new URL(route.request().url())
     const resource = url.pathname.split('/').pop()
     const select = url.searchParams.get('select') || ''
+    if (resource === 'profiles' && select.includes('role') && failAdminRole) {
+      await route.fulfill({ status: 503, contentType: 'application/json', body: JSON.stringify({ message: 'fixture role failure' }) })
+      return
+    }
+    if (resource === 'get_admin_sales_summary') {
+      await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ daily: [], categories: [], best: [], previous: {}, order_count: 0, legacy_order_count: 0, total_payment: 0, average_payment: 0 }) })
+      return
+    }
     if ((resource === 'orders' && failAdminOrders) || (resource === 'partnership_inquiries' && failPartnerships)) {
       await route.fulfill({ status: 503, contentType: 'application/json', body: JSON.stringify({ message: 'fixture failure' }) })
       return
@@ -259,6 +290,45 @@ try {
   })
   const adminPage = await adminContext.newPage()
   adminPage.setDefaultTimeout(10000)
+  await adminContext.route('**/auth/v1/token?**', route => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(makeSession('00000000-0000-4000-8000-000000000100')) }))
+  await adminPage.goto(`${origin}/login?signed-out&redirect=/cart`)
+  await adminPage.locator('input[type="email"]').fill('routing@example.test')
+  await adminPage.locator('input[type="password"]').fill('fixture-password')
+  await adminPage.locator('.auth-login-submit').click()
+  await adminPage.waitForURL(`${origin}/admin`)
+  await adminPage.locator('.admin-topbar').waitFor()
+  // Direct loads and history navigation must never mount the shopping shell.
+  await adminContext.addInitScript(() => {
+    window.shoppingUiSeen = false
+    new MutationObserver(() => {
+      if (document.querySelector('.header, .footer, .drawer, .cart-page, .checkout-page, .ev-modal')) window.shoppingUiSeen = true
+    }).observe(document, { childList: true, subtree: true })
+  })
+  for (const path of ['/', '/products/1', '/search?q=protein', '/cart', '/checkout', '/orders', '/mypage', '/payment/success', '/payment/fail', '/login']) {
+    await adminPage.goto(`${origin}${path}`)
+    await adminPage.waitForURL(`${origin}/admin`)
+    await adminPage.locator('.admin-topbar').waitFor()
+    assert.equal(await adminPage.evaluate(() => window.shoppingUiSeen), false, path)
+    assert.equal(await adminPage.getByRole('button', { name: '스토어 보기', exact: true }).count(), 0)
+  }
+  await adminPage.evaluate(() => {
+    history.pushState({}, '', '/checkout')
+    dispatchEvent(new PopStateEvent('popstate'))
+  })
+  await adminPage.waitForURL(`${origin}/admin`)
+  assert.equal(await adminPage.evaluate(() => window.shoppingUiSeen), false)
+  await adminPage.getByRole('button', { name: '상품 관리', exact: true }).click()
+  await adminPage.waitForURL(`${origin}/admin/products`)
+  await adminPage.getByRole('heading', { name: '상품 관리', exact: true }).waitFor()
+  failAdminRole = true
+  await adminPage.goto(`${origin}/cart`)
+  await adminPage.getByRole('alert').waitFor()
+  assert.equal(await adminPage.evaluate(() => window.shoppingUiSeen), false)
+  failAdminRole = false
+  await adminPage.getByRole('button', { name: '다시 시도', exact: true }).click()
+  await adminPage.waitForURL(`${origin}/admin`)
+  await adminPage.locator('.admin-topbar').waitFor()
+  assert.equal(await adminPage.evaluate(() => window.shoppingUiSeen), false)
   await adminPage.goto(`${origin}/admin/orders`)
   await adminPage.getByRole('heading', { name: '표시할 주문이 없습니다.', exact: true }).waitFor()
   failAdminOrders = true
@@ -277,6 +347,7 @@ try {
     paymentSuccessQueryPreserved: true,
     paymentFailQueryPreserved: true,
     adminGuardRenderedAfterDirectNavigation: true,
+    roleSeparation: { userLoginHome: true, userCartCheckout: true, userAdminDenied: true, adminLoginRedirect: true, adminShoppingRedirects: true, shoppingUiNeverMounted: true, roleFailureRetry: true },
     internalNavigationReached: '/products',
     staticAssetsLoaded: [scriptPath, stylesheetPath, '/favicon.svg'],
     exceptionStates: { unknownRoute: true, productNotFound: true, searchEmpty: true, homeProductsError: true, ordersEmptyAndError: true, cartEmptyAndError: true, myPageErrors: true, adminOrdersEmptyAndError: true, partnershipsEmptyAndError: true },

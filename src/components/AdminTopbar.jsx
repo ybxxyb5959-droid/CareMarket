@@ -15,7 +15,6 @@ export default function AdminTopbar() {
           <button className={view === 'adminInquiries' ? 'on' : ''} onClick={() => navigate('adminInquiries')}>1:1 문의 관리</button>
         </nav>
         <div className="admin-top-actions">
-          <button onClick={() => navigate('main')}>스토어 보기</button>
           <button className="admin-logout" onClick={logout}>로그아웃</button>
         </div>
       </div>

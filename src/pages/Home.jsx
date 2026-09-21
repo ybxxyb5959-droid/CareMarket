@@ -225,7 +225,7 @@ export default function Home() {
               <h2 className="serif">{goal === '영양제 탐색' ? '주요 성분으로 살펴보는 영양제' : `${goal}에 맞춘 추천 상품`}</h2>
               <p>{goal === '근육량 증가' ? <><strong>근육량 증가</strong>에 맞춘 추천이에요. 단백질 식품을 우선하고 단백질 정보를 함께 반영해요.</> : GOAL_GUIDE[goal]}</p>
             </div>
-            <button type="button" className="more-link" onClick={() => goToProducts({ recommend: true })}>
+            <button type="button" className="more-link" onClick={() => navigate('custom')}>
               {goal === '영양제 탐색' ? '영양제 전체 보기' : '추천 상품 더보기'} <Icon name="chevron-right" size={15} />
             </button>
           </div>

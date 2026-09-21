@@ -103,6 +103,7 @@ export function StoreProvider({ children }) {
   const [profileError, setProfileError] = useState(null)
   const [profileReloadKey, setProfileReloadKey] = useState(0)
   const [isAdmin, setIsAdmin] = useState(false)
+  const [roleReady, setRoleReady] = useState(false)
   const [reviewTarget, setReviewTarget] = useState(null)
   const [reviewInitialRating, setReviewInitialRating] = useState(null)
   const [reviewRevision, setReviewRevision] = useState(0)
@@ -142,6 +143,8 @@ export function StoreProvider({ children }) {
     const nextId = session?.user?.id || null
     const ownerChanged = cartController.getOwner() !== nextId
     if (ownerChanged) {
+      setIsAdmin(false)
+      setRoleReady(false)
       setOauthRegistrationRequired(null)
       cartController.setOwner(nextId)
       setWishlist([])
@@ -296,6 +299,7 @@ export function StoreProvider({ children }) {
     let mounted = true
 
     const loadWellnessSettings = async () => {
+      setRoleReady(false)
       setSettingsLoading(true)
       setProfileLoading(true)
       setProfileError(null)
@@ -329,25 +333,8 @@ export function StoreProvider({ children }) {
 
       const isAdminUser = profileResult.data?.role === 'admin'
       setIsAdmin(isAdminUser)
+      setRoleReady(true)
       if (isAdminUser) setOauthRegistrationRequired(false)
-
-      if (isAdminUser && !window.location.pathname.startsWith('/payment/')) {
-        const currentRoute = parseAppLocation(window.location)
-        const adminView = currentRoute.view === 'notFound'
-          ? 'notFound'
-          : ['adminDashboard', 'adminHistory', 'adminProducts', 'adminOrders', 'adminReviews', 'adminPartnerships', 'adminInquiries'].includes(currentRoute.view)
-          ? currentRoute.view
-          : 'adminDashboard'
-        if (adminView !== 'notFound') {
-          const adminUrl = adminView === 'adminOrders'
-            ? adminOrdersUrl({ status: new URLSearchParams(window.location.search).get('status') })
-            : adminView === 'adminHistory' ? `${viewUrl(adminView)}${window.location.search}`
-            : viewUrl(adminView)
-          window.history.replaceState({ ...window.history.state, view: adminView, scrollY: 0 }, '', adminUrl)
-          setView(adminView)
-          scrollTop()
-        }
-      }
 
       if (preferencesResult.error) {
         console.error('Supabase preferences fetch failed:', { code: preferencesResult.error?.code || 'PREFERENCES_FETCH_FAILED' })
@@ -953,7 +940,7 @@ export function StoreProvider({ children }) {
       drawerOpen, setDrawerOpen,
       checkout,
       products, setProducts, productsLoading, productsError, reloadProducts,
-      user, setUser, login, register, logout, isLoggedIn, authUserId, authLoading, profileLoading, profileError, reloadProfile, isAdmin,
+      user, setUser, login, register, logout, isLoggedIn, authUserId, authLoading, profileLoading, profileError, reloadProfile, isAdmin, roleReady,
       profile, updateProfile, checkEmailExists,
       loginWithOAuth, completeOAuthRegistration, oauthRegistrationRequired,
       cartTotal, deliveryFee, cartCount,
@@ -961,7 +948,7 @@ export function StoreProvider({ children }) {
       reviewTarget, reviewInitialRating, reviewRevision, openReviewForm, closeReviewForm, reviewCompleted,
     }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [view, selectedProduct, goal, subFilters, allergies, search, searchMode, aiQuery, aiResult, aiLoading, aiError, shopCategory, shopSub, dealsOnly, sortBy, wishlist, wishlistLoading, wishlistError, cart, cartState, loginPromptOpen, drawerOpen, products, productsLoading, productsError, user, isLoggedIn, authUserId, authLoading, settingsLoading, profileLoading, profileError, isAdmin, profile, toast, oauthRegistrationRequired, reviewTarget, reviewInitialRating, reviewRevision, openReviewForm, closeReviewForm, reviewCompleted],
+    [view, selectedProduct, goal, subFilters, allergies, search, searchMode, aiQuery, aiResult, aiLoading, aiError, shopCategory, shopSub, dealsOnly, sortBy, wishlist, wishlistLoading, wishlistError, cart, cartState, loginPromptOpen, drawerOpen, products, productsLoading, productsError, user, isLoggedIn, authUserId, authLoading, settingsLoading, profileLoading, profileError, isAdmin, roleReady, profile, toast, oauthRegistrationRequired, reviewTarget, reviewInitialRating, reviewRevision, openReviewForm, closeReviewForm, reviewCompleted],
   )
 
   return <StoreContext.Provider value={value}>{children}</StoreContext.Provider>

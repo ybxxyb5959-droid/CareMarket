@@ -38,8 +38,8 @@ test('admin role loading is independent from optional profile contact columns', 
 })
 
 test('automatic admin entry updates the browser URL as well as the rendered view', () => {
-  assert.match(storeSource, /history\.replaceState\([\s\S]*?adminUrl\)/)
-  assert.match(storeSource, /setView\(adminView\)/)
+  assert.match(appSource, /history\.replaceState\([\s\S]*?viewUrl\('adminDashboard'\)\)/)
+  assert.match(appSource, /setView\('adminDashboard'\)/)
 })
 
 test('same-user auth refresh does not leave profile loading stuck; account changes still load', () => {

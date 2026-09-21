@@ -3805,6 +3805,14 @@ main {
 .checkout-form-grid .field:nth-last-child(1) {
   margin-bottom: 0;
 }
+.checkout-form-grid .field-error {
+  margin: 4px 0 0;
+  color: var(--danger);
+  font-size: 13px;
+}
+.checkout-form-grid input[aria-invalid="true"] {
+  border-color: var(--danger);
+}
 .checkout-form-grid input[readonly] {
   color: var(--muted);
   cursor: default;

@@ -4,6 +4,7 @@ import fs from 'node:fs'
 import {
   checkoutRequestErrorMessage,
   createCheckoutOrder,
+  getCheckoutShippingErrors,
   isCheckoutShippingComplete,
   memberCheckoutShipping,
   normalizeCheckoutShipping,
@@ -45,6 +46,24 @@ test('checkout defaults to member shipping and clears member fields when uncheck
   })
   assert.equal(isCheckoutShippingComplete(member), true)
   assert.equal(isCheckoutShippingComplete({ ...member, postalCode: '' }), false)
+})
+
+test('checkout shipping validation flags missing and malformed phone/address fields', () => {
+  assert.deepEqual(getCheckoutShippingErrors(validShipping), {})
+
+  assert.equal(getCheckoutShippingErrors({ ...validShipping, phone: '' }).phone, '전화번호를 입력해주세요.')
+  assert.equal(getCheckoutShippingErrors({ ...validShipping, phone: '   ' }).phone, '전화번호를 입력해주세요.')
+  assert.equal(getCheckoutShippingErrors({ ...validShipping, phone: '01012345678abc' }).phone, '올바른 전화번호를 입력해주세요.')
+  assert.equal(getCheckoutShippingErrors({ ...validShipping, phone: '02012345678' }).phone, '올바른 전화번호를 입력해주세요.')
+  assert.equal(getCheckoutShippingErrors({ ...validShipping, phone: '0101234567' }).phone, '올바른 전화번호를 입력해주세요.')
+  assert.equal(getCheckoutShippingErrors({ ...validShipping, phone: '01012345678' }).phone, undefined)
+
+  assert.equal(getCheckoutShippingErrors({ ...validShipping, postalCode: '' }).postalCode, '우편번호를 입력해주세요.')
+  assert.equal(getCheckoutShippingErrors({ ...validShipping, postalCode: '   ' }).postalCode, '우편번호를 입력해주세요.')
+  assert.equal(getCheckoutShippingErrors({ ...validShipping, address: '' }).address, '주소를 입력해주세요.')
+  assert.equal(getCheckoutShippingErrors({ ...validShipping, address: '   ' }).address, '주소를 입력해주세요.')
+
+  assert.equal(isCheckoutShippingComplete({ ...validShipping, phone: '01012345678abc' }), false)
 })
 
 test('checkout keeps the Toss widget mounted during background cart refresh', () => {

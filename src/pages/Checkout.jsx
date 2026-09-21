@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useStore } from '../store'
 import Icon from '../components/Icon'
 import CheckoutOrderItems from '../components/checkout/CheckoutOrderItems'
@@ -10,10 +10,19 @@ import { supabase } from '../lib/supabase'
 import {
   checkoutRequestErrorMessage,
   createCheckoutOrder,
+  getCheckoutShippingErrors,
   isCheckoutShippingComplete,
   memberCheckoutShipping,
   shippingForMemberToggle,
 } from '../lib/payments'
+
+const CHECKOUT_FIELD_ORDER = ['name', 'phone', 'postalCode', 'address']
+const CHECKOUT_FIELD_ID = {
+  name: 'checkout-name',
+  phone: 'checkout-phone',
+  postalCode: 'checkout-postal',
+  address: 'checkout-address',
+}
 import { openPostcode } from '../lib/postcode'
 
 export default function Checkout() {
@@ -70,15 +79,30 @@ function CheckoutContent() {
   const discountAmount = selectedCoupon ? Math.floor(cartTotal * Number(selectedCoupon.coupons?.percent || 0) / 100) : 0
   const estimatedTotal = cartTotal + deliveryFee - discountAmount
   const [paymentError, setPaymentError] = useState('')
+  const [shippingErrors, setShippingErrors] = useState({})
   const submittingRef = useRef(false)
+  const focusFieldRef = useRef(null)
   const onWidgetsReady = useCallback((next) => setWidgets(next), [])
+
+  useEffect(() => {
+    if (!buyerInfoOpen || !focusFieldRef.current) return
+    const fieldEl = document.getElementById(CHECKOUT_FIELD_ID[focusFieldRef.current])
+    focusFieldRef.current = null
+    if (fieldEl) {
+      fieldEl.scrollIntoView({ behavior: 'smooth', block: 'center' })
+      fieldEl.focus()
+    }
+  }, [buyerInfoOpen, shippingErrors])
 
   const applyShipping = (nextShipping) => {
     const complete = isCheckoutShippingComplete(nextShipping)
     setShipping(nextShipping)
     if (!complete) setBuyerInfoOpen(true)
   }
-  const updateShipping = (name, value) => applyShipping({ ...shipping, [name]: value })
+  const updateShipping = (name, value) => {
+    applyShipping({ ...shipping, [name]: value })
+    if (shippingErrors[name]) setShippingErrors((current) => ({ ...current, [name]: undefined }))
+  }
   const toggleSameAsMember = (checked) => {
     setSameAsMember(checked)
     applyShipping(shippingForMemberToggle(shipping, memberShipping, checked))
@@ -95,11 +119,15 @@ function CheckoutContent() {
   const submitCheckout = async () => {
     if (cart.some(item => item.product.isDemoProduct)) { setPaymentError('시연용 상품을 제외하면 실제 주문을 진행할 수 있습니다.'); return }
     if (!isLoggedIn || !cart.length || cartLoading || cartPending || cartError || !widgets || submittingRef.current) return
-    if (!isCheckoutShippingComplete(shipping)) {
+    const errors = getCheckoutShippingErrors(shipping)
+    setShippingErrors(errors)
+    if (Object.keys(errors).length > 0) {
+      focusFieldRef.current = CHECKOUT_FIELD_ORDER.find((name) => errors[name]) || null
       setBuyerInfoOpen(true)
       setPaymentError('주문자와 배송 정보를 모두 입력해 주세요.')
       return
     }
+    setShippingErrors({})
     submittingRef.current = true
     setSubmitting(true)
     setPaymentError('')
@@ -186,6 +214,7 @@ function CheckoutContent() {
             expanded={buyerInfoOpen}
             complete={isCheckoutShippingComplete(shipping)}
             onExpandedToggle={() => setBuyerInfoOpen((current) => !current)}
+            errors={shippingErrors}
           />
           <MyCoupons userId={authUserId} selected={userCouponId} disabled={submitting} onSelect={(_id, coupon) => { setSelectedCoupon(coupon || null); setServerTotal(null) }} />
           <CheckoutPaymentMethods customerKey={authUserId} amount={serverTotal ?? estimatedTotal} onReady={onWidgetsReady} />

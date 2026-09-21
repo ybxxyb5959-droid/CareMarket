@@ -4,6 +4,7 @@ import Icon from '../components/Icon'
 import { openPostcode } from '../lib/postcode'
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+const MOBILE_PHONE_RE = /^010\d{8}$/
 
 const AGREEMENTS = [
   {
@@ -44,6 +45,8 @@ export default function Register() {
   const [showPw, setShowPw] = useState(false)
   const [error, setError] = useState('')
   const [emailError, setEmailError] = useState('')
+  const [nameError, setNameError] = useState('')
+  const [phoneError, setPhoneError] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
 
   const emailDebounce = useRef(null)
@@ -72,6 +75,8 @@ export default function Register() {
   const requiredDone = agree.terms && agree.privacy
   const setField = (name, value) => {
     if (name === 'email') setEmailError('')
+    if (name === 'displayName') setNameError('')
+    if (name === 'phone') setPhoneError('')
     setForm((c) => ({ ...c, [name]: value }))
   }
 
@@ -92,7 +97,12 @@ export default function Register() {
     if (isSubmitting || (oauthSignup && oauthRegistrationRequired !== true)) return
     setError('')
     setEmailError('')
+    setNameError('')
+    setPhoneError('')
     if (!requiredDone) return setError('필수 약관에 동의해 주세요.')
+    if (!form.displayName.trim()) return setNameError('이름을 입력해주세요.')
+    if (!form.phone.trim()) return setPhoneError('전화번호를 입력해주세요.')
+    if (!MOBILE_PHONE_RE.test(form.phone.trim())) return setPhoneError('올바른 전화번호를 입력해주세요.')
     if (!oauthSignup && form.password.length < 6) return setError('비밀번호는 6자 이상 입력해 주세요.')
     if (!oauthSignup && form.password !== form.passwordConfirm) return setError('비밀번호가 일치하지 않습니다.')
     setIsSubmitting(true)
@@ -184,7 +194,8 @@ export default function Register() {
                     </div>
                     <div className="field">
                       <label>이름</label>
-                      <input type="text" value={form.displayName} onChange={(e) => setField('displayName', e.target.value)} autoComplete="name" required />
+                      <input className={nameError ? 'input-warning' : ''} type="text" value={form.displayName} onChange={(e) => setField('displayName', e.target.value)} autoComplete="name" aria-describedby={nameError ? 'name-error' : undefined} required />
+                      {nameError && <p id="name-error" className="auth-field-error" role="alert">{nameError}</p>}
                     </div>
                     {!oauthSignup && <><div className="field">
                       <label>비밀번호</label>
@@ -218,7 +229,8 @@ export default function Register() {
                     </>}
                     <div className="field">
                       <label>휴대전화번호</label>
-                      <input type="tel" inputMode="tel" value={form.phone} onChange={(e) => setField('phone', e.target.value)} autoComplete="tel" placeholder="010-0000-0000" required />
+                      <input className={phoneError ? 'input-warning' : ''} type="tel" inputMode="numeric" value={form.phone} onChange={(e) => setField('phone', e.target.value.replace(/\D/g, ''))} autoComplete="tel" maxLength={11} placeholder="01000000000" aria-describedby={phoneError ? 'phone-error' : undefined} required />
+                      {phoneError && <p id="phone-error" className="auth-field-error" role="alert">{phoneError}</p>}
                     </div>
                     <div className="field span-2">
                       <label>우편번호</label>

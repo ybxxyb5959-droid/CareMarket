@@ -22,12 +22,28 @@ export function shippingForMemberToggle(current = {}, memberShipping = {}, check
   }
 }
 
-export function isCheckoutShippingComplete(values = {}) {
+const MOBILE_PHONE_REGEX = /^010\d{8}$/
+
+export function getCheckoutShippingErrors(values = {}) {
+  const errors = {}
   const name = String(values.name || values.recipientName || '').trim()
   const phone = String(values.phone || values.recipientPhone || '').trim()
   const postalCode = String(values.postalCode || '').trim()
   const address = String(values.address || '').trim()
-  return Boolean(name && phone.length >= 5 && postalCode && address)
+
+  if (!name) errors.name = '받는 분을 입력해주세요.'
+
+  if (!phone) errors.phone = '전화번호를 입력해주세요.'
+  else if (!MOBILE_PHONE_REGEX.test(phone.replace(/-/g, ''))) errors.phone = '올바른 전화번호를 입력해주세요.'
+
+  if (!postalCode) errors.postalCode = '우편번호를 입력해주세요.'
+  if (!address) errors.address = '주소를 입력해주세요.'
+
+  return errors
+}
+
+export function isCheckoutShippingComplete(values = {}) {
+  return Object.keys(getCheckoutShippingErrors(values)).length === 0
 }
 
 export function checkoutRequestErrorMessage(error) {

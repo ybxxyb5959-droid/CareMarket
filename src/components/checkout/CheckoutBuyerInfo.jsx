@@ -2,13 +2,21 @@ import Icon from '../Icon'
 
 export default function CheckoutBuyerInfo({
   user, values, onChange, sameAsMember, onSameToggle, onAddressSearch,
-  expanded, complete, onExpandedToggle,
+  expanded, complete, onExpandedToggle, errors = {},
 }) {
   const shippingField = (name, options = {}) => ({
     value: values[name] || '',
-    onChange: (event) => onChange(name, event.target.value),
+    onChange: (event) => {
+      const raw = event.target.value
+      onChange(name, options.digitsOnly ? raw.replace(/\D/g, '') : raw)
+    },
     readOnly: options.alwaysEditable ? false : sameAsMember,
+    'aria-invalid': errors[name] ? true : undefined,
+    'aria-describedby': errors[name] ? `checkout-${name}-error` : undefined,
   })
+  const fieldError = (name) => errors[name] && (
+    <p className="field-error" id={`checkout-${name}-error`} role="alert">{errors[name]}</p>
+  )
 
   return (
     <section className="checkout-section checkout-buyer" aria-labelledby="checkout-buyer-title">
@@ -52,10 +60,12 @@ export default function CheckoutBuyerInfo({
             <div className="field">
               <label htmlFor="checkout-name">받는 분</label>
               <input id="checkout-name" name="name" autoComplete="name" maxLength={100} required {...shippingField('name')} />
+              {fieldError('name')}
             </div>
             <div className="field">
               <label htmlFor="checkout-phone">연락처</label>
-              <input id="checkout-phone" name="phone" type="tel" inputMode="tel" autoComplete="tel" maxLength={30} placeholder="010-0000-0000" required {...shippingField('phone')} />
+              <input id="checkout-phone" name="phone" type="tel" inputMode="numeric" autoComplete="tel" maxLength={11} placeholder="01000000000" required {...shippingField('phone', { digitsOnly: true })} />
+              {fieldError('phone')}
             </div>
             <div className="field checkout-postal-field">
               <label htmlFor="checkout-postal">우편번호</label>
@@ -63,10 +73,12 @@ export default function CheckoutBuyerInfo({
                 <input id="checkout-postal" name="postalCode" autoComplete="postal-code" maxLength={20} placeholder="우편번호" required {...shippingField('postalCode')} />
                 <button type="button" className="btn btn-ghost btn-sm" onClick={onAddressSearch} disabled={sameAsMember}>주소 찾기</button>
               </div>
+              {fieldError('postalCode')}
             </div>
             <div className="field checkout-address">
               <label htmlFor="checkout-address">주소</label>
               <input id="checkout-address" name="address" autoComplete="street-address" maxLength={300} placeholder="배송받을 주소를 입력해 주세요" required {...shippingField('address')} />
+              {fieldError('address')}
             </div>
             <div className="field checkout-address">
               <label htmlFor="checkout-address-detail">상세주소</label>
